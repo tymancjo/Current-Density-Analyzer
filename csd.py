@@ -130,7 +130,7 @@ def getImpedanceArray(distanceArray, freq):
     for X in range(distanceArray.shape[0]):
         for Y in range(distanceArray.shape[0]):
             if X == Y:
-                impedanceArray[Y, X] = getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=20, sigma20C=58e6, temCoRe=3.9e-3) + 1j*omega*getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000)
+                impedanceArray[Y, X] = getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3) + 1j*omega*getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000)
             else:
                 impedanceArray[Y, X] = 1j*omega*getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000, distance=distanceArray[Y,X])
 

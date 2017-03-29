@@ -8,6 +8,8 @@ from tkinter import filedialog, messagebox
 import functools
 import numpy as np
 
+from multiprocessing import Pool
+
 
 
 def checkered(canvas, line_distanceX, line_distanceY):
@@ -173,6 +175,8 @@ def displayArrayAsImage():
     print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
     printTheArray(XSecArray)
 
+    drawGeometryArray(XSecArray)
+
 def clearArrayAndDisplay():
     '''
     This function erase the datat form array and return it back to initial
@@ -182,11 +186,11 @@ def clearArrayAndDisplay():
     if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
         q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
         if q == 'yes':
-            XSecArray[:] = 0
+            XSecArray *= 0
             #checkered(w, dX, dY)
             mainSetup()
     else:
-            XSecArray[:] = 0
+            XSecArray *= 0
             #checkered(w, dX, dY)
             mainSetup()
     checkered(w, dX, dY)
@@ -258,10 +262,23 @@ def setUpPoint( event, Set ):
     if Set and inCanvas:
         w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="orange", outline="gray")
         XSecArray[Row][Col] = 1
+        try:
+            geomim.set_data(XSecArray)
+            plt.draw()
+        except:
+            pass
+        # drawGeometryArray(XSecArray)
 
     elif not(Set) and inCanvas:
         w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
         XSecArray[Row][Col] = 0
+        try:
+            geomim.set_data(XSecArray)
+            plt.draw()
+        except:
+            pass
+
+        # drawGeometryArray(XSecArray)
 
 def printTheArray(dataArray):
     '''
@@ -365,7 +382,15 @@ def getComplexModule(x):
     '''
     return np.sqrt(x.real**2 + x.imag**2)
 
-def vectorizeTheArray():
+
+def runMainAnalysisHT():
+    '''
+    Experimental function for HT calculation
+    '''
+    p=Pool(4)
+    p.map(vectorizeTheArray)
+
+def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
     (equal to 1) elements. This allows to minimize the size of further calculation
@@ -426,7 +451,49 @@ def vectorizeTheArray():
 
         showResults()
 
+def drawGeometryArray(theArrayToDisplay):
+
+    global figGeom,geomax,geomim
+
+    title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
+    axis_font = { 'size':'10'}
+
+    my_cmap = matplotlib.cm.get_cmap('jet')
+    my_cmap.set_under('w')
+
+    figGeom = plt.figure(1)
+
+    if np.sum(theArrayToDisplay) == 0:
+        vmin=0
+    else:
+        vmin = 0.8
+
+    geomax = figGeom.add_subplot(1,1,1)
+
+    plotWidth = (theArrayToDisplay.shape[1])*dXmm
+    plotHeight = (theArrayToDisplay.shape[0])*dYmm
+
+    geomim = geomax.imshow(theArrayToDisplay, cmap='jet', interpolation='none', extent=[0,plotWidth,plotHeight,0], vmin=vmin)
+
+    geomax.set_xticks(np.arange(0,plotWidth,2*dXmm))
+    geomax.set_yticks(np.arange(0,plotHeight,2*dYmm))
+
+    figGeom.autofmt_xdate(bottom=0.2, rotation=45, ha='right')
+
+    plt.xlabel('size [mm]', **axis_font)
+    plt.ylabel('size [mm]', **axis_font)
+    plt.axis('scaled')
+    plt.tight_layout()
+
+    plt.grid(True)
+    plt.show()
+
+
 def showResults():
+
+    title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
+    axis_font = { 'size':'10'}
+
     if np.sum(resultsArray) != 0:
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
@@ -440,13 +507,25 @@ def showResults():
         min_col = int(np.min(elementsVector[:,1]))
         max_col = int(np.max(elementsVector[:,1])+1)
 
+        # Cutting down results array to the area with geometry
         resultsArrayDisplay = resultsArray [min_row:max_row,min_col:max_col]
 
-        im = ax.imshow(resultsArrayDisplay, cmap='jet', interpolation='none',  vmin=np.min(resultsCurrentVector))
+        # Checking out what are the dimensions od the ploted area
+        # to make propper scaling
+
+        plotWidth = (resultsArrayDisplay.shape[1]+1)*dXmm
+        plotHeight = (resultsArrayDisplay.shape[0]+1)*dYmm
+
+        im = ax.imshow(resultsArrayDisplay, cmap='jet', interpolation='none',  vmin=0.9*np.min(resultsCurrentVector), extent=[0,plotWidth,plotHeight,0])
+
         fig.colorbar(im, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5)
         plt.axis('scaled')
 
-        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Power losses: '+str(round(powerLosses,2))+'[W]')
+        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Power losses: '+str(round(powerLosses,2))+'[W]', **title_font)
+
+        plt.xlabel('size [mm]', **axis_font)
+        plt.ylabel('size [mm]', **axis_font)
+
         plt.tight_layout()
         plt.show()
     else:
@@ -459,11 +538,9 @@ def mainSetup():
     '''
     global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS
 
-    canvas_width = 500
-    canvas_height = 500
 
-    elementsInX = 20
-    elementsInY = 20
+    elementsInX = 2*25
+    elementsInY = 25
 
     dXmm = 10
     dYmm = 10
@@ -478,6 +555,8 @@ def mainSetup():
     frequency = 50
     curentRMS = 1000
     temperature = 35
+
+
 
 def setParameters(*arg):
     global temperature, frequency, AnalysisFreq, curentRMS, dXmm, dYmm, analysisDX, analysisDY
@@ -500,7 +579,6 @@ def setParameters(*arg):
 
 ######## End of functions definition ############
 
-mainSetup()
 
 
 master = Tk()
@@ -509,11 +587,19 @@ master.title( "Cross Section Designer" )
 img = PhotoImage(file='CSDico.gif')
 master.tk.call('wm', 'iconphoto', master._w, img)
 
+canvas_width = 1000
+canvas_height = 500
+
+mainSetup()
+
+
+
 w = Canvas(master,
            width=canvas_width,
            height=canvas_height)
 w.configure(background='white')
 w.grid(row=0, column=1, columnspan=2, rowspan=11, sticky=W+E+N+S, padx=1, pady=1)
+
 
 # opis = Label(text='Cross Section\n Designer\n v0.1', height=15)
 # opis.grid(row=8, column=0,)
@@ -535,12 +621,13 @@ print_button_slice.grid(row=6, column=0 , padx=5, pady=5)
 print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
 print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
 
-print_button = Button(master, text='Refresh View', command=displayArrayAsImage, height=2, width=16)
+print_button = Button(master, text='Show / Refresh\n CAD view', command=displayArrayAsImage, height=2, width=16)
 print_button.grid(row=8, column=0, padx=5, pady=5)
 
 
 print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)
 print_button.grid(row=9, column=3, padx=5, pady=5,columnspan=2)
+
 
 print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
 print_button.grid(row=10, column=3, padx=5, pady=5,columnspan=2)
@@ -604,6 +691,7 @@ message = Label( master, text = "use: Left Mouse Button to Set conductor, Right 
 message.grid(row=11, column=0, columnspan=3)
 
 master.resizable(width=False, height=False)
+
 
 checkered(w, dX, dY)
 

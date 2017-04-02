@@ -25,7 +25,7 @@ def checkered(canvas, line_distanceX, line_distanceY):
     for y in range(0,canvas_height,int(line_distanceY)):
         canvas.create_line(0, y, canvas_width, y, fill="gray")
 
-def arrayVectorize(inputArray):
+def arrayVectorize(inputArray,phaseNumber):
     '''
     Desription:
     This function returns vector of 4 dimension vectors that deliver
@@ -57,7 +57,7 @@ def arrayVectorize(inputArray):
     #and if yes then put it into putput vectorArray
     for Row in range(elementsInY):
         for Col in range(elementsInX):
-            if inputArray[Row][Col] == 1:
+            if inputArray[Row][Col] == phaseNumber:
                 # Let's calculate the X and Y coordinates
                 coordinateY = (0.5 + Row) * dYmm
                 coordinateX = (0.5 + Col) * dXmm
@@ -260,8 +260,18 @@ def setUpPoint( event, Set ):
 
 
     if Set and inCanvas:
-        w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="orange", outline="gray")
-        XSecArray[Row][Col] = 1
+        actualPhase = phase.get()
+
+        if actualPhase == 3:
+            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
+            XSecArray[Row][Col] = 3
+        elif actualPhase == 2:
+            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
+            XSecArray[Row][Col] = 2
+        else:
+            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
+            XSecArray[Row][Col] = 1
+
         try:
             geomim.set_data(XSecArray)
             plt.draw()
@@ -300,7 +310,11 @@ def printTheArray(dataArray):
     for Row in range(elementsInY):
         for Col in range(elementsInX):
             if dataArray[Row][Col] == 1:
-                fillColor = "orange"
+                fillColor = "red"
+            elif dataArray[Row][Col] == 2:
+                fillColor = "green"
+            elif dataArray[Row][Col] == 3:
+                fillColor = "blue"
             else:
                 fillColor = "white"
 
@@ -336,18 +350,18 @@ def simplifyArray():
 
     if dXmm < 15 and dYmm < 15:
 
-        if np.sum(XSecArray) == 0:
-            XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
-        else:
-            for Row in range(0,XSecArray.shape[0],2):
-                for Col in range(0,XSecArray.shape[0],2):
-                    # Calculating sume in rows&cols we about to drop
-                    # to be sure we keep all set point transferred
+        # if np.sum(XSecArray) == 0:
+        #     XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
+        # else:
+        #     for Row in range(0,XSecArray.shape[0],2):
+        #         for Col in range(0,XSecArray.shape[0],2):
+        #             # Calculating sume in rows&cols we about to drop
+        #             # to be sure we keep all set point transferred
+        #
+        #             XSecArray[Row,Col] = np.sum(XSecArray[Row:Row+2,Col:Col+2])
+        #             if XSecArray[Row,Col] > 0: XSecArray[Row,Col] = 1
 
-                    XSecArray[Row,Col] = np.sum(XSecArray[Row:Row+2,Col:Col+2])
-                    if XSecArray[Row,Col] > 0: XSecArray[Row,Col] = 1
-
-            XSecArray = XSecArray[::2,::2]
+        XSecArray = XSecArray[::2,::2]
 
 
         dXmm = dXmm*2
@@ -405,43 +419,87 @@ def vectorizeTheArray(*arg):
 
     #lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
-        elementsVector = arrayVectorize(inputArray=XSecArray)
-
+        # We get vectors for each phase`
+        elementsVectorPhA = arrayVectorize(inputArray=XSecArray, phaseNumber=1)
+        elementsVectorPhB = arrayVectorize(inputArray=XSecArray, phaseNumber=2)
+        elementsVectorPhC = arrayVectorize(inputArray=XSecArray, phaseNumber=3)
         # From here is the rest of calulations
 
+        #memorize the number of elements in each phase
+        elementsPhaseA = elementsVectorPhA.shape[0]
+        elementsPhaseB = elementsVectorPhB.shape[0]
+        elementsPhaseC = elementsVectorPhC.shape[0]
+
+        #Lets put the all phases togethrt
+        elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhB, elementsVectorPhC), axis=0)
+
+
         print(elementsVector.shape)
-        print(elementsVector)
-        print(getDistancesArray(elementsVector))
+        # print(elementsVector)
+        # print(getDistancesArray(elementsVector))
         admitanceMatrix = np.linalg.inv(getImpedanceArray(getDistancesArray(elementsVector),freq=frequency))
-        print('Calculated addmintance Matrix:')
-        print(admitanceMatrix)
+        # print('Calculated addmintance Matrix:')
+        # print(admitanceMatrix)
 
         #Let's put here some voltage vector
-        voltageVector = np.ones(elementsVector.shape[0])
+        vA = np.ones(elementsPhaseA)
+        vB = np.ones(elementsPhaseB)*(-0.5 + (np.sqrt(3)/2)*1j)
+        vC = np.ones(elementsPhaseC)*(-0.5 - (np.sqrt(3)/2)*1j)
+
+
+        voltageVector = np.concatenate((vA,vB,vC), axis=0)
+
         print('Voltage vector:')
-        print(voltageVector)
+        print(voltageVector.shape)
 
         # Lets calculate the currebt vector as U = ZI >> Z^-1 U = I
         # and Y = Z^-1
         #so finally I = YU - as matrix multiplication goes
 
         currentVector = np.matmul(admitanceMatrix, voltageVector)
-        print('Current vector:')
+        print('pierwotnie obliczony I')
         print(currentVector)
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0:elementsPhaseA]
+        currentPhB = currentVector[elementsPhaseA:elementsPhaseA+elementsPhaseB:1]
+        currentPhC = currentVector[elementsPhaseA+elementsPhaseB:]
+
+        print('wektory rozdzielone')
+        print(currentPhA)
+        print(currentPhB)
+        print(currentPhC)
+
+
+        currentPhA = currentPhA / getComplexModule(np.sum(currentPhA))
+        currentPhB = currentPhB / getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
+        currentPhC = currentPhC / getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
+
+        print('sumy: '+str(getComplexModule(np.sum(currentPhA)))+' : '+str(getComplexModule(np.sum(currentPhB)))+' : '+str(getComplexModule(np.sum(currentPhC)))+' : ')
+
+        print('sumy: '+str((np.sum(currentPhA)))+' : '+str((np.sum(currentPhB)))+' : '+str((np.sum(currentPhC)))+' : ')
+
+        print('Current vector:')
+        print(currentVector.shape)
         print('Current vector elements module:')
         getMod = np.vectorize(getComplexModule)
-        resultsCurrentVector = currentVector / getComplexModule(np.sum(currentVector))
 
-        #resultsCurrentVector = currentVector
-        print(getMod(resultsCurrentVector))
-        print(np.sum(resultsCurrentVector))
-        print(getComplexModule(np.sum(resultsCurrentVector)))
+        resultsCurrentVector = np.concatenate((currentPhA,currentPhB,currentPhC), axis=0)
+
+        # print(getMod(resultsCurrentVector))
+        # print(np.sum(resultsCurrentVector))
+        # print(getComplexModule(np.sum(resultsCurrentVector)))
 
         resultsCurrentVector = getMod(resultsCurrentVector)
         resistanceVector = getResistanceArray(elementsVector)
         resultsCurrentVector *= curentRMS
 
+        # print('vector currents shape')
+        # print(resultsCurrentVector.shape)
+        # print('Resistance shape')
+        # print(resistanceVector.shape)
+
         powerLossesVector = resistanceVector * resultsCurrentVector**2
+
         powerLosses = np.sum(powerLossesVector)
 
         resultsCurrentVector /= (dXmm*dYmm)
@@ -518,7 +576,11 @@ def showResults():
 
         im = ax.imshow(resultsArrayDisplay, cmap='jet', interpolation='none',  vmin=0.9*np.min(resultsCurrentVector), extent=[0,plotWidth,plotHeight,0])
 
-        fig.colorbar(im, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5)
+        if plotWidth < plotHeight:
+            fig.colorbar(im, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5)
+        else:
+            fig.colorbar(im, orientation='horizontal',label='Current Density [A/mm2]',alpha=0.5)
+
         plt.axis('scaled')
 
         ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Power losses: '+str(round(powerLosses,2))+'[W]', **title_font)
@@ -690,11 +752,20 @@ message = Label( master, text = "use: Left Mouse Button to Set conductor, Right 
 #message.pack( side = BOTTOM )
 message.grid(row=11, column=0, columnspan=3)
 
+phase = IntVar()
+
+phase.set(1) # initialize
+
+Radiobutton(master, text="Phase A", variable=phase, value=1).grid(row=9, column=0)
+Radiobutton(master, text="Phase B", variable=phase, value=2).grid(row=10, column=0)
+Radiobutton(master, text="Phase C", variable=phase, value=3).grid(row=11, column=0)
+
+
 master.resizable(width=False, height=False)
 
 
 checkered(w, dX, dY)
 
-
+print(phase)
 
 mainloop()

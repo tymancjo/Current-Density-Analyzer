@@ -602,7 +602,7 @@ def mainSetup():
 
 
     elementsInX = 2*25
-    elementsInY = 25
+    elementsInY = 2*25
 
     dXmm = 10
     dYmm = 10
@@ -649,8 +649,8 @@ master.title( "Cross Section Designer" )
 img = PhotoImage(file='CSDico.gif')
 master.tk.call('wm', 'iconphoto', master._w, img)
 
-canvas_width = 1000
-canvas_height = 500
+canvas_width = 750
+canvas_height = 750
 
 mainSetup()
 
@@ -660,7 +660,7 @@ w = Canvas(master,
            width=canvas_width,
            height=canvas_height)
 w.configure(background='white')
-w.grid(row=0, column=1, columnspan=2, rowspan=11, sticky=W+E+N+S, padx=1, pady=1)
+w.grid(row=1, column=1, columnspan=5, rowspan=10, sticky=W+E+N+S, padx=1, pady=1)
 
 
 # opis = Label(text='Cross Section\n Designer\n v0.1', height=15)
@@ -683,58 +683,55 @@ print_button_slice.grid(row=6, column=0 , padx=5, pady=5)
 print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
 print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
 
-print_button = Button(master, text='Show / Refresh\n CAD view', command=displayArrayAsImage, height=2, width=16)
-print_button.grid(row=8, column=0, padx=5, pady=5)
-
 
 print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)
-print_button.grid(row=9, column=3, padx=5, pady=5,columnspan=2)
+print_button.grid(row=9, column=8, columnspan=2)
 
 
 print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
-print_button.grid(row=10, column=3, padx=5, pady=5,columnspan=2)
+print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
 
 GeometryOpis = Label(text='Geometry setup:', height=3)
-GeometryOpis.grid(row=0, column=3,columnspan=2)
+GeometryOpis.grid(row=0, column=8,columnspan=2)
 
 # AnalysisOpis = Label(text='Analysis setup:', height=3)
 # AnalysisOpis.grid(row=4, column=3,columnspan=2)
 
 print_button = Button(master, text='Set parameters', command=setParameters, height=2, width=16)
-print_button.grid(row=8, column=3, padx=5, pady=5,columnspan=2)
+print_button.grid(row=8, column=8, padx=5, pady=5,columnspan=2)
 AnalysisFreq = Label(text= 'frequency: '+str(frequency)+'[Hz]\n Current: '+str(curentRMS)+'[A]\n Temperature: '+str(temperature)+'[deg C]', height=3  )
-AnalysisFreq.grid(row=5, column=3,columnspan=2)
+AnalysisFreq.grid(row=5, column=8,columnspan=2)
 
 myEntry = Entry(master, width = 5 )
 myEntry.insert(END,str(frequency))
-myEntry.grid(row=6, column=3, padx=1, pady=1)
+myEntry.grid(row=6, column=8, padx=1, pady=1)
 myEntry.bind("<Return>", setParameters)
 myEntry.bind("<FocusOut>", setParameters)
 
 myEntryI = Entry(master, width = 5)
 myEntryI.insert(END,str(curentRMS))
-myEntryI.grid(row=6, column=4, padx=1, pady=1)
+myEntryI.grid(row=6, column=9, padx=1, pady=1)
 myEntryI.bind("<Return>", setParameters)
 myEntryI.bind("<FocusOut>", setParameters)
 
 myEntryT = Entry(master, width = 5 )
 myEntryT.insert(END,str(temperature))
-myEntryT.grid(row=7, column=3, padx=1, pady=1)
+myEntryT.grid(row=7, column=8, padx=1, pady=1)
 myEntryT.bind("<Return>", setParameters)
 myEntryT.bind("<FocusOut>", setParameters)
 
 analysisDX = Label(text='dx\n '+str(dXmm)+'[mm]', height=2  )
-analysisDX.grid(row=1, column=3,columnspan=1)
+analysisDX.grid(row=1, column=8,columnspan=1)
 analysisDY = Label(text='dy\n '+str(dYmm)+'[mm]', height=2  )
-analysisDY.grid(row=2, column=4,columnspan=1)
+analysisDY.grid(row=2, column=9,columnspan=1)
 
 wsmall = Canvas(master,width=35,height=35)
 wsmall.configure(background='white')
-wsmall.grid(row=2, column=3 )
+wsmall.grid(row=2, column=8 )
 
 myEntryDx = Entry(master, width = 5)
 myEntryDx.insert(END,str(dXmm))
-myEntryDx.grid(row=3, column=3, columnspan=2, padx=1, pady=1)
+myEntryDx.grid(row=3, column=8, columnspan=2, padx=1, pady=1)
 myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
@@ -756,9 +753,12 @@ phase = IntVar()
 
 phase.set(1) # initialize
 
-Radiobutton(master, text="Phase A", variable=phase, value=1).grid(row=9, column=0)
-Radiobutton(master, text="Phase B", variable=phase, value=2).grid(row=10, column=0)
-Radiobutton(master, text="Phase C", variable=phase, value=3).grid(row=11, column=0)
+Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=2, width=16, bg='red', highlightbackground='red').grid(row=0, column=1)
+Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=2, width=16, bg='green', highlightbackground='green').grid(row=0, column=2)
+Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=2, width=16, bg='blue', highlightbackground='blue').grid(row=0, column=3)
+
+print_button = Button(master, text='Show / Refresh CAD view', command=displayArrayAsImage, height=2, width=22)
+print_button.grid(row=0, column=5, padx=5, pady=0)
 
 
 master.resizable(width=False, height=False)

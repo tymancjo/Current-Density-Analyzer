@@ -545,8 +545,8 @@ def drawGeometryArray(theArrayToDisplay):
 
     geomax = figGeom.add_subplot(1,1,1)
 
-    plotWidth = (theArrayToDisplay.shape[1])*dXmm
-    plotHeight = (theArrayToDisplay.shape[0])*dYmm
+    plotWidth = (theArrayToDisplay.shape[1]-1)*dXmm
+    plotHeight = (theArrayToDisplay.shape[0]-1)*dYmm
 
     geomim = geomax.imshow(theArrayToDisplay, cmap='jet', interpolation='none', extent=[0,plotWidth,plotHeight,0], vmin=vmin)
 

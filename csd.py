@@ -431,7 +431,23 @@ def vectorizeTheArray(*arg):
         elementsPhaseC = elementsVectorPhC.shape[0]
 
         #Lets put the all phases togethrt
-        elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhB, elementsVectorPhC), axis=0)
+        if elementsPhaseA !=0 and elementsPhaseB != 0 and elementsPhaseC!=0:
+            elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhB, elementsVectorPhC), axis=0)
+
+        elif elementsPhaseA == 0:
+            if elementsPhaseB == 0:
+                elementsVector = elementsVectorPhC
+            elif elementsPhaseC==0:
+                elementsVector = elementsVectorPhB
+            else:
+                elementsVector = np.concatenate((elementsVectorPhB, elementsVectorPhC), axis=0)
+        else:
+            if elementsPhaseB == 0 and elementsPhaseC == 0:
+                elementsVector = elementsVectorPhA
+            elif elementsPhaseC == 0:
+                elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhB), axis=0)
+            else:
+                elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhC), axis=0)
 
 
         print(elementsVector.shape)

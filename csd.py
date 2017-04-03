@@ -8,8 +8,7 @@ from tkinter import filedialog, messagebox
 import functools
 import numpy as np
 
-from multiprocessing import Pool
-
+import os.path
 
 
 def checkered(canvas, line_distanceX, line_distanceY):
@@ -203,6 +202,7 @@ def saveArrayToFile():
     This function saves the data of cross section array to file
     '''
     filename = filedialog.asksaveasfilename()
+    filename = os.path.normpath(filename)
     if filename:
         saveTheData(filename)
 
@@ -211,14 +211,15 @@ def loadArrayFromFile():
     This function loads the data from the file
     !!!!! Need some work - it dosn't reset properly the dXmm and dYmm
     '''
+    filename = filedialog.askopenfilename()
+    filename = os.path.normpath(filename)
+
     if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
         q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
         if q == 'yes':
-            filename = filedialog.askopenfilename()
             if filename:
                 loadTheData(filename)
     else:
-        filename = filedialog.askopenfilename()
         if filename:
             loadTheData(filename)
 

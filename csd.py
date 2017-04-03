@@ -8,6 +8,8 @@ from tkinter import filedialog, messagebox
 import functools
 import numpy as np
 
+from multiprocessing import Pool
+
 
 
 def checkered(canvas, line_distanceX, line_distanceY):
@@ -23,7 +25,7 @@ def checkered(canvas, line_distanceX, line_distanceY):
     for y in range(0,canvas_height,int(line_distanceY)):
         canvas.create_line(0, y, canvas_width, y, fill="gray")
 
-def arrayVectorize(inputArray):
+def arrayVectorize(inputArray,phaseNumber):
     '''
     Desription:
     This function returns vector of 4 dimension vectors that deliver
@@ -55,7 +57,7 @@ def arrayVectorize(inputArray):
     #and if yes then put it into putput vectorArray
     for Row in range(elementsInY):
         for Col in range(elementsInX):
-            if inputArray[Row][Col] == 1:
+            if inputArray[Row][Col] == phaseNumber:
                 # Let's calculate the X and Y coordinates
                 coordinateY = (0.5 + Row) * dYmm
                 coordinateX = (0.5 + Col) * dXmm
@@ -173,6 +175,8 @@ def displayArrayAsImage():
     print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
     printTheArray(XSecArray)
 
+    drawGeometryArray(XSecArray)
+
 def clearArrayAndDisplay():
     '''
     This function erase the datat form array and return it back to initial
@@ -182,11 +186,11 @@ def clearArrayAndDisplay():
     if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
         q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
         if q == 'yes':
-            XSecArray[:] = 0
+            XSecArray *= 0
             #checkered(w, dX, dY)
             mainSetup()
     else:
-            XSecArray[:] = 0
+            XSecArray *= 0
             #checkered(w, dX, dY)
             mainSetup()
     checkered(w, dX, dY)
@@ -256,12 +260,35 @@ def setUpPoint( event, Set ):
 
 
     if Set and inCanvas:
-        w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="orange", outline="gray")
-        XSecArray[Row][Col] = 1
+        actualPhase = phase.get()
+
+        if actualPhase == 3:
+            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
+            XSecArray[Row][Col] = 3
+        elif actualPhase == 2:
+            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
+            XSecArray[Row][Col] = 2
+        else:
+            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
+            XSecArray[Row][Col] = 1
+
+        try:
+            geomim.set_data(XSecArray)
+            plt.draw()
+        except:
+            pass
+        # drawGeometryArray(XSecArray)
 
     elif not(Set) and inCanvas:
         w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
         XSecArray[Row][Col] = 0
+        try:
+            geomim.set_data(XSecArray)
+            plt.draw()
+        except:
+            pass
+
+        # drawGeometryArray(XSecArray)
 
 def printTheArray(dataArray):
     '''
@@ -283,7 +310,11 @@ def printTheArray(dataArray):
     for Row in range(elementsInY):
         for Col in range(elementsInX):
             if dataArray[Row][Col] == 1:
-                fillColor = "orange"
+                fillColor = "red"
+            elif dataArray[Row][Col] == 2:
+                fillColor = "green"
+            elif dataArray[Row][Col] == 3:
+                fillColor = "blue"
             else:
                 fillColor = "white"
 
@@ -319,18 +350,18 @@ def simplifyArray():
 
     if dXmm < 15 and dYmm < 15:
 
-        if np.sum(XSecArray) == 0:
-            XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
-        else:
-            for Row in range(0,XSecArray.shape[0],2):
-                for Col in range(0,XSecArray.shape[0],2):
-                    # Calculating sume in rows&cols we about to drop
-                    # to be sure we keep all set point transferred
+        # if np.sum(XSecArray) == 0:
+        #     XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
+        # else:
+        #     for Row in range(0,XSecArray.shape[0],2):
+        #         for Col in range(0,XSecArray.shape[0],2):
+        #             # Calculating sume in rows&cols we about to drop
+        #             # to be sure we keep all set point transferred
+        #
+        #             XSecArray[Row,Col] = np.sum(XSecArray[Row:Row+2,Col:Col+2])
+        #             if XSecArray[Row,Col] > 0: XSecArray[Row,Col] = 1
 
-                    XSecArray[Row,Col] = np.sum(XSecArray[Row:Row+2,Col:Col+2])
-                    if XSecArray[Row,Col] > 0: XSecArray[Row,Col] = 1
-
-            XSecArray = XSecArray[::2,::2]
+        XSecArray = XSecArray[::2,::2]
 
 
         dXmm = dXmm*2
@@ -365,7 +396,15 @@ def getComplexModule(x):
     '''
     return np.sqrt(x.real**2 + x.imag**2)
 
-def vectorizeTheArray():
+
+def runMainAnalysisHT():
+    '''
+    Experimental function for HT calculation
+    '''
+    p=Pool(4)
+    p.map(vectorizeTheArray)
+
+def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
     (equal to 1) elements. This allows to minimize the size of further calculation
@@ -380,43 +419,103 @@ def vectorizeTheArray():
 
     #lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
-        elementsVector = arrayVectorize(inputArray=XSecArray)
-
+        # We get vectors for each phase`
+        elementsVectorPhA = arrayVectorize(inputArray=XSecArray, phaseNumber=1)
+        elementsVectorPhB = arrayVectorize(inputArray=XSecArray, phaseNumber=2)
+        elementsVectorPhC = arrayVectorize(inputArray=XSecArray, phaseNumber=3)
         # From here is the rest of calulations
 
+        #memorize the number of elements in each phase
+        elementsPhaseA = elementsVectorPhA.shape[0]
+        elementsPhaseB = elementsVectorPhB.shape[0]
+        elementsPhaseC = elementsVectorPhC.shape[0]
+
+        #Lets put the all phases togethrt
+        if elementsPhaseA !=0 and elementsPhaseB != 0 and elementsPhaseC!=0:
+            elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhB, elementsVectorPhC), axis=0)
+
+        elif elementsPhaseA == 0:
+            if elementsPhaseB == 0:
+                elementsVector = elementsVectorPhC
+            elif elementsPhaseC==0:
+                elementsVector = elementsVectorPhB
+            else:
+                elementsVector = np.concatenate((elementsVectorPhB, elementsVectorPhC), axis=0)
+        else:
+            if elementsPhaseB == 0 and elementsPhaseC == 0:
+                elementsVector = elementsVectorPhA
+            elif elementsPhaseC == 0:
+                elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhB), axis=0)
+            else:
+                elementsVector = np.concatenate((elementsVectorPhA, elementsVectorPhC), axis=0)
+
+
         print(elementsVector.shape)
-        print(elementsVector)
-        print(getDistancesArray(elementsVector))
+        # print(elementsVector)
+        # print(getDistancesArray(elementsVector))
         admitanceMatrix = np.linalg.inv(getImpedanceArray(getDistancesArray(elementsVector),freq=frequency))
-        print('Calculated addmintance Matrix:')
-        print(admitanceMatrix)
+        # print('Calculated addmintance Matrix:')
+        # print(admitanceMatrix)
 
         #Let's put here some voltage vector
-        voltageVector = np.ones(elementsVector.shape[0])
+        vA = np.ones(elementsPhaseA)
+        vB = np.ones(elementsPhaseB)*(-0.5 + (np.sqrt(3)/2)*1j)
+        vC = np.ones(elementsPhaseC)*(-0.5 - (np.sqrt(3)/2)*1j)
+
+
+        voltageVector = np.concatenate((vA,vB,vC), axis=0)
+
         print('Voltage vector:')
-        print(voltageVector)
+        print(voltageVector.shape)
 
         # Lets calculate the currebt vector as U = ZI >> Z^-1 U = I
         # and Y = Z^-1
         #so finally I = YU - as matrix multiplication goes
 
         currentVector = np.matmul(admitanceMatrix, voltageVector)
-        print('Current vector:')
+        print('pierwotnie obliczony I')
         print(currentVector)
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0:elementsPhaseA]
+        currentPhB = currentVector[elementsPhaseA:elementsPhaseA+elementsPhaseB:1]
+        currentPhC = currentVector[elementsPhaseA+elementsPhaseB:]
+
+        print('wektory rozdzielone')
+        print(currentPhA)
+        print(currentPhB)
+        print(currentPhC)
+
+
+        currentPhA = currentPhA / getComplexModule(np.sum(currentPhA))
+        currentPhB = currentPhB / getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
+        currentPhC = currentPhC / getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
+
+        print('sumy: '+str(getComplexModule(np.sum(currentPhA)))+' : '+str(getComplexModule(np.sum(currentPhB)))+' : '+str(getComplexModule(np.sum(currentPhC)))+' : ')
+
+        print('sumy: '+str((np.sum(currentPhA)))+' : '+str((np.sum(currentPhB)))+' : '+str((np.sum(currentPhC)))+' : ')
+
+        print('Current vector:')
+        print(currentVector.shape)
         print('Current vector elements module:')
         getMod = np.vectorize(getComplexModule)
-        resultsCurrentVector = currentVector / getComplexModule(np.sum(currentVector))
 
-        #resultsCurrentVector = currentVector
-        print(getMod(resultsCurrentVector))
-        print(np.sum(resultsCurrentVector))
-        print(getComplexModule(np.sum(resultsCurrentVector)))
+        resultsCurrentVector = np.concatenate((currentPhA,currentPhB,currentPhC), axis=0)
+
+        # print(getMod(resultsCurrentVector))
+        # print(np.sum(resultsCurrentVector))
+        # print(getComplexModule(np.sum(resultsCurrentVector)))
 
         resultsCurrentVector = getMod(resultsCurrentVector)
         resistanceVector = getResistanceArray(elementsVector)
         resultsCurrentVector *= curentRMS
 
+        # print('vector currents shape')
+        # print(resultsCurrentVector.shape)
+        # print('Resistance shape')
+        # print(resistanceVector.shape)
+
         powerLossesVector = resistanceVector * resultsCurrentVector**2
+
         powerLosses = np.sum(powerLossesVector)
 
         resultsCurrentVector /= (dXmm*dYmm)
@@ -426,7 +525,49 @@ def vectorizeTheArray():
 
         showResults()
 
+def drawGeometryArray(theArrayToDisplay):
+
+    global figGeom,geomax,geomim
+
+    title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
+    axis_font = { 'size':'10'}
+
+    my_cmap = matplotlib.cm.get_cmap('jet')
+    my_cmap.set_under('w')
+
+    figGeom = plt.figure(1)
+
+    if np.sum(theArrayToDisplay) == 0:
+        vmin=0
+    else:
+        vmin = 0.8
+
+    geomax = figGeom.add_subplot(1,1,1)
+
+    plotWidth = (theArrayToDisplay.shape[1])*dXmm
+    plotHeight = (theArrayToDisplay.shape[0])*dYmm
+
+    geomim = geomax.imshow(theArrayToDisplay, cmap='jet', interpolation='none', extent=[0,plotWidth,plotHeight,0], vmin=vmin)
+
+    geomax.set_xticks(np.arange(0,plotWidth,2*dXmm))
+    geomax.set_yticks(np.arange(0,plotHeight,2*dYmm))
+
+    figGeom.autofmt_xdate(bottom=0.2, rotation=45, ha='right')
+
+    plt.xlabel('size [mm]', **axis_font)
+    plt.ylabel('size [mm]', **axis_font)
+    plt.axis('scaled')
+    plt.tight_layout()
+
+    plt.grid(True)
+    plt.show()
+
+
 def showResults():
+
+    title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
+    axis_font = { 'size':'10'}
+
     if np.sum(resultsArray) != 0:
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
@@ -440,13 +581,29 @@ def showResults():
         min_col = int(np.min(elementsVector[:,1]))
         max_col = int(np.max(elementsVector[:,1])+1)
 
+        # Cutting down results array to the area with geometry
         resultsArrayDisplay = resultsArray [min_row:max_row,min_col:max_col]
 
-        im = ax.imshow(resultsArrayDisplay, cmap='jet', interpolation='none',  vmin=np.min(resultsCurrentVector))
-        fig.colorbar(im, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5)
+        # Checking out what are the dimensions od the ploted area
+        # to make propper scaling
+
+        plotWidth = (resultsArrayDisplay.shape[1]+1)*dXmm
+        plotHeight = (resultsArrayDisplay.shape[0]+1)*dYmm
+
+        im = ax.imshow(resultsArrayDisplay, cmap='jet', interpolation='none',  vmin=0.9*np.min(resultsCurrentVector), extent=[0,plotWidth,plotHeight,0])
+
+        if plotWidth < plotHeight:
+            fig.colorbar(im, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5)
+        else:
+            fig.colorbar(im, orientation='horizontal',label='Current Density [A/mm2]',alpha=0.5)
+
         plt.axis('scaled')
 
-        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Power losses: '+str(round(powerLosses,2))+'[W]')
+        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Power losses: '+str(round(powerLosses,2))+'[W]', **title_font)
+
+        plt.xlabel('size [mm]', **axis_font)
+        plt.ylabel('size [mm]', **axis_font)
+
         plt.tight_layout()
         plt.show()
     else:
@@ -459,11 +616,9 @@ def mainSetup():
     '''
     global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS
 
-    canvas_width = 500
-    canvas_height = 500
 
-    elementsInX = 20
-    elementsInY = 20
+    elementsInX = 2*25
+    elementsInY = 2*25
 
     dXmm = 10
     dYmm = 10
@@ -478,6 +633,8 @@ def mainSetup():
     frequency = 50
     curentRMS = 1000
     temperature = 35
+
+
 
 def setParameters(*arg):
     global temperature, frequency, AnalysisFreq, curentRMS, dXmm, dYmm, analysisDX, analysisDY
@@ -500,7 +657,6 @@ def setParameters(*arg):
 
 ######## End of functions definition ############
 
-mainSetup()
 
 
 master = Tk()
@@ -509,11 +665,19 @@ master.title( "Cross Section Designer" )
 img = PhotoImage(file='CSDico.gif')
 master.tk.call('wm', 'iconphoto', master._w, img)
 
+canvas_width = 750
+canvas_height = 750
+
+mainSetup()
+
+
+
 w = Canvas(master,
            width=canvas_width,
            height=canvas_height)
 w.configure(background='white')
-w.grid(row=0, column=1, columnspan=2, rowspan=11, sticky=W+E+N+S, padx=1, pady=1)
+w.grid(row=1, column=1, columnspan=5, rowspan=10, sticky=W+E+N+S, padx=1, pady=1)
+
 
 # opis = Label(text='Cross Section\n Designer\n v0.1', height=15)
 # opis.grid(row=8, column=0,)
@@ -535,57 +699,55 @@ print_button_slice.grid(row=6, column=0 , padx=5, pady=5)
 print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
 print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
 
-print_button = Button(master, text='Refresh View', command=displayArrayAsImage, height=2, width=16)
-print_button.grid(row=8, column=0, padx=5, pady=5)
-
 
 print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)
-print_button.grid(row=9, column=3, padx=5, pady=5,columnspan=2)
+print_button.grid(row=9, column=8, columnspan=2)
+
 
 print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
-print_button.grid(row=10, column=3, padx=5, pady=5,columnspan=2)
+print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
 
 GeometryOpis = Label(text='Geometry setup:', height=3)
-GeometryOpis.grid(row=0, column=3,columnspan=2)
+GeometryOpis.grid(row=0, column=8,columnspan=2)
 
 # AnalysisOpis = Label(text='Analysis setup:', height=3)
 # AnalysisOpis.grid(row=4, column=3,columnspan=2)
 
 print_button = Button(master, text='Set parameters', command=setParameters, height=2, width=16)
-print_button.grid(row=8, column=3, padx=5, pady=5,columnspan=2)
+print_button.grid(row=8, column=8, padx=5, pady=5,columnspan=2)
 AnalysisFreq = Label(text= 'frequency: '+str(frequency)+'[Hz]\n Current: '+str(curentRMS)+'[A]\n Temperature: '+str(temperature)+'[deg C]', height=3  )
-AnalysisFreq.grid(row=5, column=3,columnspan=2)
+AnalysisFreq.grid(row=5, column=8,columnspan=2)
 
 myEntry = Entry(master, width = 5 )
 myEntry.insert(END,str(frequency))
-myEntry.grid(row=6, column=3, padx=1, pady=1)
+myEntry.grid(row=6, column=8, padx=1, pady=1)
 myEntry.bind("<Return>", setParameters)
 myEntry.bind("<FocusOut>", setParameters)
 
 myEntryI = Entry(master, width = 5)
 myEntryI.insert(END,str(curentRMS))
-myEntryI.grid(row=6, column=4, padx=1, pady=1)
+myEntryI.grid(row=6, column=9, padx=1, pady=1)
 myEntryI.bind("<Return>", setParameters)
 myEntryI.bind("<FocusOut>", setParameters)
 
 myEntryT = Entry(master, width = 5 )
 myEntryT.insert(END,str(temperature))
-myEntryT.grid(row=7, column=3, padx=1, pady=1)
+myEntryT.grid(row=7, column=8, padx=1, pady=1)
 myEntryT.bind("<Return>", setParameters)
 myEntryT.bind("<FocusOut>", setParameters)
 
 analysisDX = Label(text='dx\n '+str(dXmm)+'[mm]', height=2  )
-analysisDX.grid(row=1, column=3,columnspan=1)
+analysisDX.grid(row=1, column=8,columnspan=1)
 analysisDY = Label(text='dy\n '+str(dYmm)+'[mm]', height=2  )
-analysisDY.grid(row=2, column=4,columnspan=1)
+analysisDY.grid(row=2, column=9,columnspan=1)
 
 wsmall = Canvas(master,width=35,height=35)
 wsmall.configure(background='white')
-wsmall.grid(row=2, column=3 )
+wsmall.grid(row=2, column=8 )
 
 myEntryDx = Entry(master, width = 5)
 myEntryDx.insert(END,str(dXmm))
-myEntryDx.grid(row=3, column=3, columnspan=2, padx=1, pady=1)
+myEntryDx.grid(row=3, column=8, columnspan=2, padx=1, pady=1)
 myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
@@ -603,10 +765,23 @@ message = Label( master, text = "use: Left Mouse Button to Set conductor, Right 
 #message.pack( side = BOTTOM )
 message.grid(row=11, column=0, columnspan=3)
 
+phase = IntVar()
+
+phase.set(1) # initialize
+
+Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=2, width=16, bg='red', highlightbackground='red').grid(row=0, column=1)
+Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=2, width=16, bg='green', highlightbackground='green').grid(row=0, column=2)
+Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=2, width=16, bg='blue', highlightbackground='blue').grid(row=0, column=3)
+
+print_button = Button(master, text='Show / Refresh CAD view', command=displayArrayAsImage, height=2, width=22)
+print_button.grid(row=0, column=5, padx=5, pady=0)
+
+
 master.resizable(width=False, height=False)
+
 
 checkered(w, dX, dY)
 
-
+print(phase)
 
 mainloop()

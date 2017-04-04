@@ -413,7 +413,7 @@ def vectorizeTheArray(*arg):
 
     and for te moment do the all math for calulations.
     '''
-    global elementsVector, resultsArray, resultsCurrentVector, frequency, powerLosses
+    global elementsVector, resultsArray, resultsCurrentVector, frequency, powerLosses,resultsArrayPower, powerLossesVector
 
     # Read the setup params from GUI
     setParameters()
@@ -516,13 +516,16 @@ def vectorizeTheArray(*arg):
         # print(resistanceVector.shape)
 
         powerLossesVector = resistanceVector * resultsCurrentVector**2
-
         powerLosses = np.sum(powerLossesVector)
+        powerLossesVector /= (dXmm*dYmm)
+
 
         resultsCurrentVector /= (dXmm*dYmm)
         print(powerLosses)
 
         resultsArray = recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
+        resultsArrayPower = recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
+
 
         showResults()
 
@@ -545,8 +548,8 @@ def drawGeometryArray(theArrayToDisplay):
 
     geomax = figGeom.add_subplot(1,1,1)
 
-    plotWidth = (theArrayToDisplay.shape[1]-1)*dXmm
-    plotHeight = (theArrayToDisplay.shape[0]-1)*dYmm
+    plotWidth = (theArrayToDisplay.shape[1])*dXmm
+    plotHeight = (theArrayToDisplay.shape[0])*dYmm
 
     geomim = geomax.imshow(theArrayToDisplay, cmap='jet', interpolation='none', extent=[0,plotWidth,plotHeight,0], vmin=vmin)
 
@@ -570,10 +573,6 @@ def showResults():
     axis_font = { 'size':'10'}
 
     if np.sum(resultsArray) != 0:
-        fig = plt.figure()
-        ax = fig.add_subplot(1,1,1)
-        my_cmap = matplotlib.cm.get_cmap('jet')
-        my_cmap.set_under('w')
 
         # Cecking the area in array that is used by geometry to limit the display
         min_row = int(np.min(elementsVector[:,0]))
@@ -584,26 +583,46 @@ def showResults():
 
         # Cutting down results array to the area with geometry
         resultsArrayDisplay = resultsArray [min_row:max_row,min_col:max_col]
+        resultsArrayDisplay2 = resultsArrayPower [min_row:max_row,min_col:max_col]
+
 
         # Checking out what are the dimensions od the ploted area
         # to make propper scaling
 
-        plotWidth = (resultsArrayDisplay.shape[1]+1)*dXmm
-        plotHeight = (resultsArrayDisplay.shape[0]+1)*dYmm
+        plotWidth = (resultsArrayDisplay.shape[1])*dXmm
+        plotHeight = (resultsArrayDisplay.shape[0])*dYmm
 
-        im = ax.imshow(resultsArrayDisplay, cmap='jet', interpolation='none',  vmin=0.9*np.min(resultsCurrentVector), extent=[0,plotWidth,plotHeight,0])
+        fig = plt.figure()
+        if plotWidth < plotHeight:
+            ax = fig.add_subplot(1,2,1)
+            ax2 = fig.add_subplot(1,2,2)
+        else:
+            ax = fig.add_subplot(2,1,1)
+            ax2 = fig.add_subplot(2,1,2)
+
+        my_cmap = matplotlib.cm.get_cmap('jet')
+        my_cmap.set_under('w')
+
+        im =  ax.imshow(resultsArrayDisplay,   cmap=my_cmap, interpolation='none',  vmin=0.8*np.min(resultsCurrentVector), extent=[0,plotWidth,plotHeight,0])
+        im2 = ax2.imshow(resultsArrayDisplay2, cmap=my_cmap, interpolation='none',  vmin=0.8*np.min(powerLossesVector), extent=[0,plotWidth,plotHeight,0])
+
 
         if plotWidth < plotHeight:
-            fig.colorbar(im, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5)
+            fig.colorbar(im, ax=ax, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5, fraction=0.046 )
+            fig.colorbar(im2, ax=ax2, orientation='vertical',label='PowerLoss Density [W/mm2]',alpha=0.5, fraction=0.046)
         else:
-            fig.colorbar(im, orientation='horizontal',label='Current Density [A/mm2]',alpha=0.5)
+            fig.colorbar(im, ax=ax, orientation='horizontal',label='Current Density [A/mm2]',alpha=0.5, fraction=0.046)
+            fig.colorbar(im2, ax=ax2, orientation='horizontal',label='PowerLoss Density [W/mm2]',alpha=0.5, fraction=0.046)
 
         plt.axis('scaled')
 
-        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Power losses: '+str(round(powerLosses,2))+'[W]', **title_font)
+        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Current Density Distribution', **title_font)
+        ax2.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Total power losses: '+str(round(powerLosses,2))+'[W]', **title_font)
 
         plt.xlabel('size [mm]', **axis_font)
         plt.ylabel('size [mm]', **axis_font)
+
+        fig.autofmt_xdate(bottom=0.2, rotation=45, ha='right')
 
         plt.tight_layout()
         plt.show()

@@ -10,97 +10,8 @@ import numpy as np
 
 import os.path
 
-
-def checkered(canvas, line_distanceX, line_distanceY):
-    '''
-    This function clean the board and draw grid
-    '''
-    # Cleaning up the whole space
-    w.create_rectangle(0, 0, canvas_width, canvas_height, fill="white", outline="gray")
-    # vertical lines at an interval of "line_distance" pixel
-    for x in range(0,canvas_width,int(line_distanceX)):
-        canvas.create_line(x, 0, x, canvas_height, fill="gray")
-    # horizontal lines at an interval of "line_distance" pixel
-    for y in range(0,canvas_height,int(line_distanceY)):
-        canvas.create_line(0, y, canvas_width, y, fill="gray")
-
-def arrayVectorize(inputArray,phaseNumber):
-    '''
-    Desription:
-    This function returns vector of 4 dimension vectors that deliver
-
-    input:
-    inputArray = 3D array thet describe by 1's position of
-    conductors in cross section
-
-    Output:
-    [0,1,2,3]
-
-    0 - Oryginal inputArray geometry origin Row for the set cell
-    1 - Oryginal inputArray geometry origin Col for the set cell
-    2 - X position in mm of the current element
-    3 - Y position in mm of the current element
-
-    Number of such [A,B,C,D] elements is equal to the number of defined
-    conductor cells in geometry
-
-    '''
-    # Let's check the size of the array
-    elementsInY = inputArray.shape[0]
-    elementsInX = inputArray.shape[1]
-
-    #lets define the empty vectorArray
-    vectorArray = []
-
-    #lets go for each input array position and check if is set
-    #and if yes then put it into putput vectorArray
-    for Row in range(elementsInY):
-        for Col in range(elementsInX):
-            if inputArray[Row][Col] == phaseNumber:
-                # Let's calculate the X and Y coordinates
-                coordinateY = (0.5 + Row) * dYmm
-                coordinateX = (0.5 + Col) * dXmm
-
-                vectorArray.append([Row,Col,coordinateX,coordinateY])
-
-    return np.array(vectorArray)
-
-def getDistancesArray(inputVector):
-    '''
-    This function calculate the array of distances between every conductors element
-    Input:
-    the vector of conductor elements as delivered by vectorizeTheArray
-    '''
-    # lets check for the numbers of elements
-    elements = inputVector.shape[0]
-    print(elements)
-    # Define the outpur array
-    distanceArray = np.zeros((elements, elements))
-
-    for x in range(elements):
-        for y in range(elements):
-            if x != y:
-                posXa =  inputVector[y][2]
-                posYa =  inputVector[y][3]
-
-                posXb =  inputVector[x][2]
-                posYb =  inputVector[x][3]
-
-                distanceArray[y,x] = np.sqrt((posXa-posXb)**2 + (posYa-posYb)**2)
-            else:
-                distanceArray[y,x] = 0
-    return distanceArray
-
-def getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
-    '''
-    Calculate the resistance of the al'a square shape in given temperature
-    All dimensions in mm
-    temperature in deg C
-
-    output:
-    Resistance in Ohm
-    '''
-    return (lenght/(sizeX*sizeY*sigma20C)) * 1e3 *(1+temCoRe*(temp-20))
+# Importing local library
+from csdlib import csdlib as csd
 
 
 def getSelfInductance(sizeX, sizeY, lenght):
@@ -131,7 +42,7 @@ def getImpedanceArray(distanceArray, freq):
     for X in range(distanceArray.shape[0]):
         for Y in range(distanceArray.shape[0]):
             if X == Y:
-                impedanceArray[Y, X] = getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3) + 1j*omega*getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000)
+                impedanceArray[Y, X] = csd.n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3) + 1j*omega*getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000)
             else:
                 impedanceArray[Y, X] = 1j*omega*getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000, distance=distanceArray[Y,X])
 
@@ -148,7 +59,7 @@ def getResistanceArray(elementsVector):
     resistanceArray = np.zeros(elementsVector.shape[0])
     for element in range(elementsVector.shape[0]):
 
-        resistanceArray[element] = getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3)
+        resistanceArray[element] = csd.n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3)
     return resistanceArray
 
 def arraySlicer(inputArray, subDivisions):
@@ -192,7 +103,7 @@ def clearArrayAndDisplay():
             XSecArray *= 0
             #checkered(w, dX, dY)
             mainSetup()
-    checkered(w, dX, dY)
+    csd.n_checkered(w, elementsInX, elementsInY)
     myEntryDx.delete(0,END)
     myEntryDx.insert(END,str(dXmm))
     setParameters()
@@ -306,7 +217,7 @@ def printTheArray(dataArray):
     dY = (canvas_height / (elementsInY))
 
     # Now we cleanUp the field
-    checkered(w, dX, dY)
+    csd.n_checkered(w, dX, dY)
 
     for Row in range(elementsInY):
         for Col in range(elementsInX):
@@ -421,9 +332,9 @@ def vectorizeTheArray(*arg):
     #lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
         # We get vectors for each phase`
-        elementsVectorPhA = arrayVectorize(inputArray=XSecArray, phaseNumber=1)
-        elementsVectorPhB = arrayVectorize(inputArray=XSecArray, phaseNumber=2)
-        elementsVectorPhC = arrayVectorize(inputArray=XSecArray, phaseNumber=3)
+        elementsVectorPhA = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm)
+        elementsVectorPhB = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
+        elementsVectorPhC = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
         # From here is the rest of calulations
 
         #memorize the number of elements in each phase
@@ -454,7 +365,7 @@ def vectorizeTheArray(*arg):
         print(elementsVector.shape)
         # print(elementsVector)
         # print(getDistancesArray(elementsVector))
-        admitanceMatrix = np.linalg.inv(getImpedanceArray(getDistancesArray(elementsVector),freq=frequency))
+        admitanceMatrix = np.linalg.inv(getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency))
         # print('Calculated addmintance Matrix:')
         # print(admitanceMatrix)
 
@@ -798,9 +709,10 @@ print_button.grid(row=0, column=5, padx=5, pady=0)
 
 
 master.resizable(width=False, height=False)
+master.update()
 
+csd.n_checkered(w, elementsInX, elementsInY)
 
-checkered(w, dX, dY)
 
 print(phase)
 

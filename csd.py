@@ -29,7 +29,7 @@ def displayArrayAsImage():
     '''
     print(XSecArray)
     print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-    printTheArray(XSecArray)
+    csd.n_printTheArray(XSecArray, canvas=w)
 
     drawGeometryArray(XSecArray)
 
@@ -97,84 +97,70 @@ def loadTheData(filename):
     global XSecArray
     print('Readinf from file :' + filename)
     XSecArray =  np.load(filename)
-    printTheArray(XSecArray)
+    csd.n_printTheArray(XSecArray, canvas=w)
+
+def setPoint(event):
+    '''Trigger procesdure for GUI action'''
+    actualPhase = phase.get()
+    csd.n_setUpPoint(event, Set=actualPhase, dataArray=XSecArray, canvas=w)
+
+    #  Plotting on CAD view if exist
+    try:
+        geomim.set_data(XSecArray)
+        plt.draw()
+    except:
+        pass
+
+def resetPoint(event):
+    '''Trigger procesdure for GUI action'''
+    csd.n_setUpPoint(event, Set=0, dataArray=XSecArray, canvas=w)
+
+    #  Plotting on CAD view if exist
+    try:
+        geomim.set_data(XSecArray)
+        plt.draw()
+    except:
+        pass
 
 
 
 
-def setUpPoint( event, Set ):
-    '''
-    This function track the mouse position from event ad setup or reset propper element
-    in the cross section array
-    '''
 
-    Col = int(event.x/dX)
-    Row = int(event.y/dY)
-
-    if event.x < canvas_width and event.y < canvas_height and event.x > 0 and event.y > 0:
-        inCanvas = True
-    else:
-        inCanvas = False
-
-
-    if Set and inCanvas:
-        actualPhase = phase.get()
-
-        if actualPhase == 3:
-            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
-            XSecArray[Row][Col] = 3
-        elif actualPhase == 2:
-            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
-            XSecArray[Row][Col] = 2
-        else:
-            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
-            XSecArray[Row][Col] = 1
-
-        try:
-            geomim.set_data(XSecArray)
-            plt.draw()
-        except:
-            pass
-
-    elif not(Set) and inCanvas:
-        w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
-        XSecArray[Row][Col] = 0
-        try:
-            geomim.set_data(XSecArray)
-            plt.draw()
-        except:
-            pass
+# def printTheArray(dataArray, canvas=w):
+#     '''
+#     This function allows to print the array back to the graphical board
+#     usefull for redraw or draw loaded data
+#     '''
+#
+#     # Let's check the size
+#     elementsInY = dataArray.shape[0]
+#     elementsInX = dataArray.shape[1]
+#
+#     # Now we calculate the propper dX and dY for this array
+#     canvasHeight = canvas.winfo_height()
+#     canvasWidth  = canvas.winfo_width()
+#
+#     dX = canvasWidth / elementsInX
+#     dY = canvasHeight / elementsInY
+#
+#     # Now we cleanUp the field
+#     csd.n_checkered(canvas, elementsInX, elementsInY)
+#
+#     for Row in range(elementsInY):
+#         for Col in range(elementsInX):
+#             if dataArray[Row][Col] == 1:
+#                 fillColor = "red"
+#                 w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
+#
+#             elif dataArray[Row][Col] == 2:
+#                 fillColor = "green"
+#                 w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
+#
+#             elif dataArray[Row][Col] == 3:
+#                 fillColor = "blue"
+#                 w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
 
 
-def printTheArray(dataArray):
-    '''
-    This function allows to print the array back to the graphical board
-    usefull for redraw or draw loaded data
-    '''
-    global dX, dY
-    # Let's check the size
-    elementsInY = dataArray.shape[0]
-    elementsInX = dataArray.shape[1]
-
-    # Now we calculate the propper dX and dY for this array
-    dX = (canvas_width / (elementsInX))
-    dY = (canvas_height / (elementsInY))
-
-    # Now we cleanUp the field
-    csd.n_checkered(w, dX, dY)
-
-    for Row in range(elementsInY):
-        for Col in range(elementsInX):
-            if dataArray[Row][Col] == 1:
-                fillColor = "red"
-            elif dataArray[Row][Col] == 2:
-                fillColor = "green"
-            elif dataArray[Row][Col] == 3:
-                fillColor = "blue"
-            else:
-                fillColor = "white"
-
-            w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
 
 def subdivideArray():
     '''
@@ -187,8 +173,9 @@ def subdivideArray():
 
         dXmm = dXmm/2
         dYmm = dYmm/2
+
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-        printTheArray(dataArray=XSecArray)
+        csd.n_printTheArray(dataArray=XSecArray, canvas=w)
     else:
         print('No further subdivisions make sense :)')
 
@@ -224,7 +211,7 @@ def simplifyArray():
         dYmm = dYmm*2
 
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-        printTheArray(dataArray=XSecArray)
+        csd.n_printTheArray(dataArray=XSecArray, canvas=w)
     else:
         print('No further simplification make sense :)')
 
@@ -481,8 +468,9 @@ def mainSetup():
     dYmm = 10
 
 
-    dX = int(canvas_width / elementsInX)
-    dY = int(canvas_height / elementsInY)
+
+    dX = (canvas_width / elementsInX)
+    dY = (canvas_height / elementsInY)
 
     XSecArray = np.zeros(shape=[elementsInY,elementsInX])
     resultsArray = np.zeros(shape=[elementsInY,elementsInX])
@@ -534,6 +522,7 @@ w = Canvas(master,
            height=canvas_height)
 w.configure(background='white')
 w.grid(row=1, column=1, columnspan=5, rowspan=10, sticky=W+E+N+S, padx=1, pady=1)
+
 
 
 # opis = Label(text='Cross Section\n Designer\n v0.1', height=15)
@@ -610,10 +599,10 @@ myEntryDx.bind("<FocusOut>", setParameters)
 
 
 
-w.bind( "<Button 1>", functools.partial(setUpPoint, Set=True))
-w.bind( "<Button 3>", functools.partial(setUpPoint, Set=False))
-w.bind( "<B1-Motion>", functools.partial(setUpPoint, Set=True))
-w.bind( "<B3-Motion>", functools.partial(setUpPoint, Set=False))
+w.bind( "<Button 1>", setPoint)
+w.bind( "<Button 3>", resetPoint)
+w.bind( "<B1-Motion>", setPoint)
+w.bind( "<B3-Motion>", resetPoint)
 
 w.bind( "<Button 2>", showXsecArray)
 
@@ -637,7 +626,10 @@ print_button.grid(row=0, column=5, padx=5, pady=0)
 master.resizable(width=False, height=False)
 master.update()
 
-csd.n_checkered(w, elementsInX, elementsInY)
+canvas_height = w.winfo_height()
+canvas_width  = w.winfo_width()
+
+csd.n_printTheArray(dataArray=XSecArray, canvas=w)
 
 
 print(phase)

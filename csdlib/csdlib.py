@@ -22,6 +22,48 @@ import os.path
 
 # ################# FUNCTIONS & PROCEDURES##############################
 
+
+# Calculations of mututal inductance between conductors
+def n_getMutualInductance(sizeX, sizeY, lenght, distance):
+    '''
+    Calculate the mutual inductance for the subconductor
+    It assumes rectangular shape. If you want put for circular shape just
+    make sizeX = sizeY = 2r
+
+    Inputs:
+    sizeX - width in [mm]
+    sizeY - height in [mm]
+    lenght - conductor lenght in [mm]
+    distance - distance between analyzed conductors in [mm]
+
+    output
+    M in [H]
+    '''
+    srednica = (sizeX+sizeY)/2
+
+    return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
+
+
+
+# Calculation of self inductance value function
+def n_getSelfInductance(sizeX, sizeY, lenght):
+    '''
+    Calculate the self inductance for the subconductor
+    It assumes rectangular shape. If you want put for circular shape just
+    make sizeX = sizeY = 2r
+
+    Inputs:
+    sizeX - width in [mm]
+    sizeY - height in [mm]
+    lenght - cinductor lenght in [mm]
+
+    output
+    L in [H]
+    '''
+    srednica = (sizeX+sizeY)/2
+    return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
+
+
 # Calculate the resistance value function
 def n_getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
     '''
@@ -132,3 +174,72 @@ def n_checkered(canvas, cutsX, cutsY):
     # horizontal lines at an interval of "line_distance" pixel
     for y in range(0,canvasHeight,line_distanceY):
         canvas.create_line(0, y, canvasWidth, y, fill="gray")
+
+
+# Functions that calculate the master impedance array for given geometry
+def n_getImpedanceArray(distanceArray, freq, dXmm, dYmm, lenght=1000, temperature=20, sigma20C=58e6, temCoRe=3.9e-3):
+    '''
+    Calculate the array of impedance as complex values for each element
+    Input:
+    distanceArray -  array of distances beetween the elements in [mm]
+    freq = frequency in Hz
+    dXmm - size of element in x [mm]
+    dYmm - size of element in Y [mm]
+    lenght - analyzed lenght in [mm] /default= 1000mm
+    temperature - temperature of the conductors in deg C / defoult = 20degC
+    sigma20C - conductivity of conductor material in 20degC in [S] / default = 58MS (copper)
+    temCoRe - temperature resistance coeficcient / default is copper
+    '''
+    omega = 2*np.pi*freq
+
+    impedanceArray = np.zeros((distanceArray.shape),dtype=np.complex_)
+    for X in range(distanceArray.shape[0]):
+        for Y in range(distanceArray.shape[0]):
+            if X == Y:
+                impedanceArray[Y, X] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe) + 1j*omega*n_getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght)
+            else:
+                impedanceArray[Y, X] = 1j*omega*n_getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, distance=distanceArray[Y,X])
+
+    return impedanceArray
+
+# Function for calculating resistance array
+def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20,sigma20C=58e6, temCoRe=3.9e-3):
+    '''
+    Calculate the array of resistance values for each element
+    Input:
+    elementsVector - The elements vector as delivered by arrayVectorize
+    dXmm - size of element in x [mm]
+    dYmm - size of element in Y [mm]
+    lenght - analyzed lenght in [mm] /default= 1000mm
+    temperature - temperature of the conductors in deg C / defoult = 20degC
+    sigma20C - conductivity of conductor material in 20degC in [S] / default = 58MS (copper)
+    temCoRe - temperature resistance coeficcient / default is copper
+    '''
+
+    resistanceArray = np.zeros(elementsVector.shape[0])
+    for element in range(elementsVector.shape[0]):
+
+        resistanceArray[element] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe)
+    return resistanceArray
+
+# Function that increase the resolution of the main geometry array
+def n_arraySlicer(inputArray, subDivisions=2):
+    '''
+    This function increase the resolution of the cross section array
+    inputArray -  oryginal geometry matrix
+    subDivisions -  number of subdivisions / factor of increase of resoluttion / default = 2
+    '''
+    return inputArray.repeat(subDivisions,axis=0).repeat(subDivisions,axis=1)
+
+# Functions that calculate module of complex number
+def n_getComplexModule(x):
+    '''
+    returns the module of complex number
+    input: x - complex number
+    if not a complex number is given as parameter then it return the x diretly
+    
+    '''
+    if isinstance(x, complex):
+        return np.sqrt(x.real**2 + x.imag**2)
+    else:
+        return x

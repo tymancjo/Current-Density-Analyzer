@@ -14,60 +14,6 @@ import os.path
 from csdlib import csdlib as csd
 
 
-def getSelfInductance(sizeX, sizeY, lenght):
-    '''
-    Calculate the self inductance for the subconductor
-    '''
-    srednica = (sizeX+sizeY)/2
-    return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
-
-def getMutualInductance(sizeX, sizeY, lenght, distance):
-    '''
-    Calculate the mutual inductance for the pait of subconductors
-    '''
-    srednica = (sizeX+sizeY)/2
-
-    return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
-
-def getImpedanceArray(distanceArray, freq):
-    '''
-    Calculate the array of impedance as complex values for each element
-    Input:
-    The elements vector as delivered by arrayVectorize
-    freq = frequency in Hz
-    '''
-    omega = 2*np.pi*freq
-
-    impedanceArray = np.zeros((distanceArray.shape),dtype=np.complex_)
-    for X in range(distanceArray.shape[0]):
-        for Y in range(distanceArray.shape[0]):
-            if X == Y:
-                impedanceArray[Y, X] = csd.n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3) + 1j*omega*getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000)
-            else:
-                impedanceArray[Y, X] = 1j*omega*getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000, distance=distanceArray[Y,X])
-
-    return impedanceArray
-
-
-def getResistanceArray(elementsVector):
-    '''
-    Calculate the array of resistance values for each element
-    Input:
-    The elements vector as delivered by arrayVectorize
-    '''
-
-    resistanceArray = np.zeros(elementsVector.shape[0])
-    for element in range(elementsVector.shape[0]):
-
-        resistanceArray[element] = csd.n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3)
-    return resistanceArray
-
-def arraySlicer(inputArray, subDivisions):
-    '''
-    This function increase the resolution of the cross section array
-    '''
-    return inputArray.repeat(subDivisions,axis=0).repeat(subDivisions,axis=1)
-
 def showXsecArray(event):
     '''
     This function print the array to the terminal
@@ -189,7 +135,6 @@ def setUpPoint( event, Set ):
             plt.draw()
         except:
             pass
-        # drawGeometryArray(XSecArray)
 
     elif not(Set) and inCanvas:
         w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
@@ -200,7 +145,6 @@ def setUpPoint( event, Set ):
         except:
             pass
 
-        # drawGeometryArray(XSecArray)
 
 def printTheArray(dataArray):
     '''
@@ -239,7 +183,7 @@ def subdivideArray():
     '''
     global XSecArray, dXmm, dYmm
     if dXmm > 1 and dYmm > 1:
-        XSecArray = arraySlicer(inputArray = XSecArray, subDivisions = 2)
+        XSecArray = csd.n_arraySlicer(inputArray = XSecArray, subDivisions = 2)
 
         dXmm = dXmm/2
         dYmm = dYmm/2
@@ -300,22 +244,6 @@ def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
 
     return localResultsArray
 
-
-def getComplexModule(x):
-    '''
-    returns the module of complex number
-    input: x - complex number
-    '''
-    return np.sqrt(x.real**2 + x.imag**2)
-
-
-def runMainAnalysisHT():
-    '''
-    Experimental function for HT calculation
-    '''
-    p=Pool(4)
-    p.map(vectorizeTheArray)
-
 def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
@@ -365,7 +293,7 @@ def vectorizeTheArray(*arg):
         print(elementsVector.shape)
         # print(elementsVector)
         # print(getDistancesArray(elementsVector))
-        admitanceMatrix = np.linalg.inv(getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency))
+        admitanceMatrix = np.linalg.inv(csd.n_getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency, dXmm=dXmm, dYmm=dYmm, temperature=temperature ))
         # print('Calculated addmintance Matrix:')
         # print(admitanceMatrix)
 
@@ -398,27 +326,25 @@ def vectorizeTheArray(*arg):
         print(currentPhC)
 
 
-        currentPhA = currentPhA / getComplexModule(np.sum(currentPhA))
-        currentPhB = currentPhB / getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
-        currentPhC = currentPhC / getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
+        currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
+        currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
+        currentPhC = currentPhC / csd.n_getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
 
-        print('sumy: '+str(getComplexModule(np.sum(currentPhA)))+' : '+str(getComplexModule(np.sum(currentPhB)))+' : '+str(getComplexModule(np.sum(currentPhC)))+' : ')
+        print('sumy: '+str(csd.n_getComplexModule(np.sum(currentPhA)))+' : '+str(csd.n_getComplexModule(np.sum(currentPhB)))+' : '+str(csd.n_getComplexModule(np.sum(currentPhC)))+' : ')
 
         print('sumy: '+str((np.sum(currentPhA)))+' : '+str((np.sum(currentPhB)))+' : '+str((np.sum(currentPhC)))+' : ')
 
         print('Current vector:')
         print(currentVector.shape)
         print('Current vector elements module:')
-        getMod = np.vectorize(getComplexModule)
+        getMod = np.vectorize(csd.n_getComplexModule)
 
         resultsCurrentVector = np.concatenate((currentPhA,currentPhB,currentPhC), axis=0)
 
-        # print(getMod(resultsCurrentVector))
-        # print(np.sum(resultsCurrentVector))
-        # print(getComplexModule(np.sum(resultsCurrentVector)))
+
 
         resultsCurrentVector = getMod(resultsCurrentVector)
-        resistanceVector = getResistanceArray(elementsVector)
+        resistanceVector = csd.n_getResistanceArray(elementsVector, dXmm=dXmm, dYmm=dYmm, temperature=temperature)
         resultsCurrentVector *= curentRMS
 
         # print('vector currents shape')

@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 from tkinter import *
 from tkinter import filedialog, messagebox
 
-import functools
 import numpy as np
 
 import os.path
+import time
 
 # Importing local library
 from csdlib import csdlib as csd
@@ -124,49 +124,14 @@ def resetPoint(event):
 
 
 
-
-
-# def printTheArray(dataArray, canvas=w):
-#     '''
-#     This function allows to print the array back to the graphical board
-#     usefull for redraw or draw loaded data
-#     '''
-#
-#     # Let's check the size
-#     elementsInY = dataArray.shape[0]
-#     elementsInX = dataArray.shape[1]
-#
-#     # Now we calculate the propper dX and dY for this array
-#     canvasHeight = canvas.winfo_height()
-#     canvasWidth  = canvas.winfo_width()
-#
-#     dX = canvasWidth / elementsInX
-#     dY = canvasHeight / elementsInY
-#
-#     # Now we cleanUp the field
-#     csd.n_checkered(canvas, elementsInX, elementsInY)
-#
-#     for Row in range(elementsInY):
-#         for Col in range(elementsInX):
-#             if dataArray[Row][Col] == 1:
-#                 fillColor = "red"
-#                 w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
-#
-#             elif dataArray[Row][Col] == 2:
-#                 fillColor = "green"
-#                 w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
-#
-#             elif dataArray[Row][Col] == 3:
-#                 fillColor = "blue"
-#                 w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
-
-
-
 def subdivideArray():
     '''
     This function is logical wrapper for array slicer
     it take care to not loose any entered data from the modufied array
     '''
+
+    start= time.clock() #just to check the time
+
     global XSecArray, dXmm, dYmm
     if dXmm > 1 and dYmm > 1:
         XSecArray = csd.n_arraySlicer(inputArray = XSecArray, subDivisions = 2)
@@ -183,6 +148,8 @@ def subdivideArray():
     myEntryDx.insert(END,str(dXmm))
     setParameters()
 
+    end= time.clock()
+    print('subdiv time :'+str(end - start))
 
 def simplifyArray():
     '''

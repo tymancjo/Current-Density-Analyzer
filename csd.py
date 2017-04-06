@@ -5,197 +5,20 @@ import matplotlib.pyplot as plt
 from tkinter import *
 from tkinter import filedialog, messagebox
 
-import functools
 import numpy as np
 
 import os.path
+import time
 
+# Importing local library
+from csdlib import csdlib as csd
 
-def checkered(canvas, line_distanceX, line_distanceY):
-    '''
-    This function clean the board and draw grid
-    '''
-    # Cleaning up the whole space
-    w.create_rectangle(0, 0, canvas_width, canvas_height, fill="white", outline="gray")
-    # vertical lines at an interval of "line_distance" pixel
-    for x in range(0,canvas_width,int(line_distanceX)):
-        canvas.create_line(x, 0, x, canvas_height, fill="gray")
-    # horizontal lines at an interval of "line_distance" pixel
-    for y in range(0,canvas_height,int(line_distanceY)):
-        canvas.create_line(0, y, canvas_width, y, fill="gray")
-
-def arrayVectorize(inputArray,phaseNumber):
-    '''
-    Desription:
-    This function returns vector of 4 dimension vectors that deliver
-
-    input:
-    inputArray = 3D array thet describe by 1's position of
-    conductors in cross section
-
-    Output:
-    [0,1,2,3]
-
-    0 - Oryginal inputArray geometry origin Row for the set cell
-    1 - Oryginal inputArray geometry origin Col for the set cell
-    2 - X position in mm of the current element
-    3 - Y position in mm of the current element
-
-    Number of such [A,B,C,D] elements is equal to the number of defined
-    conductor cells in geometry
-
-    '''
-    # Let's check the size of the array
-    elementsInY = inputArray.shape[0]
-    elementsInX = inputArray.shape[1]
-
-    #lets define the empty vectorArray
-    vectorArray = []
-
-    #lets go for each input array position and check if is set
-    #and if yes then put it into putput vectorArray
-    for Row in range(elementsInY):
-        for Col in range(elementsInX):
-            if inputArray[Row][Col] == phaseNumber:
-                # Let's calculate the X and Y coordinates
-                coordinateY = (0.5 + Row) * dYmm
-                coordinateX = (0.5 + Col) * dXmm
-
-                vectorArray.append([Row,Col,coordinateX,coordinateY])
-
-    return np.array(vectorArray)
-
-def getDistancesArray(inputVector):
-    '''
-    This function calculate the array of distances between every conductors element
-    Input:
-    the vector of conductor elements as delivered by vectorizeTheArray
-    '''
-    # lets check for the numbers of elements
-    elements = inputVector.shape[0]
-    print(elements)
-    # Define the outpur array
-    distanceArray = np.zeros((elements, elements))
-
-    for x in range(elements):
-        for y in range(elements):
-            if x != y:
-                posXa =  inputVector[y][2]
-                posYa =  inputVector[y][3]
-
-                posXb =  inputVector[x][2]
-                posYb =  inputVector[x][3]
-
-                distanceArray[y,x] = np.sqrt((posXa-posXb)**2 + (posYa-posYb)**2)
-            else:
-                distanceArray[y,x] = 0
-    return distanceArray
-
-def getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
-    '''
-    Calculate the resistance of the al'a square shape in given temperature
-    All dimensions in mm
-    temperature in deg C
-
-    output:
-    Resistance in Ohm
-    '''
-    return (lenght/(sizeX*sizeY*sigma20C)) * 1e3 *(1+temCoRe*(temp-20))
-
-
-def getSelfInductance(sizeX, sizeY, lenght):
-    '''
-    Calculate the self inductance for the subconductor
-    '''
-    srednica = (sizeX+sizeY)/2
-    return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
-
-def getMutualInductance(sizeX, sizeY, lenght, distance):
-    '''
-    Calculate the mutual inductance for the pait of subconductors
-    '''
-    srednica = (sizeX+sizeY)/2
-
-    return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
-
-def getImpedanceArray(distanceArray, freq):
-    '''
-    Calculate the array of impedance as complex values for each element
-    Input:
-    The elements vector as delivered by arrayVectorize
-    freq = frequency in Hz
-    '''
-    omega = 2*np.pi*freq
-
-    impedanceArray = np.zeros((distanceArray.shape),dtype=np.complex_)
-    for X in range(distanceArray.shape[0]):
-        for Y in range(distanceArray.shape[0]):
-            if X == Y:
-                impedanceArray[Y, X] = getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3) + 1j*omega*getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000)
-            else:
-                impedanceArray[Y, X] = 1j*omega*getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=1000, distance=distanceArray[Y,X])
-
-    return impedanceArray
-
-
-def getResistanceArray(elementsVector):
-    '''
-    Calculate the array of resistance values for each element
-    Input:
-    The elements vector as delivered by arrayVectorize
-    '''
-
-    resistanceArray = np.zeros(elementsVector.shape[0])
-    for element in range(elementsVector.shape[0]):
-
-        resistanceArray[element] = getResistance(sizeX=dXmm, sizeY=dYmm, lenght=1000, temp=temperature, sigma20C=58e6, temCoRe=3.9e-3)
-    return resistanceArray
-
-def arraySlicer(inputArray, subDivisions):
-    '''
-    This function increase the resolution of the cross section array
-    '''
-    return inputArray.repeat(subDivisions,axis=0).repeat(subDivisions,axis=1)
 
 def showXsecArray(event):
     '''
     This function print the array to the terminal
     '''
     print(XSecArray)
-
-
-def displayArrayAsImage():
-    '''
-    This function print the array to termianl and shows additional info of the
-    dX and dy size in mm
-    and redraw the array on the graphical working area
-    '''
-    print(XSecArray)
-    print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-    printTheArray(XSecArray)
-
-    drawGeometryArray(XSecArray)
-
-def clearArrayAndDisplay():
-    '''
-    This function erase the datat form array and return it back to initial
-    setup
-    '''
-    global XSecArray, dX, dY
-    if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
-        q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
-        if q == 'yes':
-            XSecArray *= 0
-            #checkered(w, dX, dY)
-            mainSetup()
-    else:
-            XSecArray *= 0
-            #checkered(w, dX, dY)
-            mainSetup()
-    checkered(w, dX, dY)
-    myEntryDx.delete(0,END)
-    myEntryDx.insert(END,str(dXmm))
-    setParameters()
 
 def saveArrayToFile():
     '''
@@ -205,6 +28,12 @@ def saveArrayToFile():
     filename = os.path.normpath(filename)
     if filename:
         saveTheData(filename)
+def saveTheData(filename):
+    '''
+    This is the subfunction for saving data
+    '''
+    print('Saving to file :' + filename)
+    np.save(filename, XSecArray)
 
 def loadArrayFromFile():
     '''
@@ -222,17 +51,6 @@ def loadArrayFromFile():
     else:
         if filename:
             loadTheData(filename)
-
-
-
-
-def saveTheData(filename):
-    '''
-    This is the subfunction for saving data
-    '''
-    print('Saving to file :' + filename)
-    np.save(filename, XSecArray)
-
 def loadTheData(filename):
     '''
     This is sub function to load data
@@ -240,100 +58,85 @@ def loadTheData(filename):
     global XSecArray
     print('Readinf from file :' + filename)
     XSecArray =  np.load(filename)
-    printTheArray(XSecArray)
+    csd.n_printTheArray(XSecArray, canvas=w)
 
-
-
-
-def setUpPoint( event, Set ):
+def displayArrayAsImage():
     '''
-    This function track the mouse position from event ad setup or reset propper element
-    in the cross section array
+    This function print the array to termianl and shows additional info of the
+    dX and dy size in mm
+    and redraw the array on the graphical working area
     '''
+    print(XSecArray)
+    print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
+    csd.n_printTheArray(XSecArray, canvas=w)
 
-    Col = int(event.x/dX)
-    Row = int(event.y/dY)
+    drawGeometryArray(XSecArray)
 
-    if event.x < canvas_width and event.y < canvas_height and event.x > 0 and event.y > 0:
-        inCanvas = True
+def setPoint(event):
+    '''Trigger procesdure for GUI action'''
+    actualPhase = phase.get()
+    csd.n_setUpPoint(event, Set=actualPhase, dataArray=XSecArray, canvas=w)
+
+    #  Plotting on CAD view if exist
+    try:
+        geomim.set_data(XSecArray)
+        plt.draw()
+    except:
+        pass
+
+def resetPoint(event):
+    '''Trigger procesdure for GUI action'''
+    csd.n_setUpPoint(event, Set=0, dataArray=XSecArray, canvas=w)
+
+    #  Plotting on CAD view if exist
+    try:
+        geomim.set_data(XSecArray)
+        plt.draw()
+    except:
+        pass
+
+def clearArrayAndDisplay():
+    '''
+    This function erase the datat form array and return it back to initial
+    setup
+    '''
+    global XSecArray, dX, dY
+    if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
+        q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
+        if q == 'yes':
+            XSecArray = np.zeros(XSecArray.shape)
+            #checkered(w, dX, dY)
+            mainSetup()
     else:
-        inCanvas = False
+            XSecArray *= 0
+            #checkered(w, dX, dY)
+            mainSetup()
+    csd.n_checkered(w, elementsInX, elementsInY)
+    myEntryDx.delete(0,END)
+    myEntryDx.insert(END,str(dXmm))
+    setParameters()
 
 
-    if Set and inCanvas:
-        actualPhase = phase.get()
 
-        if actualPhase == 3:
-            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
-            XSecArray[Row][Col] = 3
-        elif actualPhase == 2:
-            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
-            XSecArray[Row][Col] = 2
-        else:
-            w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
-            XSecArray[Row][Col] = 1
 
-        try:
-            geomim.set_data(XSecArray)
-            plt.draw()
-        except:
-            pass
-        # drawGeometryArray(XSecArray)
-
-    elif not(Set) and inCanvas:
-        w.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
-        XSecArray[Row][Col] = 0
-        try:
-            geomim.set_data(XSecArray)
-            plt.draw()
-        except:
-            pass
-
-        # drawGeometryArray(XSecArray)
-
-def printTheArray(dataArray):
-    '''
-    This function allows to print the array back to the graphical board
-    usefull for redraw or draw loaded data
-    '''
-    global dX, dY
-    # Let's check the size
-    elementsInY = dataArray.shape[0]
-    elementsInX = dataArray.shape[1]
-
-    # Now we calculate the propper dX and dY for this array
-    dX = (canvas_width / (elementsInX))
-    dY = (canvas_height / (elementsInY))
-
-    # Now we cleanUp the field
-    checkered(w, dX, dY)
-
-    for Row in range(elementsInY):
-        for Col in range(elementsInX):
-            if dataArray[Row][Col] == 1:
-                fillColor = "red"
-            elif dataArray[Row][Col] == 2:
-                fillColor = "green"
-            elif dataArray[Row][Col] == 3:
-                fillColor = "blue"
-            else:
-                fillColor = "white"
-
-            w.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
 
 def subdivideArray():
     '''
     This function is logical wrapper for array slicer
     it take care to not loose any entered data from the modufied array
     '''
+
+    start= time.clock() #just to check the time
+
     global XSecArray, dXmm, dYmm
     if dXmm > 1 and dYmm > 1:
-        XSecArray = arraySlicer(inputArray = XSecArray, subDivisions = 2)
+        XSecArray = csd.n_arraySlicer(inputArray = XSecArray, subDivisions = 2)
 
         dXmm = dXmm/2
         dYmm = dYmm/2
+
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-        printTheArray(dataArray=XSecArray)
+        csd.n_printTheArray(dataArray=XSecArray, canvas=w)
     else:
         print('No further subdivisions make sense :)')
 
@@ -341,6 +144,8 @@ def subdivideArray():
     myEntryDx.insert(END,str(dXmm))
     setParameters()
 
+    end= time.clock()
+    print('subdiv time :'+str(end - start))
 
 def simplifyArray():
     '''
@@ -349,8 +154,8 @@ def simplifyArray():
     '''
     global XSecArray, dXmm, dYmm
 
-    if dXmm < 15 and dYmm < 15:
-
+    if dXmm < 30 and dYmm < 30:
+        # Below was working just fine for single phase solver where only 0 or 1 was in the array
         # if np.sum(XSecArray) == 0:
         #     XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
         # else:
@@ -369,7 +174,7 @@ def simplifyArray():
         dYmm = dYmm*2
 
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-        printTheArray(dataArray=XSecArray)
+        csd.n_printTheArray(dataArray=XSecArray, canvas=w)
     else:
         print('No further simplification make sense :)')
 
@@ -378,32 +183,6 @@ def simplifyArray():
     setParameters()
 
 
-def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
-
-    localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
-
-    vectorIndex = 0
-    for result in resultsVector:
-        localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
-        vectorIndex +=1
-
-    return localResultsArray
-
-
-def getComplexModule(x):
-    '''
-    returns the module of complex number
-    input: x - complex number
-    '''
-    return np.sqrt(x.real**2 + x.imag**2)
-
-
-def runMainAnalysisHT():
-    '''
-    Experimental function for HT calculation
-    '''
-    p=Pool(4)
-    p.map(vectorizeTheArray)
 
 def vectorizeTheArray(*arg):
     '''
@@ -421,9 +200,9 @@ def vectorizeTheArray(*arg):
     #lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
         # We get vectors for each phase`
-        elementsVectorPhA = arrayVectorize(inputArray=XSecArray, phaseNumber=1)
-        elementsVectorPhB = arrayVectorize(inputArray=XSecArray, phaseNumber=2)
-        elementsVectorPhC = arrayVectorize(inputArray=XSecArray, phaseNumber=3)
+        elementsVectorPhA = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm)
+        elementsVectorPhB = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
+        elementsVectorPhC = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
         # From here is the rest of calulations
 
         #memorize the number of elements in each phase
@@ -452,11 +231,8 @@ def vectorizeTheArray(*arg):
 
 
         print(elementsVector.shape)
-        # print(elementsVector)
-        # print(getDistancesArray(elementsVector))
-        admitanceMatrix = np.linalg.inv(getImpedanceArray(getDistancesArray(elementsVector),freq=frequency))
-        # print('Calculated addmintance Matrix:')
-        # print(admitanceMatrix)
+
+        admitanceMatrix = np.linalg.inv(csd.n_getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency, dXmm=dXmm, dYmm=dYmm, temperature=temperature ))
 
         #Let's put here some voltage vector
         vA = np.ones(elementsPhaseA)
@@ -466,67 +242,52 @@ def vectorizeTheArray(*arg):
 
         voltageVector = np.concatenate((vA,vB,vC), axis=0)
 
-        print('Voltage vector:')
-        print(voltageVector.shape)
-
         # Lets calculate the currebt vector as U = ZI >> Z^-1 U = I
         # and Y = Z^-1
         #so finally I = YU - as matrix multiplication goes
 
         currentVector = np.matmul(admitanceMatrix, voltageVector)
-        print('pierwotnie obliczony I')
-        print(currentVector)
+
         # And now we need to get solution for each phase to normalize it
         currentPhA = currentVector[0:elementsPhaseA]
         currentPhB = currentVector[elementsPhaseA:elementsPhaseA+elementsPhaseB:1]
         currentPhC = currentVector[elementsPhaseA+elementsPhaseB:]
 
-        print('wektory rozdzielone')
-        print(currentPhA)
-        print(currentPhB)
-        print(currentPhC)
+        # Normalize the solution vectors fr each phase
+        currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
+        currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
+        currentPhC = currentPhC / csd.n_getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
 
-
-        currentPhA = currentPhA / getComplexModule(np.sum(currentPhA))
-        currentPhB = currentPhB / getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
-        currentPhC = currentPhC / getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
-
-        print('sumy: '+str(getComplexModule(np.sum(currentPhA)))+' : '+str(getComplexModule(np.sum(currentPhB)))+' : '+str(getComplexModule(np.sum(currentPhC)))+' : ')
+        # Print out he results currents in each phase
+        print('sumy: '+str(csd.n_getComplexModule(np.sum(currentPhA)))+' : '+str(csd.n_getComplexModule(np.sum(currentPhB)))+' : '+str(csd.n_getComplexModule(np.sum(currentPhC)))+' : ')
 
         print('sumy: '+str((np.sum(currentPhA)))+' : '+str((np.sum(currentPhB)))+' : '+str((np.sum(currentPhC)))+' : ')
 
         print('Current vector:')
         print(currentVector.shape)
         print('Current vector elements module:')
-        getMod = np.vectorize(getComplexModule)
+        getMod = np.vectorize(csd.n_getComplexModule)
 
         resultsCurrentVector = np.concatenate((currentPhA,currentPhB,currentPhC), axis=0)
 
-        # print(getMod(resultsCurrentVector))
-        # print(np.sum(resultsCurrentVector))
-        # print(getComplexModule(np.sum(resultsCurrentVector)))
-
         resultsCurrentVector = getMod(resultsCurrentVector)
-        resistanceVector = getResistanceArray(elementsVector)
+        resistanceVector = csd.n_getResistanceArray(elementsVector, dXmm=dXmm, dYmm=dYmm, temperature=temperature)
         resultsCurrentVector *= curentRMS
-
-        # print('vector currents shape')
-        # print(resultsCurrentVector.shape)
-        # print('Resistance shape')
-        # print(resistanceVector.shape)
 
         powerLossesVector = resistanceVector * resultsCurrentVector**2
         powerLosses = np.sum(powerLossesVector)
+        print(powerLosses)
+        # Converting results to form of density
         powerLossesVector /= (dXmm*dYmm)
 
-
+        # Converting resutls to current density
         resultsCurrentVector /= (dXmm*dYmm)
-        print(powerLosses)
 
-        resultsArray = recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
-        resultsArrayPower = recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
+        # Recreating the solution to form of cross section array
+        resultsArray = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
+        resultsArrayPower = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
 
-
+        #Showing the results
         showResults()
 
 def drawGeometryArray(theArrayToDisplay):
@@ -644,8 +405,9 @@ def mainSetup():
     dYmm = 10
 
 
-    dX = int(canvas_width / elementsInX)
-    dY = int(canvas_height / elementsInY)
+
+    dX = (canvas_width / elementsInX)
+    dY = (canvas_height / elementsInY)
 
     XSecArray = np.zeros(shape=[elementsInY,elementsInX])
     resultsArray = np.zeros(shape=[elementsInY,elementsInX])
@@ -697,6 +459,7 @@ w = Canvas(master,
            height=canvas_height)
 w.configure(background='white')
 w.grid(row=1, column=1, columnspan=5, rowspan=10, sticky=W+E+N+S, padx=1, pady=1)
+
 
 
 # opis = Label(text='Cross Section\n Designer\n v0.1', height=15)
@@ -773,10 +536,10 @@ myEntryDx.bind("<FocusOut>", setParameters)
 
 
 
-w.bind( "<Button 1>", functools.partial(setUpPoint, Set=True))
-w.bind( "<Button 3>", functools.partial(setUpPoint, Set=False))
-w.bind( "<B1-Motion>", functools.partial(setUpPoint, Set=True))
-w.bind( "<B3-Motion>", functools.partial(setUpPoint, Set=False))
+w.bind( "<Button 1>", setPoint)
+w.bind( "<Button 3>", resetPoint)
+w.bind( "<B1-Motion>", setPoint)
+w.bind( "<B3-Motion>", resetPoint)
 
 w.bind( "<Button 2>", showXsecArray)
 
@@ -798,9 +561,13 @@ print_button.grid(row=0, column=5, padx=5, pady=0)
 
 
 master.resizable(width=False, height=False)
+master.update()
 
+canvas_height = w.winfo_height()
+canvas_width  = w.winfo_width()
 
-checkered(w, dX, dY)
+csd.n_printTheArray(dataArray=XSecArray, canvas=w)
+
 
 print(phase)
 

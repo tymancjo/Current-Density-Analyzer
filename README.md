@@ -18,6 +18,7 @@ You should be good to go!
 If something is not working – let me know!
 
 Run the app:
+
 ***Please note that the screenshots are from previous version of the app. Current one have options for 3 phase analysis. But for information purposes should be just fine***
 1.	Navigate to the directory where you unzipped the app files:
 ![Folder with App](readme_img/92.png)

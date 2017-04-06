@@ -10,14 +10,15 @@ Installation:
 1.	If you already have python installed you can jump to point 2
 a.	Install on your system the anaconda package from: https://www.continuum.io/downloads
 b.	This should be all you need to do.
-2.	Download the CSD app script from GitHub: 
-a.	https://github.com/tymancjo/Current-Density-Analyzer/blob/master/Relese_for_beta/CSDapp.zip
-b.	Unzip the content to a directory of your choice.
+2.	Download the CSD app script from GitHub (use the Clone or Download button and take a ZIP or clone the repo depending on your preferences): 
+a.	https://github.com/tymancjo/Current-Density-Analyzer/tree/master
+b.	If you get ZIP then Unzip the content to a directory of your choice. If you colone the repo - you will know how to handle this ;)
 
 You should be good to go!
-If anything is not working – let me know!
+If something is not working – let me know!
 
 Run the app:
+***Please note that the screenshots are from previous version of the app. Current one have options for 3 phase analysis. But for information purposes should be just fine***
 1.	Navigate to the directory where you unzipped the app files:
 ![Folder with App](readme_img/92.png)
 
@@ -29,6 +30,7 @@ Run the app:
 4.	Now you can start using the app. All your actions are done in the main app window. Terminal will display some data that reflect particular calculations steps. But this is nothing you need to worry about.
 
 Using the app:
+
 1.	Let’s use the app for simple case of one copper bar
 2.	Main window description:
 ![Main window description](readme_img/94.png)

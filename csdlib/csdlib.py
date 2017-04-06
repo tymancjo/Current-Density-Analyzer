@@ -328,3 +328,21 @@ def n_setUpPoint( event, Set, dataArray, canvas):
     elif Set==0 and inCanvas:
         canvas.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
         dataArray[Row][Col] = 0
+
+# Function that put back together the solution vectr back to represent the crss section shape array
+def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
+    '''
+    Functions returns recreate cross section array with mapperd solution results
+    Inputs:
+    elementsVector - vector of crossection elements as created by the n_arrayVectorize
+    resultsVector - vectr with results values calculated base on the elementsVector
+    initialGeometryArray - the array that contains the cross section geometry model
+    '''
+    localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
+
+    vectorIndex = 0
+    for result in resultsVector:
+        localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
+        vectorIndex +=1
+
+    return localResultsArray

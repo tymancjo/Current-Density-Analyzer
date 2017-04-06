@@ -20,40 +20,6 @@ def showXsecArray(event):
     '''
     print(XSecArray)
 
-
-def displayArrayAsImage():
-    '''
-    This function print the array to termianl and shows additional info of the
-    dX and dy size in mm
-    and redraw the array on the graphical working area
-    '''
-    print(XSecArray)
-    print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-    csd.n_printTheArray(XSecArray, canvas=w)
-
-    drawGeometryArray(XSecArray)
-
-def clearArrayAndDisplay():
-    '''
-    This function erase the datat form array and return it back to initial
-    setup
-    '''
-    global XSecArray, dX, dY
-    if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
-        q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
-        if q == 'yes':
-            XSecArray *= 0
-            #checkered(w, dX, dY)
-            mainSetup()
-    else:
-            XSecArray *= 0
-            #checkered(w, dX, dY)
-            mainSetup()
-    csd.n_checkered(w, elementsInX, elementsInY)
-    myEntryDx.delete(0,END)
-    myEntryDx.insert(END,str(dXmm))
-    setParameters()
-
 def saveArrayToFile():
     '''
     This function saves the data of cross section array to file
@@ -62,6 +28,12 @@ def saveArrayToFile():
     filename = os.path.normpath(filename)
     if filename:
         saveTheData(filename)
+def saveTheData(filename):
+    '''
+    This is the subfunction for saving data
+    '''
+    print('Saving to file :' + filename)
+    np.save(filename, XSecArray)
 
 def loadArrayFromFile():
     '''
@@ -79,17 +51,6 @@ def loadArrayFromFile():
     else:
         if filename:
             loadTheData(filename)
-
-
-
-
-def saveTheData(filename):
-    '''
-    This is the subfunction for saving data
-    '''
-    print('Saving to file :' + filename)
-    np.save(filename, XSecArray)
-
 def loadTheData(filename):
     '''
     This is sub function to load data
@@ -98,6 +59,18 @@ def loadTheData(filename):
     print('Readinf from file :' + filename)
     XSecArray =  np.load(filename)
     csd.n_printTheArray(XSecArray, canvas=w)
+
+def displayArrayAsImage():
+    '''
+    This function print the array to termianl and shows additional info of the
+    dX and dy size in mm
+    and redraw the array on the graphical working area
+    '''
+    print(XSecArray)
+    print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
+    csd.n_printTheArray(XSecArray, canvas=w)
+
+    drawGeometryArray(XSecArray)
 
 def setPoint(event):
     '''Trigger procesdure for GUI action'''
@@ -121,6 +94,29 @@ def resetPoint(event):
         plt.draw()
     except:
         pass
+
+def clearArrayAndDisplay():
+    '''
+    This function erase the datat form array and return it back to initial
+    setup
+    '''
+    global XSecArray, dX, dY
+    if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
+        q = messagebox.askquestion("Delete", "This will delete current shape. Are You Sure?", icon='warning')
+        if q == 'yes':
+            XSecArray = np.zeros(XSecArray.shape)
+            #checkered(w, dX, dY)
+            mainSetup()
+    else:
+            XSecArray *= 0
+            #checkered(w, dX, dY)
+            mainSetup()
+    csd.n_checkered(w, elementsInX, elementsInY)
+    myEntryDx.delete(0,END)
+    myEntryDx.insert(END,str(dXmm))
+    setParameters()
+
+
 
 
 
@@ -158,8 +154,8 @@ def simplifyArray():
     '''
     global XSecArray, dXmm, dYmm
 
-    if dXmm < 15 and dYmm < 15:
-
+    if dXmm < 30 and dYmm < 30:
+        # Below was working just fine for single phase solver where only 0 or 1 was in the array
         # if np.sum(XSecArray) == 0:
         #     XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
         # else:
@@ -187,16 +183,6 @@ def simplifyArray():
     setParameters()
 
 
-def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
-
-    localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
-
-    vectorIndex = 0
-    for result in resultsVector:
-        localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
-        vectorIndex +=1
-
-    return localResultsArray
 
 def vectorizeTheArray(*arg):
     '''
@@ -245,11 +231,8 @@ def vectorizeTheArray(*arg):
 
 
         print(elementsVector.shape)
-        # print(elementsVector)
-        # print(getDistancesArray(elementsVector))
+
         admitanceMatrix = np.linalg.inv(csd.n_getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency, dXmm=dXmm, dYmm=dYmm, temperature=temperature ))
-        # print('Calculated addmintance Matrix:')
-        # print(admitanceMatrix)
 
         #Let's put here some voltage vector
         vA = np.ones(elementsPhaseA)
@@ -259,31 +242,23 @@ def vectorizeTheArray(*arg):
 
         voltageVector = np.concatenate((vA,vB,vC), axis=0)
 
-        print('Voltage vector:')
-        print(voltageVector.shape)
-
         # Lets calculate the currebt vector as U = ZI >> Z^-1 U = I
         # and Y = Z^-1
         #so finally I = YU - as matrix multiplication goes
 
         currentVector = np.matmul(admitanceMatrix, voltageVector)
-        print('pierwotnie obliczony I')
-        print(currentVector)
+
         # And now we need to get solution for each phase to normalize it
         currentPhA = currentVector[0:elementsPhaseA]
         currentPhB = currentVector[elementsPhaseA:elementsPhaseA+elementsPhaseB:1]
         currentPhC = currentVector[elementsPhaseA+elementsPhaseB:]
 
-        print('wektory rozdzielone')
-        print(currentPhA)
-        print(currentPhB)
-        print(currentPhC)
-
-
+        # Normalize the solution vectors fr each phase
         currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
         currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB)) #*(-0.5 + (np.sqrt(3)/2)*1j))
         currentPhC = currentPhC / csd.n_getComplexModule(np.sum(currentPhC)) #*(-0.5 - (np.sqrt(3)/2)*1j))
 
+        # Print out he results currents in each phase
         print('sumy: '+str(csd.n_getComplexModule(np.sum(currentPhA)))+' : '+str(csd.n_getComplexModule(np.sum(currentPhB)))+' : '+str(csd.n_getComplexModule(np.sum(currentPhC)))+' : ')
 
         print('sumy: '+str((np.sum(currentPhA)))+' : '+str((np.sum(currentPhB)))+' : '+str((np.sum(currentPhC)))+' : ')
@@ -295,29 +270,24 @@ def vectorizeTheArray(*arg):
 
         resultsCurrentVector = np.concatenate((currentPhA,currentPhB,currentPhC), axis=0)
 
-
-
         resultsCurrentVector = getMod(resultsCurrentVector)
         resistanceVector = csd.n_getResistanceArray(elementsVector, dXmm=dXmm, dYmm=dYmm, temperature=temperature)
         resultsCurrentVector *= curentRMS
 
-        # print('vector currents shape')
-        # print(resultsCurrentVector.shape)
-        # print('Resistance shape')
-        # print(resistanceVector.shape)
-
         powerLossesVector = resistanceVector * resultsCurrentVector**2
         powerLosses = np.sum(powerLossesVector)
+        print(powerLosses)
+        # Converting results to form of density
         powerLossesVector /= (dXmm*dYmm)
 
-
+        # Converting resutls to current density
         resultsCurrentVector /= (dXmm*dYmm)
-        print(powerLosses)
 
-        resultsArray = recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
-        resultsArrayPower = recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
+        # Recreating the solution to form of cross section array
+        resultsArray = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
+        resultsArrayPower = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
 
-
+        #Showing the results
         showResults()
 
 def drawGeometryArray(theArrayToDisplay):

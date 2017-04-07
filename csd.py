@@ -107,14 +107,19 @@ def clearArrayAndDisplay():
             XSecArray = np.zeros(XSecArray.shape)
             #checkered(w, dX, dY)
             mainSetup()
+            csd.n_checkered(w, elementsInX, elementsInY)
+            myEntryDx.delete(0,END)
+            myEntryDx.insert(END,str(dXmm))
+            setParameters()
+
     else:
             XSecArray *= 0
             #checkered(w, dX, dY)
             mainSetup()
-    csd.n_checkered(w, elementsInX, elementsInY)
-    myEntryDx.delete(0,END)
-    myEntryDx.insert(END,str(dXmm))
-    setParameters()
+            csd.n_checkered(w, elementsInX, elementsInY)
+            myEntryDx.delete(0,END)
+            myEntryDx.insert(END,str(dXmm))
+            setParameters()
 
 
 
@@ -232,7 +237,7 @@ def vectorizeTheArray(*arg):
 
         print(elementsVector.shape)
 
-        admitanceMatrix = np.linalg.inv(csd.n_getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency, dXmm=dXmm, dYmm=dYmm, temperature=temperature ))
+        admitanceMatrix = np.linalg.inv(csd.n_getImpedanceArray(csd.n_getDistancesArray(elementsVector),freq=frequency, dXmm=dXmm, dYmm=dYmm, temperature=temperature))
 
         #Let's put here some voltage vector
         vA = np.ones(elementsPhaseA)
@@ -354,7 +359,7 @@ def showResults():
         plotHeight = (resultsArrayDisplay.shape[0])*dYmm
 
         fig = plt.figure()
-        if plotWidth < plotHeight:
+        if plotWidth <= plotHeight:
             ax = fig.add_subplot(1,2,1)
             ax2 = fig.add_subplot(1,2,2)
         else:

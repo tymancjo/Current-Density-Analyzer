@@ -218,7 +218,6 @@ def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20
 
     resistanceArray = np.zeros(elementsVector.shape[0])
     for element in range(elementsVector.shape[0]):
-
         resistanceArray[element] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe)
     return resistanceArray
 
@@ -340,9 +339,7 @@ def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
     '''
     localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
 
-    vectorIndex = 0
-    for result in resultsVector:
+    for vectorIndex, result in enumerate(resultsVector):
         localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
-        vectorIndex +=1
 
     return localResultsArray

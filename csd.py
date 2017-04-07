@@ -60,6 +60,82 @@ def loadTheData(filename):
     XSecArray =  np.load(filename)
     csd.n_printTheArray(XSecArray, canvas=w)
 
+def zoomInArray(inputArray, zoomSize=2, startX=0, startY=0):
+
+    oryginalX = inputArray.shape[0]
+    oryginalY = inputArray.shape[1]
+
+    NewX = oryginalX // zoomSize
+    NewY = oryginalY // zoomSize
+
+    if startX > (oryginalX-NewX):
+        startX = oryginalX-NewX
+
+    if startY > (oryginalY-NewY):
+        startY = oryginalY-NewY
+
+    return inputArray[startY:startY+NewY,startX:startX+NewX]
+
+def zoomIn():
+    global globalZoom
+
+    if globalZoom < 5:
+        globalZoom +=1
+
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+def zoomOut():
+    global globalZoom, globalX, globalY
+
+    if globalZoom > 1:
+        globalZoom -=1
+
+    if globalX > 0:
+        globalX -=1
+
+    if globalY > 0:
+        globalY -=1
+
+    if globalZoom == 1:
+        globalX = 0
+        globalY = 0
+
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+
+def zoomL():
+    global globalX, globalY
+
+    globalX -= 2
+    if globalX < 0:
+        globalX =0
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+
+def zoomR():
+    global globalX, globalY
+
+    globalX += 2
+
+    if globalX > XSecArray.shape[1]-XSecArray.shape[1]//globalZoom:
+        globalX = XSecArray.shape[1]-XSecArray.shape[1]//globalZoom
+
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+def zoomU():
+    global globalX, globalY
+
+    if globalY > 0:
+        globalY -=1
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+def zoomD():
+    global globalX, globalY
+
+    if globalY < XSecArray.shape[0]:
+        globalY +=1
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
 def displayArrayAsImage():
     '''
     This function print the array to termianl and shows additional info of the
@@ -113,7 +189,7 @@ def clearArrayAndDisplay():
             setParameters()
 
     else:
-            XSecArray *= 0
+            XSecArray = np.zeros(XSecArray.shape)
             #checkered(w, dX, dY)
             mainSetup()
             csd.n_checkered(w, elementsInX, elementsInY)
@@ -400,8 +476,11 @@ def mainSetup():
     '''
     This function set up (or reset) all the main elements
     '''
-    global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS
+    global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS, globalX, globalY, globalZoom
 
+    globalX = 0
+    globalY = 0
+    globalZoom = 1
 
     elementsInX = 2*25
     elementsInY = 2*25
@@ -487,6 +566,19 @@ print_button_slice.grid(row=6, column=0 , padx=5, pady=5)
 print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
 print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
 
+print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=16)
+print_button_zoom.grid(row=8, column=0 , padx=5, pady=5)
+print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
+print_button_zoom.grid(row=9, column=0 , padx=5, pady=5)
+
+print_button_zoom = Button(master, text='<', command=zoomL, height=2, width=2)
+print_button_zoom.grid(row=10, column=0 , padx=5, pady=5)
+print_button_zoom = Button(master, text='>', command=zoomR, height=2, width=2)
+print_button_zoom.grid(row=10, column=1 , padx=5, pady=5)
+print_button_zoom = Button(master, text='^', command=zoomU, height=2, width=2)
+print_button_zoom.grid(row=11, column=0 , padx=5, pady=5)
+print_button_zoom = Button(master, text='v', command=zoomD, height=2, width=2)
+print_button_zoom.grid(row=11, column=1 , padx=5, pady=5)
 
 print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)
 print_button.grid(row=9, column=8, columnspan=2)
@@ -548,10 +640,14 @@ w.bind( "<B3-Motion>", resetPoint)
 
 w.bind( "<Button 2>", showXsecArray)
 
+w.bind("<Left>",zoomL)
+w.bind("<Right>",zoomR)
+w.bind("<Up>",zoomU)
+w.bind("<Down>",zoomD)
 
 message = Label( master, text = "use: Left Mouse Button to Set conductor, Right to reset" )
 #message.pack( side = BOTTOM )
-message.grid(row=11, column=0, columnspan=3)
+message.grid(row=12, column=0, columnspan=3)
 
 phase = IntVar()
 

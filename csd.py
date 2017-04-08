@@ -90,11 +90,14 @@ def zoomOut():
     if globalZoom > 1:
         globalZoom -=1
 
-    if globalX > 0:
-        globalX -=1
+    globalX -=2
+    if globalX < 0:
+        globalX = 0
 
-    if globalY > 0:
-        globalY -=1
+    globalY -=2
+    if globalY < 0:
+        globalY = 0
+
 
     if globalZoom == 1:
         globalX = 0
@@ -125,15 +128,19 @@ def zoomR():
 def zoomU():
     global globalX, globalY
 
-    if globalY > 0:
-        globalY -=1
+    globalY -=2
+    if globalY < 0:
+        globalY =0
+
     csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
 def zoomD():
     global globalX, globalY
 
-    if globalY < XSecArray.shape[0]:
-        globalY +=1
+    globalY +=2
+    if globalY > XSecArray.shape[0]-XSecArray.shape[0]//globalZoom:
+        globalY = XSecArray.shape[0]-XSecArray.shape[0]//globalZoom
+
     csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
 def displayArrayAsImage():
@@ -144,14 +151,15 @@ def displayArrayAsImage():
     '''
     print(XSecArray)
     print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-    csd.n_printTheArray(XSecArray, canvas=w)
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
     drawGeometryArray(XSecArray)
 
 def setPoint(event):
     '''Trigger procesdure for GUI action'''
     actualPhase = phase.get()
-    csd.n_setUpPoint(event, Set=actualPhase, dataArray=XSecArray, canvas=w)
+
+    csd.n_setUpPoint(event, Set=actualPhase, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
     #  Plotting on CAD view if exist
     try:
@@ -162,7 +170,7 @@ def setPoint(event):
 
 def resetPoint(event):
     '''Trigger procesdure for GUI action'''
-    csd.n_setUpPoint(event, Set=0, dataArray=XSecArray, canvas=w)
+    csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
     #  Plotting on CAD view if exist
     try:
@@ -571,13 +579,13 @@ print_button_zoom.grid(row=8, column=0 , padx=5, pady=5)
 print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
 print_button_zoom.grid(row=9, column=0 , padx=5, pady=5)
 
-print_button_zoom = Button(master, text='<', command=zoomL, height=2, width=2)
+print_button_zoom = Button(master, text='<', command=zoomL, height=2, width=2, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=10, column=0 , padx=5, pady=5)
-print_button_zoom = Button(master, text='>', command=zoomR, height=2, width=2)
+print_button_zoom = Button(master, text='>', command=zoomR, height=2, width=2, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=10, column=1 , padx=5, pady=5)
-print_button_zoom = Button(master, text='^', command=zoomU, height=2, width=2)
+print_button_zoom = Button(master, text='^', command=zoomU, height=2, width=2, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=11, column=0 , padx=5, pady=5)
-print_button_zoom = Button(master, text='v', command=zoomD, height=2, width=2)
+print_button_zoom = Button(master, text='v', command=zoomD, height=2, width=2, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=11, column=1 , padx=5, pady=5)
 
 print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)

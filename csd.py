@@ -119,7 +119,7 @@ def zoomL():
     if globalX < 0:
         globalX = 0
     csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+                        canvas=w)   
 
 
 def zoomR():
@@ -152,7 +152,6 @@ def zoomD():
         globalY = XSecArray.shape[0]-XSecArray.shape[0]//globalZoom
 
     csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
-
 
 def displayArrayAsImage():
     '''
@@ -309,6 +308,11 @@ def vectorizeTheArray(*arg):
         elementsVectorPhB = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
         elementsVectorPhC = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
         # From here is the rest of calulations
+        perymeterA = csd.n_perymiter(elementsVectorPhA, XSecArray, dXmm, dYmm)
+        perymeterB = csd.n_perymiter(elementsVectorPhB, XSecArray, dXmm, dYmm)
+        perymeterC = csd.n_perymiter(elementsVectorPhC, XSecArray, dXmm, dYmm)
+
+
 
         #memorize the number of elements in each phase
         elementsPhaseA = elementsVectorPhA.shape[0]
@@ -389,6 +393,9 @@ def vectorizeTheArray(*arg):
         
         print('power losses: {} [W] \n phA: {}[W]\n phB: {}[W]\n phC: {}[W]'
               .format(powerLosses, powPhA, powPhB, powPhC))
+
+        print('Phases perymeters:\nA: {}mm\nB: {}mm\nC: {}mm\n'
+              .format(perymeterA, perymeterB, perymeterC))
 
         powerLosses = [powerLosses, powPhA, powPhB, powPhC]
         

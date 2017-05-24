@@ -104,8 +104,43 @@ def n_getDistancesArray(inputVector):
     return distanceArray
 
 
+def n_perymiter(vec, arr, dXmm, dYmm):
+    '''
+    This function returns the area perynmiter lenght for given
+    vector of conducting elements in the array
+    Inputs:
+    vec - vector of elements to calculate the perymiter 
+        lenght for (as delivered by n_vectorizeTheArray)
+
+    arr - array that describe the geometry shape
+
+    dXmm - element size in x diretion
+
+    dYmm - element size in y diretion
+
+    Output:
+    perymiter lenght in the same units as dXmm and dYmm
+    '''
+    # TODO: adding check if we dont exeed dimensions of array
+    perymiter = 0
+    for box in vec:
+        
+        # checking in x diretions lef and right
+        if arr[int(box[0] + 1)][int(box[1])] == 0:
+            perymiter += dYmm
+        if arr[int(box[0] - 1)][int(box[1])] == 0:
+            perymiter += dYmm
+
+        if arr[int(box[0])][int(box[1] + 1)] == 0:
+            perymiter += dXmm
+        if arr[int(box[0])][int(box[1] - 1)] == 0:
+            perymiter += dXmm
+
+    return perymiter
+
+
 # Master Array Vecrorization FUNCTION
-def n_arrayVectorize(inputArray,phaseNumber, dXmm, dYmm):
+def n_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
     '''
     Desription:
     This function returns vector of 4 dimension vectors that deliver

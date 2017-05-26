@@ -7,6 +7,9 @@ import os.path
 import time
 # Importing local library
 from csdlib import csdlib as csd
+from csdlib.vect import Vector as v2
+from csdlib import csdgui as gui
+
 matplotlib.use('TKAgg')
 
 
@@ -286,7 +289,42 @@ def simplifyArray():
     myEntryDx.insert(END,str(dXmm))
     setParameters()
 
+def showMeForces(*arg):
+    '''
+    This function abnalyze the cross section array and returns vector of all set
+    (equal to 1) elements. This allows to minimize the size of further calculation
+    arrays only to active elements.
 
+    and for te moment do the all math for calulations.
+    '''
+    global elementsVector, resultsArray, resultsCurrentVector, frequency, powerLosses,resultsArrayPower, powerLossesVector
+
+
+    # Read the setup params from GUI
+    setParameters()
+
+    #lets check if there is anything in the xsection geom array
+    if np.sum(XSecArray) > 0:
+        # We get vectors for each phase`
+        elementsVectorPhA = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm)
+        elementsVectorPhB = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
+        elementsVectorPhC = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
+        # Experimental use of force calculator 
+        # I = 1.0*187e3
+        # Fa, Fb, Fc = csd.n_getForces(XsecArr=XSecArray,
+        #                              vPhA=elementsVectorPhA,
+        #                              vPhB=elementsVectorPhB,
+        #                              vPhC=elementsVectorPhC,
+        #                              Ia=-0.5*I, Ib=-0.5*I, Ic=I)
+
+        # print('Forces: \nA:{}\nB:{}\nC:{}'.format(Fa, Fb, Fc))
+        
+        root = Tk()
+        gui.forceWindow(root,
+                        XSecArray,
+                        elementsVectorPhA,
+                        elementsVectorPhB,
+                        elementsVectorPhC)
 
 def vectorizeTheArray(*arg):
     '''
@@ -312,9 +350,7 @@ def vectorizeTheArray(*arg):
         perymeterB = csd.n_perymiter(elementsVectorPhB, XSecArray, dXmm, dYmm)
         perymeterC = csd.n_perymiter(elementsVectorPhC, XSecArray, dXmm, dYmm)
 
-
-
-        #memorize the number of elements in each phase
+        # memorize the number of elements in each phase
         elementsPhaseA = elementsVectorPhA.shape[0]
         elementsPhaseB = elementsVectorPhB.shape[0]
         elementsPhaseC = elementsVectorPhC.shape[0]
@@ -408,6 +444,8 @@ def vectorizeTheArray(*arg):
         # Recreating the solution to form of cross section array
         resultsArray = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
         resultsArrayPower = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
+
+        
 
         #Showing the results
         showResults()
@@ -613,6 +651,9 @@ print_button.grid(row=9, column=8, columnspan=2)
 
 print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
 print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
+
+print_button = Button(master, text='Show Forces', command=showMeForces, height=2, width=16)
+print_button.grid(row=11, column=8, padx=5, pady=5,columnspan=2)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8,columnspan=2)

@@ -18,6 +18,8 @@ import numpy as np
 
 import os.path
 
+from csdlib.vect import Vector as v2
+
 ### End of external Loads
 
 # ################# FUNCTIONS & PROCEDURES##############################
@@ -378,3 +380,49 @@ def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
         localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
 
     return localResultsArray
+
+def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
+    '''
+    this experimental functions will calcuate the fore vector for each phase
+    in given geometry and currents values.
+    Inputs:
+    vPhA/B/C - elements vectors of the each phase geometry as delivered by n_arrayVectorize
+    Ia/b/c - current value in each phase in [A]
+    '''
+    def sumVecList(list):
+        sumV = v2(0,0)
+        for v in list:
+            sumV = sumV + v
+        return sumV
+
+    mi0_o2pi = 2e-7
+    lPh = (len(vPhA), len(vPhB), len(vPhC))  # Memorizing each phaze elements count
+    Iph = (Ia / len(vPhA), Ib / len(vPhB), Ic / len(vPhC))
+
+    vPhAll = np.concatenate((vPhA, vPhB, vPhC), axis=0)  # One vector for all phases
+
+    totalForceVec = []
+
+    
+
+    for this in vPhAll:
+        forceVec = v2(0, 0)  # initial reset for this element force
+        for other in vPhAll:
+            if this[0] != other[0] or this[1] != other[1]:
+                distV = v2(other[2]-this[2], other[3]-this[3])
+                direction = distV.normalize()
+                distance = distV.norm() * 1e-3  # to convert into [m]
+
+                Ithis = Iph[int(XsecArr[int(this[0])][int(this[1])])-1]
+                Iother = Iph[int(XsecArr[int(other[0])][int(other[1])])-1]
+
+                forceVec += (mi0_o2pi * Iother * Ithis / distance) * direction 
+                        
+        totalForceVec.append(forceVec)
+
+    ForceA = sumVecList(totalForceVec[:lPh[0]])
+    ForceB = sumVecList(totalForceVec[lPh[0]: lPh[0] + lPh[1]])
+    ForceC = sumVecList(totalForceVec[lPh[0] + lPh[1]:])
+
+    return Lenght * ForceA, Lenght * ForceB, Lenght * ForceC
+

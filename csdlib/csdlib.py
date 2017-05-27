@@ -426,3 +426,23 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
 
     return Lenght * ForceA, Lenght * ForceB, Lenght * ForceC
 
+def n_getPhasesCenters(vPhA, vPhB, vPhC):
+    '''
+    This functions calculate the geometry center (average) for each phase
+    delivered as a vector form
+    Inputs:
+    vPhA/B/C - elements vectors of the each phase geometry as delivered by n_arrayVectorize
+    '''
+    tempX = [x[2] for x in vPhA]
+    tempY = [x[3] for x in vPhA]
+    Pha = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+    
+    tempX = [x[2] for x in vPhB]
+    tempY = [x[3] for x in vPhB]
+    Phb = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+    
+    tempX = [x[2] for x in vPhC]
+    tempY = [x[3] for x in vPhC]
+    Phc = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+
+    return Pha, Phb, Phc

@@ -291,40 +291,19 @@ def simplifyArray():
 
 def showMeForces(*arg):
     '''
-    This function abnalyze the cross section array and returns vector of all set
-    (equal to 1) elements. This allows to minimize the size of further calculation
-    arrays only to active elements.
-
-    and for te moment do the all math for calulations.
+    This function trigger the forceWindow object to make it possible for
+    Icw forces calculations
     '''
-    global elementsVector, resultsArray, resultsCurrentVector, frequency, powerLosses,resultsArrayPower, powerLossesVector
-
+    # Maiking it global - as for now it's not all object based gui
+    global forceCalc
 
     # Read the setup params from GUI
     setParameters()
 
     #lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
-        # We get vectors for each phase`
-        elementsVectorPhA = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm)
-        elementsVectorPhB = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
-        elementsVectorPhC = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
-        # Experimental use of force calculator 
-        # I = 1.0*187e3
-        # Fa, Fb, Fc = csd.n_getForces(XsecArr=XSecArray,
-        #                              vPhA=elementsVectorPhA,
-        #                              vPhB=elementsVectorPhB,
-        #                              vPhC=elementsVectorPhC,
-        #                              Ia=-0.5*I, Ib=-0.5*I, Ic=I)
-
-        # print('Forces: \nA:{}\nB:{}\nC:{}'.format(Fa, Fb, Fc))
-        
         root = Tk()
-        gui.forceWindow(root,
-                        XSecArray,
-                        elementsVectorPhA,
-                        elementsVectorPhB,
-                        elementsVectorPhC)
+        forceCalc = gui.forceWindow(root, XSecArray, dXmm, dYmm)
 
 def vectorizeTheArray(*arg):
     '''
@@ -579,6 +558,12 @@ def setParameters(*arg):
 
     dXmm = float(myEntryDx.get())
     dYmm = dXmm
+
+    try:
+        forceCalc.dXmm = dXmm
+        forceCalc.dYmm = dYmm
+    except:
+        pass
 
     AnalysisFreq.config(text= 'frequency: '+str(frequency)+'[Hz]\n Current: '+str(curentRMS)+'[A]\n Temperature: '+str(temperature)+'[deg C]')
 

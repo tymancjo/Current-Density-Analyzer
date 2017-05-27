@@ -11,12 +11,11 @@ class forceWindow():
     This class define the main control window for the 
     electrodynamic forces analysis.
     '''
-    def __init__(self, master, XsecArr, vPhA, vPhB, vPhC):
+    def __init__(self, master, XsecArr, dXmm, dYmm):
         
         self.XsecArr = XsecArr
-        self.vPhA = vPhA
-        self.vPhB = vPhB
-        self.vPhC = vPhC
+        self.dXmm = dXmm
+        self.dYmm = dYmm
 
         self.master = master
         self.frame = tk.Frame(self.master)
@@ -58,9 +57,14 @@ class forceWindow():
         self.desc_IcwB.pack()
         self.desc_IcwC = tk.Label(self.bframe, text=self.IcwC)
         self.desc_IcwC.pack()
-                
 
-        self.openButton = tk.Button(self.bframe, text='Calculate Force Vectors',
+        self.cframe = tk.Frame(self.master)
+        self.cframe.pack(padx=10, pady=10)
+                
+        self.tx1 = tk.Text(self.cframe, height=5, width=35)
+        self.tx1.pack()
+
+        self.openButton = tk.Button(self.cframe, text='Calculate Force Vectors',
                                     command=self.forcesAnalysis)
         self.openButton.pack()
 
@@ -73,6 +77,21 @@ class forceWindow():
         self.desc_IcwA.config(text='Ia: {0[0]:.2f} [kA]'.format(self.Icw))
         self.desc_IcwB.config(text='Ib: {0[1]:.2f} [kA]'.format(self.Icw))
         self.desc_IcwC.config(text='Ic: {0[2]:.2f} [kA]'.format(self.Icw))
+
+        self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=1,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+        self.vPhB = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=2,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+        self.vPhC = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=3,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+
+    def console(self, string):
+        self.tx1.insert(tk.END, str(string))
+        self.tx1.insert(tk.END,'\n')
+        self.tx1.see(tk.END)
 
 
     def forcesAnalysis(self):
@@ -87,6 +106,13 @@ class forceWindow():
                                                     Ic=self.Icw[2]*1e3,
                                                     Lenght=self.L*1e-3)
 
-
+        self.console('Electrodynamic Forces:')
+        self.console('Fa(x,y):({0[0]:.0f},{0[1]:.0f})[N]'.format(self.Fa))
+        self.console('Fb(x,y):({0[0]:.0f},{0[1]:.0f})[N]'.format(self.Fb))
+        self.console('Fc(x,y):({0[0]:.0f},{0[1]:.0f})[N]'.format(self.Fc))
+        
         print('Forces: \nA:{}\nB:{}\nC:{}'.format(self.Fa, self.Fb, self.Fc))
+
+        pa, pb, pc = csd.n_getPhasesCenters(self.vPhA, self.vPhB, self.vPhC)
+        print(pa, pb, pc)
 

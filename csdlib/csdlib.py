@@ -18,6 +18,8 @@ import numpy as np
 
 import os.path
 
+from csdlib.vect import Vector as v2
+
 ### End of external Loads
 
 # ################# FUNCTIONS & PROCEDURES##############################
@@ -104,8 +106,43 @@ def n_getDistancesArray(inputVector):
     return distanceArray
 
 
+def n_perymiter(vec, arr, dXmm, dYmm):
+    '''
+    This function returns the area perynmiter lenght for given
+    vector of conducting elements in the array
+    Inputs:
+    vec - vector of elements to calculate the perymiter 
+        lenght for (as delivered by n_vectorizeTheArray)
+
+    arr - array that describe the geometry shape
+
+    dXmm - element size in x diretion
+
+    dYmm - element size in y diretion
+
+    Output:
+    perymiter lenght in the same units as dXmm and dYmm
+    '''
+    # TODO: adding check if we dont exeed dimensions of array
+    perymiter = 0
+    for box in vec:
+        
+        # checking in x diretions lef and right
+        if arr[int(box[0] + 1)][int(box[1])] == 0:
+            perymiter += dYmm
+        if arr[int(box[0] - 1)][int(box[1])] == 0:
+            perymiter += dYmm
+
+        if arr[int(box[0])][int(box[1] + 1)] == 0:
+            perymiter += dXmm
+        if arr[int(box[0])][int(box[1] - 1)] == 0:
+            perymiter += dXmm
+
+    return perymiter
+
+
 # Master Array Vecrorization FUNCTION
-def n_arrayVectorize(inputArray,phaseNumber, dXmm, dYmm):
+def n_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
     '''
     Desription:
     This function returns vector of 4 dimension vectors that deliver
@@ -343,3 +380,71 @@ def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
         localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
 
     return localResultsArray
+
+def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
+    '''
+    this experimental functions will calcuate the fore vector for each phase
+    in given geometry and currents values.
+    Inputs:
+    vPhA/B/C - elements vectors of the each phase geometry as delivered by n_arrayVectorize
+    Ia/b/c - current value in each phase in [A]
+    '''
+    def sumVecList(list):
+        sumV = v2(0,0)
+        for v in list:
+            sumV = sumV + v
+        return sumV
+
+    mi0_o2pi = 2e-7
+    lPh = (len(vPhA), len(vPhB), len(vPhC))  # Memorizing each phaze elements count
+    Iph = (Ia / len(vPhA), Ib / len(vPhB), Ic / len(vPhC))
+
+    vPhAll = np.concatenate((vPhA, vPhB, vPhC), axis=0)  # One vector for all phases
+
+    totalForceVec = []
+
+    
+
+    for this in vPhAll:
+        forceVec = v2(0, 0)  # initial reset for this element force
+        for other in vPhAll:
+            if this[0] != other[0] or this[1] != other[1]:
+                distV = v2(other[2]-this[2], other[3]-this[3])
+                direction = distV.normalize()
+                distance = distV.norm() * 1e-3  # to convert into [m]
+
+                Ithis = Iph[int(XsecArr[int(this[0])][int(this[1])])-1]
+                Iother = Iph[int(XsecArr[int(other[0])][int(other[1])])-1]
+
+                forceVec += (mi0_o2pi * Iother * Ithis / distance) * direction 
+                        
+        totalForceVec.append(forceVec)
+
+    ForceA = sumVecList(totalForceVec[:lPh[0]])
+    ForceB = sumVecList(totalForceVec[lPh[0]: lPh[0] + lPh[1]])
+    ForceC = sumVecList(totalForceVec[lPh[0] + lPh[1]:])
+
+    ForceMagVect = [force.norm() for force in totalForceVec]
+
+    return Lenght * ForceA, Lenght * ForceB, Lenght * ForceC, ForceMagVect, totalForceVec
+
+def n_getPhasesCenters(vPhA, vPhB, vPhC):
+    '''
+    This functions calculate the geometry center (average) for each phase
+    delivered as a vector form
+    Inputs:
+    vPhA/B/C - elements vectors of the each phase geometry as delivered by n_arrayVectorize
+    '''
+    tempX = [x[2] for x in vPhA]
+    tempY = [x[3] for x in vPhA]
+    Pha = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+    
+    tempX = [x[2] for x in vPhB]
+    tempY = [x[3] for x in vPhB]
+    Phb = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+    
+    tempX = [x[2] for x in vPhC]
+    tempY = [x[3] for x in vPhC]
+    Phc = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+
+    return Pha, Phb, Phc

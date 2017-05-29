@@ -1,17 +1,16 @@
 import matplotlib
-matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
-
-from tkinter import *
+from tkinter import * 
 from tkinter import filedialog, messagebox
-
 import numpy as np
-
 import os.path
 import time
-
 # Importing local library
 from csdlib import csdlib as csd
+from csdlib.vect import Vector as v2
+from csdlib import csdgui as gui
+
+matplotlib.use('TKAgg')
 
 
 def showXsecArray(event):
@@ -19,6 +18,7 @@ def showXsecArray(event):
     This function print the array to the terminal
     '''
     print(XSecArray)
+
 
 def saveArrayToFile():
     '''
@@ -28,12 +28,15 @@ def saveArrayToFile():
     filename = os.path.normpath(filename)
     if filename:
         saveTheData(filename)
+
+
 def saveTheData(filename):
     '''
     This is the subfunction for saving data
     '''
     print('Saving to file :' + filename)
     np.save(filename, XSecArray)
+
 
 def loadArrayFromFile():
     '''
@@ -51,6 +54,8 @@ def loadArrayFromFile():
     else:
         if filename:
             loadTheData(filename)
+
+
 def loadTheData(filename):
     '''
     This is sub function to load data
@@ -60,6 +65,97 @@ def loadTheData(filename):
     XSecArray =  np.load(filename)
     csd.n_printTheArray(XSecArray, canvas=w)
 
+
+def zoomInArray(inputArray, zoomSize=2, startX=0, startY=0):
+
+    oryginalX = inputArray.shape[0]
+    oryginalY = inputArray.shape[1]
+
+    NewX = oryginalX // zoomSize
+    NewY = oryginalY // zoomSize
+
+    if startX > (oryginalX-NewX):
+        startX = oryginalX-NewX
+
+    if startY > (oryginalY-NewY):
+        startY = oryginalY-NewY
+
+    return inputArray[startY:startY+NewY,startX:startX+NewX]
+
+
+def zoomIn():
+    global globalZoom
+
+    if globalZoom < 5:
+        globalZoom +=1
+
+    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w)
+
+
+def zoomOut():
+    global globalZoom, globalX, globalY
+
+    if globalZoom > 1:
+        globalZoom -= 1
+
+    globalX -= 2
+    if globalX < 0:
+        globalX = 0
+
+    globalY -= 2
+    if globalY < 0:
+        globalY = 0
+
+    if globalZoom == 1:
+        globalX = 0
+        globalY = 0
+
+    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w)
+
+
+def zoomL():
+    global globalX, globalY
+
+    globalX -= 2
+    if globalX < 0:
+        globalX = 0
+    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w)   
+
+
+def zoomR():
+    global globalX, globalY
+
+    globalX += 2
+
+    if globalX > XSecArray.shape[1]-XSecArray.shape[1]//globalZoom:
+        globalX = XSecArray.shape[1]-XSecArray.shape[1]//globalZoom
+
+    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w)
+
+
+def zoomU():
+    global globalX, globalY
+
+    globalY -=2
+    if globalY < 0:
+        globalY =0
+
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+
+def zoomD():
+    global globalX, globalY
+
+    globalY +=2
+    if globalY > XSecArray.shape[0]-XSecArray.shape[0]//globalZoom:
+        globalY = XSecArray.shape[0]-XSecArray.shape[0]//globalZoom
+
+    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
 def displayArrayAsImage():
     '''
     This function print the array to termianl and shows additional info of the
@@ -68,14 +164,19 @@ def displayArrayAsImage():
     '''
     print(XSecArray)
     print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-    csd.n_printTheArray(XSecArray, canvas=w)
+    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w)
 
     drawGeometryArray(XSecArray)
+
 
 def setPoint(event):
     '''Trigger procesdure for GUI action'''
     actualPhase = phase.get()
-    csd.n_setUpPoint(event, Set=actualPhase, dataArray=XSecArray, canvas=w)
+
+    csd.n_setUpPoint(event, Set=actualPhase,
+                     dataArray=zoomInArray(XSecArray, globalZoom, globalX,
+                                           globalY), canvas=w)
 
     #  Plotting on CAD view if exist
     try:
@@ -84,9 +185,10 @@ def setPoint(event):
     except:
         pass
 
+
 def resetPoint(event):
     '''Trigger procesdure for GUI action'''
-    csd.n_setUpPoint(event, Set=0, dataArray=XSecArray, canvas=w)
+    csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
     #  Plotting on CAD view if exist
     try:
@@ -113,7 +215,7 @@ def clearArrayAndDisplay():
             setParameters()
 
     else:
-            XSecArray *= 0
+            XSecArray = np.zeros(XSecArray.shape)
             #checkered(w, dX, dY)
             mainSetup()
             csd.n_checkered(w, elementsInX, elementsInY)
@@ -187,7 +289,22 @@ def simplifyArray():
     myEntryDx.insert(END,str(dXmm))
     setParameters()
 
+def showMeForces(*arg):
+    '''
+    This function trigger the forceWindow object to make it possible for
+    Icw forces calculations
+    '''
+    # Maiking it global - as for now it's not all object based gui
+    global forceCalc
 
+    # Read the setup params from GUI
+    setParameters()
+
+    #lets check if there is anything in the xsection geom array
+    if np.sum(XSecArray) > 0:
+        root = Tk()
+        root.title('Forces calculator')
+        forceCalc = gui.forceWindow(root, XSecArray, dXmm, dYmm)
 
 def vectorizeTheArray(*arg):
     '''
@@ -209,8 +326,11 @@ def vectorizeTheArray(*arg):
         elementsVectorPhB = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
         elementsVectorPhC = csd.n_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
         # From here is the rest of calulations
+        perymeterA = csd.n_perymiter(elementsVectorPhA, XSecArray, dXmm, dYmm)
+        perymeterB = csd.n_perymiter(elementsVectorPhB, XSecArray, dXmm, dYmm)
+        perymeterC = csd.n_perymiter(elementsVectorPhC, XSecArray, dXmm, dYmm)
 
-        #memorize the number of elements in each phase
+        # memorize the number of elements in each phase
         elementsPhaseA = elementsVectorPhA.shape[0]
         elementsPhaseB = elementsVectorPhB.shape[0]
         elementsPhaseC = elementsVectorPhC.shape[0]
@@ -273,7 +393,7 @@ def vectorizeTheArray(*arg):
         print('Current vector elements module:')
         getMod = np.vectorize(csd.n_getComplexModule)
 
-        resultsCurrentVector = np.concatenate((currentPhA,currentPhB,currentPhC), axis=0)
+        resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
 
         resultsCurrentVector = getMod(resultsCurrentVector)
         resistanceVector = csd.n_getResistanceArray(elementsVector, dXmm=dXmm, dYmm=dYmm, temperature=temperature)
@@ -281,7 +401,20 @@ def vectorizeTheArray(*arg):
 
         powerLossesVector = resistanceVector * resultsCurrentVector**2
         powerLosses = np.sum(powerLossesVector)
-        print(powerLosses)
+
+        # Power losses per phase
+        powPhA = np.sum(powerLossesVector[0:elementsPhaseA])
+        powPhB = np.sum(powerLossesVector[elementsPhaseA:elementsPhaseA+elementsPhaseB:1])
+        powPhC = np.sum(powerLossesVector[elementsPhaseA+elementsPhaseB:])
+        
+        print('power losses: {} [W] \n phA: {}[W]\n phB: {}[W]\n phC: {}[W]'
+              .format(powerLosses, powPhA, powPhB, powPhC))
+
+        print('Phases perymeters:\nA: {}mm\nB: {}mm\nC: {}mm\n'
+              .format(perymeterA, perymeterB, perymeterC))
+
+        powerLosses = [powerLosses, powPhA, powPhB, powPhC]
+        
         # Converting results to form of density
         powerLossesVector /= (dXmm*dYmm)
 
@@ -291,6 +424,8 @@ def vectorizeTheArray(*arg):
         # Recreating the solution to form of cross section array
         resultsArray = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
         resultsArrayPower = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
+
+        
 
         #Showing the results
         showResults()
@@ -358,33 +493,19 @@ def showResults():
         plotWidth = (resultsArrayDisplay.shape[1])*dXmm
         plotHeight = (resultsArrayDisplay.shape[0])*dYmm
 
-        fig = plt.figure()
-        if plotWidth <= plotHeight:
-            ax = fig.add_subplot(1,2,1)
-            ax2 = fig.add_subplot(1,2,2)
-        else:
-            ax = fig.add_subplot(2,1,1)
-            ax2 = fig.add_subplot(2,1,2)
-
+        fig = plt.figure('Results Window')
+        ax = fig.add_subplot(1,1,1)
+        
         my_cmap = matplotlib.cm.get_cmap('jet')
         my_cmap.set_under('w')
 
         im =  ax.imshow(resultsArrayDisplay,   cmap=my_cmap, interpolation='none',  vmin=0.8*np.min(resultsCurrentVector), extent=[0,plotWidth,plotHeight,0])
-        im2 = ax2.imshow(resultsArrayDisplay2, cmap=my_cmap, interpolation='none',  vmin=0.8*np.min(powerLossesVector), extent=[0,plotWidth,plotHeight,0])
-
-
-        if plotWidth < plotHeight:
-            fig.colorbar(im, ax=ax, orientation='vertical',label='Current Density [A/mm2]',alpha=0.5, fraction=0.046 )
-            fig.colorbar(im2, ax=ax2, orientation='vertical',label='PowerLoss Density [W/mm2]',alpha=0.5, fraction=0.046)
-        else:
-            fig.colorbar(im, ax=ax, orientation='horizontal',label='Current Density [A/mm2]',alpha=0.5, fraction=0.046)
-            fig.colorbar(im2, ax=ax2, orientation='horizontal',label='PowerLoss Density [W/mm2]',alpha=0.5, fraction=0.046)
-
+        fig.colorbar(im, ax=ax, orientation='vertical',label='Current Density [A/mm$^2$]',alpha=0.5, fraction=0.046 )
         plt.axis('scaled')
 
-        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Current Density Distribution', **title_font)
-        ax2.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature)+'[$^o$C]\n Total power losses: '+str(round(powerLosses,2))+'[W]', **title_font)
-
+        ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature) +
+                     '[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}'.format(powerLosses), **title_font)
+        
         plt.xlabel('size [mm]', **axis_font)
         plt.ylabel('size [mm]', **axis_font)
 
@@ -400,8 +521,11 @@ def mainSetup():
     '''
     This function set up (or reset) all the main elements
     '''
-    global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS
+    global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS, globalX, globalY, globalZoom
 
+    globalX = 0
+    globalY = 0
+    globalZoom = 1
 
     elementsInX = 2*25
     elementsInY = 2*25
@@ -436,6 +560,12 @@ def setParameters(*arg):
     dXmm = float(myEntryDx.get())
     dYmm = dXmm
 
+    try:
+        forceCalc.dXmm = dXmm
+        forceCalc.dYmm = dYmm
+    except:
+        pass
+
     AnalysisFreq.config(text= 'frequency: '+str(frequency)+'[Hz]\n Current: '+str(curentRMS)+'[A]\n Temperature: '+str(temperature)+'[deg C]')
 
     analysisDX.config(text='dx:\n '+str(dXmm)+'[mm]')
@@ -452,8 +582,8 @@ master.title( "Cross Section Designer" )
 img = PhotoImage(file='CSDico.gif')
 master.tk.call('wm', 'iconphoto', master._w, img)
 
-canvas_width = 750
-canvas_height = 750
+canvas_width = 650
+canvas_height = 650
 
 mainSetup()
 
@@ -487,6 +617,19 @@ print_button_slice.grid(row=6, column=0 , padx=5, pady=5)
 print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
 print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
 
+print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=16)
+print_button_zoom.grid(row=8, column=0 , padx=5, pady=5)
+print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
+print_button_zoom.grid(row=9, column=0 , padx=5, pady=5)
+
+print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=10, column=0 , padx=5, pady=5)
+print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=10, column=1 , padx=5, pady=5)
+print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=11, column=0 , padx=5, pady=5)
+print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=11, column=1 , padx=5, pady=5)
 
 print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)
 print_button.grid(row=9, column=8, columnspan=2)
@@ -495,7 +638,10 @@ print_button.grid(row=9, column=8, columnspan=2)
 print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
 print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
 
-GeometryOpis = Label(text='Geometry setup:', height=3)
+print_button = Button(master, text='Forces Calc.', command=showMeForces, height=2, width=16)
+print_button.grid(row=11, column=8, padx=5, pady=5,columnspan=2)
+
+GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8,columnspan=2)
 
 # AnalysisOpis = Label(text='Analysis setup:', height=3)
@@ -548,20 +694,24 @@ w.bind( "<B3-Motion>", resetPoint)
 
 w.bind( "<Button 2>", showXsecArray)
 
+w.bind("<Left>",zoomL)
+w.bind("<Right>",zoomR)
+w.bind("<Up>",zoomU)
+w.bind("<Down>",zoomD)
 
 message = Label( master, text = "use: Left Mouse Button to Set conductor, Right to reset" )
 #message.pack( side = BOTTOM )
-message.grid(row=11, column=0, columnspan=3)
+message.grid(row=12, column=0, columnspan=3)
 
 phase = IntVar()
 
 phase.set(1) # initialize
 
-Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=2, width=16, bg='red', highlightbackground='red').grid(row=0, column=1)
-Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=2, width=16, bg='green', highlightbackground='green').grid(row=0, column=2)
-Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=2, width=16, bg='blue', highlightbackground='blue').grid(row=0, column=3)
+Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').grid(row=0, column=1)
+Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').grid(row=0, column=2)
+Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').grid(row=0, column=3)
 
-print_button = Button(master, text='Show / Refresh CAD view', command=displayArrayAsImage, height=2, width=22)
+print_button = Button(master, text='Show / Refresh CAD view', command=displayArrayAsImage, height=1, width=22)
 print_button.grid(row=0, column=5, padx=5, pady=0)
 
 

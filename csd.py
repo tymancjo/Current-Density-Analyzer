@@ -303,6 +303,7 @@ def showMeForces(*arg):
     #lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
         root = Tk()
+        root.title('Forces calculator')
         forceCalc = gui.forceWindow(root, XSecArray, dXmm, dYmm)
 
 def vectorizeTheArray(*arg):
@@ -637,7 +638,7 @@ print_button.grid(row=9, column=8, columnspan=2)
 print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
 print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
 
-print_button = Button(master, text='Show Forces', command=showMeForces, height=2, width=16)
+print_button = Button(master, text='Forces Calc.', command=showMeForces, height=2, width=16)
 print_button.grid(row=11, column=8, padx=5, pady=5,columnspan=2)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)

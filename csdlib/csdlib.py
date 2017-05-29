@@ -424,7 +424,9 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
     ForceB = sumVecList(totalForceVec[lPh[0]: lPh[0] + lPh[1]])
     ForceC = sumVecList(totalForceVec[lPh[0] + lPh[1]:])
 
-    return Lenght * ForceA, Lenght * ForceB, Lenght * ForceC
+    ForceMagVect = [force.norm() for force in totalForceVec]
+
+    return Lenght * ForceA, Lenght * ForceB, Lenght * ForceC, ForceMagVect, totalForceVec
 
 def n_getPhasesCenters(vPhA, vPhB, vPhC):
     '''

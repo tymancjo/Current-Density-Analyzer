@@ -1,4 +1,5 @@
 import matplotlib
+matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from tkinter import * 
 from tkinter import filedialog, messagebox
@@ -9,8 +10,6 @@ import time
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
 from csdlib import csdgui as gui
-
-matplotlib.use('TKAgg')
 
 
 def showXsecArray(event):
@@ -306,6 +305,17 @@ def showMeForces(*arg):
         root.title('Forces calculator')
         forceCalc = gui.forceWindow(root, XSecArray, dXmm, dYmm)
 
+
+def showMePower(*arg):
+    # lets check if there is anything in the xsection geom array
+    setParameters()
+
+    if np.sum(XSecArray) > 0:
+        root = Tk()
+        root.title('Power Losses Calculator')
+        powerCalc = gui.currentDensityWindow(root, XSecArray, dXmm, dYmm)
+
+
 def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
@@ -365,7 +375,7 @@ def vectorizeTheArray(*arg):
         vC = np.ones(elementsPhaseC)*(-0.5 - (np.sqrt(3)/2)*1j)
 
 
-        voltageVector = np.concatenate((vA,vB,vC), axis=0)
+        voltageVector = np.concatenate((vA, vB, vC), axis=0)
 
         # Lets calculate the currebt vector as U = ZI >> Z^-1 U = I
         # and Y = Z^-1
@@ -550,13 +560,6 @@ def mainSetup():
 def setParameters(*arg):
     global temperature, frequency, AnalysisFreq, curentRMS, dXmm, dYmm, analysisDX, analysisDY
 
-    frequency = float(myEntry.get())
-    if frequency == 0:
-        frequency = 1e-5
-
-    curentRMS = float(myEntryI.get())
-    temperature = float(myEntryT.get())
-
     dXmm = float(myEntryDx.get())
     dYmm = dXmm
 
@@ -566,7 +569,12 @@ def setParameters(*arg):
     except:
         pass
 
-    AnalysisFreq.config(text= 'frequency: '+str(frequency)+'[Hz]\n Current: '+str(curentRMS)+'[A]\n Temperature: '+str(temperature)+'[deg C]')
+    try:
+        powerCalc.dXmm = dXmm
+        powerCalc.dYmm = dYmm
+    except:
+        pass
+
 
     analysisDX.config(text='dx:\n '+str(dXmm)+'[mm]')
     analysisDY.config(text='dy:\n '+str(dYmm)+'[mm]')
@@ -596,9 +604,6 @@ w.configure(background='white')
 w.grid(row=1, column=1, columnspan=5, rowspan=10, sticky=W+E+N+S, padx=1, pady=1)
 
 
-
-# opis = Label(text='Cross Section\n Designer\n v0.1', height=15)
-# opis.grid(row=8, column=0,)
 print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
 print_button_clear.grid(row=1, column=0, padx=5, pady=5)
 
@@ -618,57 +623,31 @@ print_button_slice = Button(master, text='Simplify', command=simplifyArray, heig
 print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
 
 print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=16)
-print_button_zoom.grid(row=8, column=0 , padx=5, pady=5)
+print_button_zoom.grid(row=4, column=8 , padx=5, pady=5, columnspan=2)
 print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
-print_button_zoom.grid(row=9, column=0 , padx=5, pady=5)
+print_button_zoom.grid(row=5, column=8 , padx=5, pady=5, columnspan=2)
 
 print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=10, column=0 , padx=5, pady=5)
+print_button_zoom.grid(row=6, column=8 , padx=5, pady=5)
 print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=10, column=1 , padx=5, pady=5)
+print_button_zoom.grid(row=6, column=9 , padx=5, pady=5)
 print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=11, column=0 , padx=5, pady=5)
+print_button_zoom.grid(row=7, column=8 , padx=5, pady=5)
 print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=11, column=1 , padx=5, pady=5)
+print_button_zoom.grid(row=7, column=9 , padx=5, pady=5)
 
-print_button = Button(master, text='Run Analysis!', command=vectorizeTheArray, height=2, width=16)
+print_button = Button(master, text='Power Calc.', command=showMePower, height=2, width=16)
 print_button.grid(row=9, column=8, columnspan=2)
 
-
-print_button = Button(master, text='Show Results', command=showResults, height=2, width=16)
-print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
-
 print_button = Button(master, text='Forces Calc.', command=showMeForces, height=2, width=16)
-print_button.grid(row=11, column=8, padx=5, pady=5,columnspan=2)
+print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8,columnspan=2)
 
-# AnalysisOpis = Label(text='Analysis setup:', height=3)
-# AnalysisOpis.grid(row=4, column=3,columnspan=2)
+# print_button = Button(master, text='Set parameters', command=setParameters, height=2, width=16)
+# print_button.grid(row=8, column=8, padx=5, pady=5,columnspan=2)
 
-print_button = Button(master, text='Set parameters', command=setParameters, height=2, width=16)
-print_button.grid(row=8, column=8, padx=5, pady=5,columnspan=2)
-AnalysisFreq = Label(text= 'frequency: '+str(frequency)+'[Hz]\n Current: '+str(curentRMS)+'[A]\n Temperature: '+str(temperature)+'[deg C]', height=3  )
-AnalysisFreq.grid(row=5, column=8,columnspan=2)
-
-myEntry = Entry(master, width = 5 )
-myEntry.insert(END,str(frequency))
-myEntry.grid(row=6, column=8, padx=1, pady=1)
-myEntry.bind("<Return>", setParameters)
-myEntry.bind("<FocusOut>", setParameters)
-
-myEntryI = Entry(master, width = 5)
-myEntryI.insert(END,str(curentRMS))
-myEntryI.grid(row=6, column=9, padx=1, pady=1)
-myEntryI.bind("<Return>", setParameters)
-myEntryI.bind("<FocusOut>", setParameters)
-
-myEntryT = Entry(master, width = 5 )
-myEntryT.insert(END,str(temperature))
-myEntryT.grid(row=7, column=8, padx=1, pady=1)
-myEntryT.bind("<Return>", setParameters)
-myEntryT.bind("<FocusOut>", setParameters)
 
 analysisDX = Label(text='dx\n '+str(dXmm)+'[mm]', height=2  )
 analysisDX.grid(row=1, column=8,columnspan=1)

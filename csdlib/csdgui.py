@@ -11,6 +11,249 @@ import numpy as np
 # matplotlib.use('TKAgg')
 
 
+class currentDensityWindow():
+    '''
+    This class define the main control window for handling
+    the analysis of current density of given geometry.
+    '''
+    def __init__(self, master, XsecArr, dXmm, dYmm):
+
+        self.XsecArr = XsecArr
+        self.dXmm = dXmm
+        self.dYmm = dYmm
+
+        self.master = master
+        self.frame = tk.Frame(self.master)
+        self.frame.pack(padx=10, pady=10)
+
+        self.lab_I = tk.Label(self.frame,
+                              text='Current RMS [A]')
+        self.lab_I.pack()
+        self.Irms_txt = tk.Entry(self.frame)
+        self.Irms_txt.insert(4, 1000)
+        self.Irms_txt.pack()
+
+        self.lab_Freq = tk.Label(self.frame,
+                                 text='Frequency [Hz]')
+        self.lab_Freq.pack()
+        self.Freq_txt = tk.Entry(self.frame)
+        self.Freq_txt.insert(5, '50')
+        self.Freq_txt.pack()
+
+        self.lab_Temp = tk.Label(self.frame,
+                                 text='Conductor temperature [degC]')
+        self.lab_Temp.pack()
+        self.Temp_txt = tk.Entry(self.frame)
+        self.Temp_txt.insert(5, '140')
+        self.Temp_txt.pack()
+
+        self.rButton = tk.Button(self.frame, text='Set Parameters',
+                                 command=self.readSettings)
+        self.rButton.pack()
+
+        self.bframe = tk.Frame(self.master)
+        self.bframe.pack(padx=10, pady=10)
+
+        self.I = float(self.Irms_txt.get())
+        self.f = float(self.Freq_txt.get())
+        self.t = float(self.Temp_txt.get())
+
+        self.desc_I = tk.Label(self.bframe,
+                               text='Current: {:.2f} [A]'.format(self.I))
+        self.desc_I.pack()
+        self.desc_f = tk.Label(self.bframe,
+                               text='Frequency: {:.2f} [Hz]'.format(self.f))
+        self.desc_f.pack()
+        self.desc_t = tk.Label(self.bframe,
+                               text='Temperature: {:.2f} [degC]'
+                               .format(self.t))
+        self.desc_t.pack()
+
+        self.cframe = tk.Frame(self.master)
+        self.cframe.pack(padx=10, pady=10)
+
+        self.tx1 = tk.Text(self.cframe, height=5, width=35)
+        self.tx1.pack()
+
+        self.openButton = tk.Button(self.cframe,
+                                    text='Calculate!',
+                                    command=self.powerAnalysis)
+        self.openButton.pack()
+        self.resultsButton = tk.Button(self.cframe,
+                                       text='Show Results',
+                                       command=self.showResults)
+        self.resultsButton.pack()
+
+
+    def readSettings(self):
+        self.I = float(self.Irms_txt.get())
+        self.f = float(self.Freq_txt.get())
+        self.t = float(self.Temp_txt.get())
+
+        self.desc_I.config(text='Current: {:.2f} [A]'.format(self.I))
+        self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
+        self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
+ 
+        self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=1,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+        self.vPhB = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=2,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+        self.vPhC = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=3,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+
+        # Lets put the all phases together
+        self.elementsPhaseA = len(self.vPhA)
+        self.elementsPhaseB = len(self.vPhB)
+        self.elementsPhaseC = len(self.vPhC)
+
+        if self.elementsPhaseA != 0 and self.elementsPhaseB != 0 and self.elementsPhaseC != 0:
+            self.elementsVector = np.concatenate((self.vPhA,
+                                                  self.vPhB,
+                                                  self.vPhC),
+                                                 axis=0)
+        elif self.elementsPhaseA == 0:
+            if self.elementsPhaseB == 0:
+                self.elementsVector = self.vPhC
+            elif self.elementsPhaseC == 0:
+                self.elementsVector = self.vPhB
+            else:
+                self.elementsVector = np.concatenate((self.vPhB, self.vPhC),
+                                                     axis=0)
+        else:
+            if self.elementsPhaseB == 0 and self.elementsPhaseC == 0:
+                self.elementsVector = self.vPhA
+            elif self.elementsPhaseC == 0:
+                self.elementsVector = np.concatenate((self.vPhA, self.vPhB),
+                                                     axis=0)
+            else:
+                self.elementsVector = np.concatenate((self.vPhA, self.vPhC),
+                                                     axis=0)
+
+    def console(self, string):
+        self.tx1.insert(tk.END, str(string))
+        self.tx1.insert(tk.END, '\n')
+        self.tx1.see(tk.END)
+
+    def powerAnalysis(self):
+        self.readSettings()
+
+        admitanceMatrix = np.linalg.inv(
+                            csd.n_getImpedanceArray(
+                                csd.n_getDistancesArray(self.elementsVector),
+                                freq=self.f,
+                                dXmm=self.dXmm,
+                                dYmm=self.dYmm,
+                                temperature=self.t))
+
+        # Let's put here some voltage vector
+        vA = np.ones(self.elementsPhaseA)
+        vB = np.ones(self.elementsPhaseB)*(-0.5 + (np.sqrt(3)/2)*1j)
+        vC = np.ones(self.elementsPhaseC)*(-0.5 - (np.sqrt(3)/2)*1j)
+
+
+        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+
+        currentVector = np.matmul(admitanceMatrix, voltageVector)
+
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0: self.elementsPhaseA]
+        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB:1]
+        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+
+        # Normalize the solution vectors fr each phase
+        currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
+        currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB))
+        currentPhC = currentPhC / csd.n_getComplexModule(np.sum(currentPhC))
+
+        getMod = np.vectorize(csd.n_getComplexModule)
+
+        resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
+
+        resultsCurrentVector = getMod(resultsCurrentVector)
+        resistanceVector = csd.n_getResistanceArray(self.elementsVector,
+                                                    dXmm=self.dXmm, dYmm=self.dYmm,
+                                                    temperature=self.t)
+        resultsCurrentVector *= self.I
+
+        powerLossesVector = resistanceVector * resultsCurrentVector**2
+        powerLosses = np.sum(powerLossesVector)
+
+        # Power losses per phase
+        powPhA = np.sum(powerLossesVector[0:self.elementsPhaseA])
+        powPhB = np.sum(powerLossesVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
+        powPhC = np.sum(powerLossesVector[self.elementsPhaseA+self.elementsPhaseB:])
+
+        self.console('power losses: {:.2f} [W] \n phA: {:.2f}[W]\n phB: {:.2f}[W]\n phC: {:.2f}[W]'
+                     .format(powerLosses, powPhA, powPhB, powPhC))
+
+        self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
+
+        # Converting resutls to current density
+        self.resultsCurrentVector = resultsCurrentVector / (self.dXmm * self.dYmm)
+
+        # Recreating the solution to form of cross section array
+        self.resultsArray = csd.n_recreateresultsArray(
+                                      elementsVector=self.elementsVector,
+                                      resultsVector=self.resultsCurrentVector,
+                                      initialGeometryArray=self.XsecArr)
+        # Display the results:
+        self.showResults()
+
+
+    def showResults(self):
+
+        title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
+        axis_font = { 'size':'10'}
+
+        if np.sum(self.resultsArray) != 0:
+
+            # Cecking the area in array that is used by geometry to limit the display
+            min_row = int(np.min(self.elementsVector[:, 0]))
+            max_row = int(np.max(self.elementsVector[:, 0])+1)
+
+            min_col = int(np.min(self.elementsVector[:, 1]))
+            max_col = int(np.max(self.elementsVector[:, 1])+1)
+
+            # Cutting down results array to the area with geometry
+            resultsArrayDisplay = self.resultsArray[min_row:max_row, min_col:max_col]
+
+            # Checking out what are the dimensions od the ploted area
+            # to make propper scaling
+
+            plotWidth = (resultsArrayDisplay.shape[1]) * self.dXmm
+            plotHeight = (resultsArrayDisplay.shape[0]) * self.dYmm
+
+            fig = plt.figure('Power Results Window')
+            ax = fig.add_subplot(1, 1, 1)
+
+            my_cmap = matplotlib.cm.get_cmap('jet')
+            my_cmap.set_under('w')
+
+            im = ax.imshow(resultsArrayDisplay,
+                           cmap=my_cmap, interpolation='none',
+                           vmin=0.8*np.min(self.resultsCurrentVector),
+                           extent=[0, plotWidth, plotHeight, 0])
+
+            fig.colorbar(im, ax=ax, orientation='vertical',
+                         label='Current Density [A/mm$^2$]',
+                         alpha=0.5, fraction=0.046)
+            plt.axis('scaled')
+
+            ax.set_title(str(self.f)+'[Hz] / '+str(self.I)+'[A] / '+str(self.t) +
+                         '[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}'.format(self.powerLosses), **title_font)
+            
+            plt.xlabel('size [mm]', **axis_font)
+            plt.ylabel('size [mm]', **axis_font)
+
+            fig.autofmt_xdate(bottom=0.2, rotation=45, ha='right')
+
+            plt.tight_layout()
+            plt.show()
+
+
 class forceWindow():
     '''
     This class define the main control window for the

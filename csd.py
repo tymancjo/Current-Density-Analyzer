@@ -33,8 +33,12 @@ def saveTheData(filename):
     '''
     This is the subfunction for saving data
     '''
-    print('Saving to file :' + filename)
-    np.save(filename, XSecArray)
+    # print('Saving to file :' + filename)
+    # np.save(filename, XSecArray)
+    
+    S = csd.cointainer(XSecArray, dXmm, dYmm)
+    S.save(filename) 
+    del(S)   
 
 
 def loadArrayFromFile():
@@ -42,7 +46,7 @@ def loadArrayFromFile():
     This function loads the data from the file
     !!!!! Need some work - it dosn't reset properly the dXmm and dYmm
     '''
-    filename = filedialog.askopenfilename()
+    filename = filedialog.askopenfilename(filetypes=[("CSD files", "*.csd")])
     filename = os.path.normpath(filename)
 
     if np.sum(XSecArray) != 0: # Test if there is anything draw on the array
@@ -59,11 +63,18 @@ def loadTheData(filename):
     '''
     This is sub function to load data
     '''
-    global XSecArray
-    print('Readinf from file :' + filename)
-    XSecArray =  np.load(filename)
-    csd.n_printTheArray(XSecArray, canvas=w)
+    global XSecArray, dXmm, dYmm
 
+    print('Readinf from file :' + filename)
+    # XSecArray =  np.load(filename)
+    S = csd.loadObj(filename)
+    XSecArray, dXmm, dYmm = S.restore()
+    print('dX:{} dY:{}'.format(dXmm, dYmm))
+    myEntryDx.delete(0, END)
+    myEntryDx.insert(END, str(dXmm))
+    setParameters()
+    csd.n_printTheArray(XSecArray, canvas=w)
+    del(S)
 
 def zoomInArray(inputArray, zoomSize=2, startX=0, startY=0):
 
@@ -601,7 +612,7 @@ w = Canvas(master,
            width=canvas_width,
            height=canvas_height)
 w.configure(background='white')
-w.grid(row=1, column=1, columnspan=5, rowspan=10, sticky=W+E+N+S, padx=1, pady=1)
+w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1)
 
 
 print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
@@ -613,54 +624,51 @@ print_button_load.grid(row=2, column=0, padx=5, pady=5)
 print_button_save = Button(master, text='Save to File', command=saveArrayToFile, height=2, width=16)
 print_button_save.grid(row=3, column=0, padx=5, pady=5)
 
+
+print_button_slice = Button(master, text='Subdivide', command=subdivideArray, height=2, width=16)
+print_button_slice.grid(row=11, column=8, padx=5, pady=5, columnspan=3)
+
+print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
+print_button_slice.grid(row=12, column=8, padx=5, pady=5, columnspan=3)
+
+print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=16)
+print_button_zoom.grid(row=6, column=8, padx=5, pady=5, columnspan=3)
+print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
+print_button_zoom.grid(row=7, column=8, padx=5, pady=5, columnspan=3)
+
+print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=9, column=8, padx=5, pady=5)
+print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=9, column=10, padx=5, pady=5)
+print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=8, column=9, padx=5, pady=5)
+print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=10, column=9, padx=5, pady=5)
+
 emptyOpis = Label(text='', height=3)
 emptyOpis.grid(row=5, column=0,)
 
-print_button_slice = Button(master, text='Subdivide', command=subdivideArray, height=2, width=16)
-print_button_slice.grid(row=6, column=0 , padx=5, pady=5)
+emptyOpis = Label(text='Analysis:', height=3)
+emptyOpis.grid(row=6, column=0,)
 
-print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
-print_button_slice.grid(row=7, column=0 , padx=5, pady=5)
+print_button = Button(master, text='Power Losses\n Calculations', command=showMePower, height=2, width=16)
+print_button.grid(row=7, column=0, columnspan=1)
 
-print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=16)
-print_button_zoom.grid(row=4, column=8 , padx=5, pady=5, columnspan=2)
-print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
-print_button_zoom.grid(row=5, column=8 , padx=5, pady=5, columnspan=2)
-
-print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=6, column=8 , padx=5, pady=5)
-print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=6, column=9 , padx=5, pady=5)
-print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=8 , padx=5, pady=5)
-print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=9 , padx=5, pady=5)
-
-print_button = Button(master, text='Power Calc.', command=showMePower, height=2, width=16)
-print_button.grid(row=9, column=8, columnspan=2)
-
-print_button = Button(master, text='Forces Calc.', command=showMeForces, height=2, width=16)
-print_button.grid(row=10, column=8, padx=5, pady=5,columnspan=2)
+print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
+print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)
-GeometryOpis.grid(row=0, column=8,columnspan=2)
-
-# print_button = Button(master, text='Set parameters', command=setParameters, height=2, width=16)
-# print_button.grid(row=8, column=8, padx=5, pady=5,columnspan=2)
+GeometryOpis.grid(row=0, column=8, columnspan=3)
 
 
-analysisDX = Label(text='dx\n '+str(dXmm)+'[mm]', height=2  )
-analysisDX.grid(row=1, column=8,columnspan=1)
-analysisDY = Label(text='dy\n '+str(dYmm)+'[mm]', height=2  )
-analysisDY.grid(row=2, column=9,columnspan=1)
-
-wsmall = Canvas(master,width=35,height=35)
-wsmall.configure(background='white')
-wsmall.grid(row=2, column=8 )
+analysisDX = Label(text='grid:', height=2  )
+analysisDX.grid(row=5, column=8, columnspan=1)
+analysisDY = Label(text='[mm]', height=2  )
+analysisDY.grid(row=5, column=10, columnspan=1)
 
 myEntryDx = Entry(master, width = 5)
 myEntryDx.insert(END,str(dXmm))
-myEntryDx.grid(row=3, column=8, columnspan=2, padx=1, pady=1)
+myEntryDx.grid(row=5, column=9, columnspan=1, padx=1, pady=1)
 myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
@@ -679,19 +687,18 @@ w.bind("<Up>",zoomU)
 w.bind("<Down>",zoomD)
 
 message = Label( master, text = "use: Left Mouse Button to Set conductor, Right to reset" )
-#message.pack( side = BOTTOM )
-message.grid(row=12, column=0, columnspan=3)
+message.grid(row=13, column=1, columnspan=3)
 
 phase = IntVar()
 
 phase.set(1) # initialize
 
-Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').grid(row=0, column=1)
-Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').grid(row=0, column=2)
-Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').grid(row=0, column=3)
+Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').grid(row=2, column=8, columnspan=3)
+Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').grid(row=3, column=8, columnspan=3)
+Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').grid(row=4, column=8, columnspan=3)
 
-print_button = Button(master, text='Show / Refresh CAD view', command=displayArrayAsImage, height=1, width=22)
-print_button.grid(row=0, column=5, padx=5, pady=0)
+print_button = Button(master, text='CAD view', command=displayArrayAsImage, height=1, width=18)
+print_button.grid(row=1, column=8, padx=5, pady=0, columnspan=3)
 
 
 master.resizable(width=False, height=False)

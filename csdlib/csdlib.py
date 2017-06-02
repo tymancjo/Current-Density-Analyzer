@@ -10,6 +10,8 @@ import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 
+import pickle
+
 from tkinter import *
 from tkinter import filedialog, messagebox
 
@@ -21,8 +23,49 @@ import os.path
 from csdlib.vect import Vector as v2
 
 ### End of external Loads
+# Classes
+
+class cointainer():
+    def __init__(self, xArray, dX, dY):
+        self.xArray = xArray
+        self.dX = dX
+        self.dY = dY
+        print('The cointainer is created')
+
+    def save(self, filename):
+        filename = str(filename) + '.csd'
+        try:
+            print('trying to save to: {}'.format(filename))
+            tempfile = filename + '_temp'
+            with open(tempfile, 'wb') as output:
+                pickle.dump(self, output, pickle.DEFAULT_PROTOCOL)
+        except:
+            print('There is issue with pickle. Save aborded to protect file.')
+        else:
+            with open(filename, 'wb') as output:
+                pickle.dump(self, output, pickle.DEFAULT_PROTOCOL)
+
+    def restore(self):
+        return self.xArray, self.dX, self.dY
 
 # ################# FUNCTIONS & PROCEDURES##############################
+
+
+def loadObj(filename):
+    '''load object data from file that was saved by saveObj function.
+    Inputs:
+    filename: file to save the data to with properly delivered path.
+
+    Returns:
+    Recreated object
+
+    Example use:``
+
+    P = loadObj('project.save')
+    recreate P as myProject class object.
+    '''
+    with open(filename, 'rb') as myInput:
+        return pickle.load(myInput)
 
 
 # Calculations of mututal inductance between conductors

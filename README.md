@@ -1,8 +1,14 @@
 # Current-Density-Analyzer
-This is repository for tool that analyze the current density distribution in conductors.
+This is repository for tool that analyze the current density distribution in conductors.It alseo allows to calculate alseforces between conductors.
 
+# Current release:
+- Calcuate current density distribution in conductors cross sections for 1, 2 and 3 phase scenarios
+- Calculate electrodynamic forces between conductors (this require 3 phase geometry - for now)
+
+# Old relese notes:
 So – long story short – after putting together  a round of 600 lines of code (in python off course) and learning some basic usage of the tkinter GUI building framework I can now for the first time release to you beta version of the CSD app.
 This app is a python based mirror of the calculator of the Current Density Distribution that was available on my webpage (actually still is http://tomasztomanek.pl/pub/webapp/IcwThermal). 
+
 
 Please give it a try!
 
@@ -17,8 +23,8 @@ b.	If you get ZIP then Unzip the content to a directory of your choice. If you c
 You should be good to go!
 If something is not working – let me know!
 
+# Usage - this shows the  old screenshots - will be updated!
 Run the app:
-
 ***Please note that the screenshots are from previous version of the app. Current one have options for 3 phase analysis. But for information purposes should be just fine***
 1.	Navigate to the directory where you unzipped the app files:
 ![Folder with App](readme_img/92.png)

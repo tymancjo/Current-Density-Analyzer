@@ -1,5 +1,5 @@
 # Current-Density-Analyzer
-This is repository for tool that analyze the current density distribution in conductors.It alseo allows to calculate alseforces between conductors.
+This is repository for tool that analyze the current density distribution in conductors.It also allows to calculate electrodynamic forces between conductors.
 
 # Current release:
 - Calcuate current density distribution in conductors cross sections for 1, 2 and 3 phase scenarios

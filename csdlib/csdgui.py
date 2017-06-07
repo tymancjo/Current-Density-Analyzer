@@ -350,7 +350,7 @@ class forceWindow():
         # reading input data frm gui
         self.readSettings()
         self.Fa, self.Fb, self.Fc, self.ForcesMag2,\
-            self.ForcesMag = csd.n_getForces(XsecArr=self.XsecArr,
+            self.ForcesVec = csd.n_getForces(XsecArr=self.XsecArr,
                                              vPhA=self.vPhA,
                                              vPhB=self.vPhB,
                                              vPhC=self.vPhC,
@@ -450,10 +450,53 @@ class forceWindow():
 
         maxForce = max([f.norm() for f in self.forces])
 
-        # figVect = plt.figure('Forces VectorPlot')
-        # figVect.clear()
         plt.quiver(X, Y, U, V, edgecolor='none', facecolor='red',
                    linewidth=.5, scale=2 * maxForce, scale_units=scale_units,
                    width=.0001 * bigger_size)
+
+        conductors, total, phCon = csd.n_getConductors(XsecArr=self.XsecArr,
+                                                       vPhA=self.vPhA,
+                                                       vPhB=self.vPhB,
+                                                       vPhC=self.vPhC)
+
+        # fig2 = plt.figure('Conductors')
+        # fig2.clear()
+        # ax2 = plt.axes()
+
+        # im2 = ax2.imshow(conductors[min_row: max_row, min_col: max_col],
+        #                  cmap=my_cmap, interpolation='none',
+        #                  vmin=0.9,
+        #                  extent=[0, plotWidth, plotHeight, 0])
+
+        bars = []
+        for bar in range(1, total+1):
+            temp = csd.n_arrayVectorize(inputArray=conductors,
+                                             phaseNumber=bar,
+                                             dXmm=self.dXmm, dYmm=self.dYmm)
+            bars.append(temp)
+
+        Fx_array = [x[0] for x in self.ForcesVec]
+        Fy_array = [-x[1] for x in self.ForcesVec]
+
+        resultsFx =\
+            csd.n_recreateresultsArray(elementsVector=self.elementsVector,
+                                       resultsVector=Fx_array,
+                                       initialGeometryArray=self.XsecArr)
+
+        resultsFy =\
+            csd.n_recreateresultsArray(elementsVector=self.elementsVector,
+                                       resultsVector=Fy_array,
+                                       initialGeometryArray=self.XsecArr)
+
+        for i, bar in enumerate(bars):
+            x, y = csd.n_getCenter(bar)
+            ax.text(x, y, '[{}]'.format(i), horizontalalignment='center')
+            Fx = 0
+            Fy = 0
+            for element in bar:
+                Fx += resultsFx[int(element[0]), int(element[1])]
+                Fy += resultsFy[int(element[0]), int(element[1])]
+
+            print('Bar {0:02d}: F(x,y): ({1:06.2f}, {2:06.2f}) [N]'.format(i, Fx, Fy))
 
         plt.show()

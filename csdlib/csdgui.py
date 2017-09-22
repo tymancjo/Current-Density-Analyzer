@@ -199,6 +199,43 @@ class currentDensityWindow():
                                       elementsVector=self.elementsVector,
                                       resultsVector=self.resultsCurrentVector,
                                       initialGeometryArray=self.XsecArr)
+        
+        # Calculationg the eqivalent single busbar representative object parameters
+        # This will be moved to a separate function place in the future
+
+        # Getting the data:
+        perymeterA = csd.n_perymiter(self.vPhA, self.XsecArr, self.dXmm, self.dYmm)
+        perymeterB = csd.n_perymiter(self.vPhB, self.XsecArr, self.dXmm, self.dYmm)
+        perymeterC = csd.n_perymiter(self.vPhC, self.XsecArr, self.dXmm, self.dYmm)
+
+        # temperature coeff of resistance
+        alfa = 0.004
+        # assuming the thickness of equivalent bar is a=10mm
+        a = 10
+        
+        b_phA = (perymeterA - 2*a) / 2
+        b_phB = (perymeterB - 2*a) / 2
+        b_phC = (perymeterC - 2*a) / 2
+
+        # calculating equivalent gamma in 20C - to get the same power losses in DC calculations RI^2
+        gamma_phA = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phA*1e-3 * powPhA)
+        gamma_phB = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phB*1e-3 * powPhB)
+        gamma_phC = (1 + alfa*(self.t - 20)) *1 * self.I**2 / (a*1e-3 * b_phC*1e-3 * powPhC)
+
+            
+
+
+
+        print('Eqivalent bar phA is: {}mm x {}mm at gamma: {}'.format(a,b_phA,gamma_phA))
+        print('Eqivalent bar phB is: {}mm x {}mm at gamma: {}'.format(a,b_phB,gamma_phB))
+        print('Eqivalent bar phC is: {}mm x {}mm at gamma: {}'.format(a,b_phC,gamma_phC))
+        
+        print('({},{},1000, gamma={})'.format(a,b_phA,gamma_phA))
+        print('({},{},1000, gamma={})'.format(a,b_phB,gamma_phB))
+        print('({},{},1000, gamma={})'.format(a,b_phC,gamma_phC))
+        
+        
+
         # Display the results:
         self.showResults()
 

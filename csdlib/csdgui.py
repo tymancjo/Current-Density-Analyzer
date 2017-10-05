@@ -72,7 +72,7 @@ class currentDensityWindow():
         self.cframe = tk.Frame(self.master)
         self.cframe.pack(padx=10, pady=10)
 
-        self.tx1 = tk.Text(self.cframe, height=5, width=35)
+        self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
 
         self.openButton = tk.Button(self.cframe,
@@ -93,7 +93,7 @@ class currentDensityWindow():
         self.desc_I.config(text='Current: {:.2f} [A]'.format(self.I))
         self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
         self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
- 
+
         self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
                                          phaseNumber=1,
                                          dXmm=self.dXmm, dYmm=self.dYmm)
@@ -163,6 +163,18 @@ class currentDensityWindow():
         currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB:1]
         currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
 
+        # As we have complex currents vectors we can caluculate the impedances
+        # Of each phase as Z= U/I
+
+        I_PhA = np.sum(currentPhA)
+        I_PhB = np.sum(currentPhB)
+        I_PhC = np.sum(currentPhC)
+
+
+        Za = 1 / csd.n_getComplexModule(I_PhA)
+        Zb = csd.n_getComplexModule(-0.5 + (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(I_PhB)
+        Zc = csd.n_getComplexModule(-0.5 - (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(I_PhC)
+
         # Normalize the solution vectors fr each phase
         currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
         currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB))
@@ -191,6 +203,43 @@ class currentDensityWindow():
 
         self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
 
+        # Calculatinr resistances from power losses
+
+        # Ra = (powPhA / self.I**2)
+        # Rb = (powPhB / self.I**2)
+        # Rc = (powPhC / self.I**2)
+
+        # Calculating phases resistance based on geometry
+        Ra = 1 / np.sum(1 / resistanceVector[0:self.elementsPhaseA])
+        Rb = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
+        Rc = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA+self.elementsPhaseB:])
+
+        # Calculating the reactance part of impedance
+        Xa = np.sqrt(Za**2 - Ra**2)
+        Xb = np.sqrt(Zb**2 - Rb**2)
+        Xc = np.sqrt(Zc**2 - Rc**2)
+
+        # calculationg the inductance of the sustem (assuming co capacitance)
+        La = Xa / (2 * np.pi * self.f)
+        Lb = Xb / (2 * np.pi * self.f)
+        Lc = Xc / (2 * np.pi * self.f)
+
+        # printing to system consloe window
+        print('Impedance calulations results: \n')
+        print('Za: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
+        print('Zb: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
+        print('Zc: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
+        print('\n \n')
+
+        # printing to GUI console window
+        self.console('Impedance calulations results:')
+        self.console('units: [uOhm], [uH]')
+
+        self.console('Za:{:.2f} Ra:{:.2f} Xa:{:.2f} La:{:.3f}'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
+        self.console('Zb:{:.2f} Rb:{:.2f} Xb:{:.2f} Lb:{:.3f}'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
+        self.console('Zc:{:.2f} Rc:{:.2f} Xc:{:.2f} Lc:{:.3f}'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
+
+
         # Converting resutls to current density
         self.resultsCurrentVector = resultsCurrentVector / (self.dXmm * self.dYmm)
 
@@ -199,6 +248,43 @@ class currentDensityWindow():
                                       elementsVector=self.elementsVector,
                                       resultsVector=self.resultsCurrentVector,
                                       initialGeometryArray=self.XsecArr)
+
+        # Calculationg the eqivalent single busbar representative object parameters
+        # This will be moved to a separate function place in the future
+
+        # Getting the data:
+        perymeterA = csd.n_perymiter(self.vPhA, self.XsecArr, self.dXmm, self.dYmm)
+        perymeterB = csd.n_perymiter(self.vPhB, self.XsecArr, self.dXmm, self.dYmm)
+        perymeterC = csd.n_perymiter(self.vPhC, self.XsecArr, self.dXmm, self.dYmm)
+
+        # temperature coeff of resistance
+        alfa = 0.004
+        # assuming the thickness of equivalent bar is a=10mm
+        a = 10
+
+        b_phA = (perymeterA - 2*a) / 2
+        b_phB = (perymeterB - 2*a) / 2
+        b_phC = (perymeterC - 2*a) / 2
+
+        # calculating equivalent gamma in 20C - to get the same power losses in DC calculations RI^2
+        gamma_phA = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phA*1e-3 * powPhA)
+        gamma_phB = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phB*1e-3 * powPhB)
+        gamma_phC = (1 + alfa*(self.t - 20)) *1 * self.I**2 / (a*1e-3 * b_phC*1e-3 * powPhC)
+
+
+
+
+        print('Equivalent bars for DC based thermal analysis: \n')
+        print('Eqivalent bar phA is: {}mm x {}mm at gamma: {}'.format(a,b_phA,gamma_phA))
+        print('Eqivalent bar phB is: {}mm x {}mm at gamma: {}'.format(a,b_phB,gamma_phB))
+        print('Eqivalent bar phC is: {}mm x {}mm at gamma: {}'.format(a,b_phC,gamma_phC))
+
+        print('({},{},1000, gamma={})'.format(a,b_phA,gamma_phA))
+        print('({},{},1000, gamma={})'.format(a,b_phB,gamma_phB))
+        print('({},{},1000, gamma={})'.format(a,b_phC,gamma_phC))
+
+
+
         # Display the results:
         self.showResults()
 
@@ -244,7 +330,7 @@ class currentDensityWindow():
 
             ax.set_title(str(self.f)+'[Hz] / '+str(self.I)+'[A] / '+str(self.t) +
                          '[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}'.format(self.powerLosses), **title_font)
-            
+
             plt.xlabel('size [mm]', **axis_font)
             plt.ylabel('size [mm]', **axis_font)
 
@@ -350,7 +436,7 @@ class forceWindow():
         # reading input data frm gui
         self.readSettings()
         self.Fa, self.Fb, self.Fc, self.ForcesMag2,\
-            self.ForcesMag = csd.n_getForces(XsecArr=self.XsecArr,
+            self.ForcesVec = csd.n_getForces(XsecArr=self.XsecArr,
                                              vPhA=self.vPhA,
                                              vPhB=self.vPhB,
                                              vPhC=self.vPhC,
@@ -450,10 +536,53 @@ class forceWindow():
 
         maxForce = max([f.norm() for f in self.forces])
 
-        # figVect = plt.figure('Forces VectorPlot')
-        # figVect.clear()
         plt.quiver(X, Y, U, V, edgecolor='none', facecolor='red',
                    linewidth=.5, scale=2 * maxForce, scale_units=scale_units,
                    width=.0001 * bigger_size)
+
+        conductors, total, phCon = csd.n_getConductors(XsecArr=self.XsecArr,
+                                                       vPhA=self.vPhA,
+                                                       vPhB=self.vPhB,
+                                                       vPhC=self.vPhC)
+
+        # fig2 = plt.figure('Conductors')
+        # fig2.clear()
+        # ax2 = plt.axes()
+
+        # im2 = ax2.imshow(conductors[min_row: max_row, min_col: max_col],
+        #                  cmap=my_cmap, interpolation='none',
+        #                  vmin=0.9,
+        #                  extent=[0, plotWidth, plotHeight, 0])
+
+        bars = []
+        for bar in range(1, total+1):
+            temp = csd.n_arrayVectorize(inputArray=conductors,
+                                             phaseNumber=bar,
+                                             dXmm=self.dXmm, dYmm=self.dYmm)
+            bars.append(temp)
+
+        Fx_array = [x[0] for x in self.ForcesVec]
+        Fy_array = [-x[1] for x in self.ForcesVec]
+
+        resultsFx =\
+            csd.n_recreateresultsArray(elementsVector=self.elementsVector,
+                                       resultsVector=Fx_array,
+                                       initialGeometryArray=self.XsecArr)
+
+        resultsFy =\
+            csd.n_recreateresultsArray(elementsVector=self.elementsVector,
+                                       resultsVector=Fy_array,
+                                       initialGeometryArray=self.XsecArr)
+
+        for i, bar in enumerate(bars):
+            x, y = csd.n_getCenter(bar)
+            ax.text(x, y, '[{}]'.format(i), horizontalalignment='center')
+            Fx = 0
+            Fy = 0
+            for element in bar:
+                Fx += resultsFx[int(element[0]), int(element[1])]
+                Fy += resultsFy[int(element[0]), int(element[1])]
+
+            print('Bar {0:02d}: F(x,y): ({1:06.2f}, {2:06.2f}) [N]'.format(i, Fx, Fy))
 
         plt.show()

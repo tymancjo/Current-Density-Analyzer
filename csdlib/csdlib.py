@@ -119,12 +119,14 @@ def n_getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
     output:
     Resistance in Ohm
     '''
-    return (lenght/(sizeX*sizeY*sigma20C)) * 1e3 *(1+temCoRe*(temp-20))
+    return (lenght/(sizeX*sizeY*sigma20C)) * 1e3 * (1+temCoRe*(temp-20))
+
 
 # Calculate distance between elements function
 def n_getDistancesArray(inputVector):
     '''
-    This function calculate the array of distances between every conductors element
+    This function calculate the array of distances between every conductors
+    element
     Input:
     the vector of conductor elements as delivered by n_vectorizeTheArray
     '''
@@ -137,15 +139,15 @@ def n_getDistancesArray(inputVector):
     for x in range(elements):
         for y in range(elements):
             if x != y:
-                posXa =  inputVector[y][2]
-                posYa =  inputVector[y][3]
+                posXa = inputVector[y][2]
+                posYa = inputVector[y][3]
 
-                posXb =  inputVector[x][2]
-                posYb =  inputVector[x][3]
+                posXb = inputVector[x][2]
+                posYb = inputVector[x][3]
 
-                distanceArray[y,x] = np.sqrt((posXa-posXb)**2 + (posYa-posYb)**2)
+                distanceArray[y, x] = np.sqrt((posXa-posXb)**2 + (posYa-posYb)**2)
             else:
-                distanceArray[y,x] = 0
+                distanceArray[y, x] = 0
     return distanceArray
 
 
@@ -154,7 +156,7 @@ def n_perymiter(vec, arr, dXmm, dYmm):
     This function returns the area perynmiter lenght for given
     vector of conducting elements in the array
     Inputs:
-    vec - vector of elements to calculate the perymiter 
+    vec - vector of elements to calculate the perymiter
         lenght for (as delivered by n_vectorizeTheArray)
 
     arr - array that describe the geometry shape
@@ -169,7 +171,7 @@ def n_perymiter(vec, arr, dXmm, dYmm):
     # TODO: adding check if we dont exeed dimensions of array
     perymiter = 0
     for box in vec:
-        
+
         # checking in x diretions lef and right
         if arr[int(box[0] + 1)][int(box[1])] == 0:
             perymiter += dYmm
@@ -223,7 +225,7 @@ def n_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
                 coordinateY = (0.5 + Row) * dYmm
                 coordinateX = (0.5 + Col) * dXmm
 
-                vectorArray.append([Row,Col,coordinateX,coordinateY])
+                vectorArray.append([Row, Col, coordinateX, coordinateY])
 
     return np.array(vectorArray)
 
@@ -363,7 +365,7 @@ def n_printTheArray(dataArray, canvas):
                 canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
 
 # Procedure to set up point in the array and display it on canvas
-def n_setUpPoint( event, Set, dataArray, canvas):
+def n_setUpPoint(event, Set, dataArray, canvas):
     '''
     This procedure track the mouse position from event ad setup or reset propper element
     in the cross section array
@@ -378,7 +380,7 @@ def n_setUpPoint( event, Set, dataArray, canvas):
     elementsInX = dataArray.shape[1]
 
     canvasHeight = canvas.winfo_height()
-    canvasWidth  = canvas.winfo_width()
+    canvasWidth = canvas.winfo_width()
 
     dX = canvasWidth / elementsInX
     dY = canvasHeight / elementsInY
@@ -424,6 +426,12 @@ def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
 
     return localResultsArray
 
+def n_sumVecList(list):
+        sumV = v2(0, 0)
+        for v in list:
+            sumV = sumV + v
+        return sumV
+
 def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
     '''
     this experimental functions will calcuate the fore vector for each phase
@@ -433,7 +441,7 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
     Ia/b/c - current value in each phase in [A]
     '''
     def sumVecList(list):
-        sumV = v2(0,0)
+        sumV = v2(0, 0)
         for v in list:
             sumV = sumV + v
         return sumV
@@ -446,7 +454,7 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
 
     totalForceVec = []
 
-    
+
 
     for this in vPhAll:
         forceVec = v2(0, 0)  # initial reset for this element force
@@ -459,8 +467,8 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
                 Ithis = Iph[int(XsecArr[int(this[0])][int(this[1])])-1]
                 Iother = Iph[int(XsecArr[int(other[0])][int(other[1])])-1]
 
-                forceVec += (mi0_o2pi * Iother * Ithis / distance) * direction 
-                        
+                forceVec += Lenght * (mi0_o2pi * Iother * Ithis / distance) * direction
+
         totalForceVec.append(forceVec)
 
     ForceA = sumVecList(totalForceVec[:lPh[0]])
@@ -469,7 +477,7 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
 
     ForceMagVect = [force.norm() for force in totalForceVec]
 
-    return Lenght * ForceA, Lenght * ForceB, Lenght * ForceC, ForceMagVect, totalForceVec
+    return ForceA, ForceB, ForceC, ForceMagVect, totalForceVec
 
 def n_getPhasesCenters(vPhA, vPhB, vPhC):
     '''
@@ -481,13 +489,71 @@ def n_getPhasesCenters(vPhA, vPhB, vPhC):
     tempX = [x[2] for x in vPhA]
     tempY = [x[3] for x in vPhA]
     Pha = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
-    
+
     tempX = [x[2] for x in vPhB]
     tempY = [x[3] for x in vPhB]
     Phb = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
-    
+
     tempX = [x[2] for x in vPhC]
     tempY = [x[3] for x in vPhC]
     Phc = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
 
     return Pha, Phb, Phc
+
+def n_getCenter(v):
+    '''
+    This functions calculate the geometry center (average) for each phase
+    delivered as a vector form
+    Inputs:
+    vPhA/B/C - elements vectors of the each phase geometry as delivered by n_arrayVectorize
+    '''
+    tempX = [x[2] for x in v]
+    tempY = [x[3] for x in v]
+    center = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
+
+    return center
+
+
+def n_getConductors(XsecArr, vPhA, vPhB, vPhC):
+    '''
+    [Row,Col,X,Y]
+    '''
+    # Setting up new conductors array
+    conductorsArr = np.zeros((XsecArr.shape), dtype=int)
+
+    conductor = 0
+    phases = [vPhA, vPhB, vPhC]
+    phaseCond = []
+
+    for phase in phases:
+        phaseConductors = 0
+
+        for element in phase:
+            R = int(element[0])
+            C = int(element[1])
+
+            if conductorsArr[R, C] == 0:
+                # tests in 4 directions
+                N, E, S, W = 0, 0, 0, 0
+                try:
+                    E = conductorsArr[R+1, C]
+                    W = conductorsArr[R-1, C]
+                    N = conductorsArr[R, C-1]
+                    S = conductorsArr[R, C+1]
+                except:
+                    pass
+                if N != 0:
+                    conductorsArr[R, C] = N
+                elif S != 0:
+                    conductorsArr[R, C] = S
+                elif E != 0:
+                    conductorsArr[R, C] = E
+                elif W != 0:
+                    conductorsArr[R, C] = W
+                else:
+                    conductor += 1
+                    phaseConductors += 1
+                    conductorsArr[R, C] = conductor
+        phaseCond.append(phaseConductors)
+
+    return conductorsArr, conductor, phaseCond

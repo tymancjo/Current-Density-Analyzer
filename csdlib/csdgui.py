@@ -72,7 +72,7 @@ class currentDensityWindow():
         self.cframe = tk.Frame(self.master)
         self.cframe.pack(padx=10, pady=10)
 
-        self.tx1 = tk.Text(self.cframe, height=5, width=35)
+        self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
 
         self.openButton = tk.Button(self.cframe,
@@ -209,25 +209,35 @@ class currentDensityWindow():
         # Rb = (powPhB / self.I**2)
         # Rc = (powPhC / self.I**2)
 
-
+        # Calculating phases resistance based on geometry
         Ra = 1 / np.sum(1 / resistanceVector[0:self.elementsPhaseA])
         Rb = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
         Rc = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA+self.elementsPhaseB:])
 
-
+        # Calculating the reactance part of impedance
         Xa = np.sqrt(Za**2 - Ra**2)
         Xb = np.sqrt(Zb**2 - Rb**2)
         Xc = np.sqrt(Zc**2 - Rc**2)
 
+        # calculationg the inductance of the sustem (assuming co capacitance)
         La = Xa / (2 * np.pi * self.f)
         Lb = Xb / (2 * np.pi * self.f)
         Lc = Xc / (2 * np.pi * self.f)
 
+        # printing to system consloe window
+        print('Impedance calulations results: \n')
         print('Za: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
         print('Zb: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
         print('Zc: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
-
         print('\n \n')
+
+        # printing to GUI console window
+        self.console('Impedance calulations results:')
+        self.console('units: [uOhm], [uH]')
+
+        self.console('Za:{:.2f} Ra:{:.2f} Xa:{:.2f} La:{:.3f}'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
+        self.console('Zb:{:.2f} Rb:{:.2f} Xb:{:.2f} Lb:{:.3f}'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
+        self.console('Zc:{:.2f} Rc:{:.2f} Xc:{:.2f} Lc:{:.3f}'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
 
 
         # Converting resutls to current density
@@ -264,7 +274,7 @@ class currentDensityWindow():
 
 
 
-
+        print('Equivalent bars for DC based thermal analysis: \n')
         print('Eqivalent bar phA is: {}mm x {}mm at gamma: {}'.format(a,b_phA,gamma_phA))
         print('Eqivalent bar phB is: {}mm x {}mm at gamma: {}'.format(a,b_phB,gamma_phB))
         print('Eqivalent bar phC is: {}mm x {}mm at gamma: {}'.format(a,b_phC,gamma_phC))

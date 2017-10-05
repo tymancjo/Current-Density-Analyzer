@@ -93,7 +93,7 @@ class currentDensityWindow():
         self.desc_I.config(text='Current: {:.2f} [A]'.format(self.I))
         self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
         self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
- 
+
         self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
                                          phaseNumber=1,
                                          dXmm=self.dXmm, dYmm=self.dYmm)
@@ -163,6 +163,18 @@ class currentDensityWindow():
         currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB:1]
         currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
 
+        # As we have complex currents vectors we can caluculate the impedances
+        # Of each phase as Z= U/I
+
+        I_PhA = np.sum(currentPhA)
+        I_PhB = np.sum(currentPhB)
+        I_PhC = np.sum(currentPhC)
+
+
+        Za = 1 / csd.n_getComplexModule(I_PhA)
+        Zb = csd.n_getComplexModule(-0.5 + (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(I_PhB)
+        Zc = csd.n_getComplexModule(-0.5 - (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(I_PhC)
+
         # Normalize the solution vectors fr each phase
         currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
         currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB))
@@ -191,6 +203,33 @@ class currentDensityWindow():
 
         self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
 
+        # Calculatinr resistances from power losses
+
+        # Ra = (powPhA / self.I**2)
+        # Rb = (powPhB / self.I**2)
+        # Rc = (powPhC / self.I**2)
+
+
+        Ra = 1 / np.sum(1 / resistanceVector[0:self.elementsPhaseA])
+        Rb = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
+        Rc = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA+self.elementsPhaseB:])
+
+
+        Xa = np.sqrt(Za**2 - Ra**2)
+        Xb = np.sqrt(Zb**2 - Rb**2)
+        Xc = np.sqrt(Zc**2 - Rc**2)
+
+        La = Xa / (2 * np.pi * self.f)
+        Lb = Xb / (2 * np.pi * self.f)
+        Lc = Xc / (2 * np.pi * self.f)
+
+        print('Za: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
+        print('Zb: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
+        print('Zc: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
+
+        print('\n \n')
+
+
         # Converting resutls to current density
         self.resultsCurrentVector = resultsCurrentVector / (self.dXmm * self.dYmm)
 
@@ -199,7 +238,7 @@ class currentDensityWindow():
                                       elementsVector=self.elementsVector,
                                       resultsVector=self.resultsCurrentVector,
                                       initialGeometryArray=self.XsecArr)
-        
+
         # Calculationg the eqivalent single busbar representative object parameters
         # This will be moved to a separate function place in the future
 
@@ -212,7 +251,7 @@ class currentDensityWindow():
         alfa = 0.004
         # assuming the thickness of equivalent bar is a=10mm
         a = 10
-        
+
         b_phA = (perymeterA - 2*a) / 2
         b_phB = (perymeterB - 2*a) / 2
         b_phC = (perymeterC - 2*a) / 2
@@ -222,19 +261,19 @@ class currentDensityWindow():
         gamma_phB = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phB*1e-3 * powPhB)
         gamma_phC = (1 + alfa*(self.t - 20)) *1 * self.I**2 / (a*1e-3 * b_phC*1e-3 * powPhC)
 
-            
+
 
 
 
         print('Eqivalent bar phA is: {}mm x {}mm at gamma: {}'.format(a,b_phA,gamma_phA))
         print('Eqivalent bar phB is: {}mm x {}mm at gamma: {}'.format(a,b_phB,gamma_phB))
         print('Eqivalent bar phC is: {}mm x {}mm at gamma: {}'.format(a,b_phC,gamma_phC))
-        
+
         print('({},{},1000, gamma={})'.format(a,b_phA,gamma_phA))
         print('({},{},1000, gamma={})'.format(a,b_phB,gamma_phB))
         print('({},{},1000, gamma={})'.format(a,b_phC,gamma_phC))
-        
-        
+
+
 
         # Display the results:
         self.showResults()
@@ -281,7 +320,7 @@ class currentDensityWindow():
 
             ax.set_title(str(self.f)+'[Hz] / '+str(self.I)+'[A] / '+str(self.t) +
                          '[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}'.format(self.powerLosses), **title_font)
-            
+
             plt.xlabel('size [mm]', **axis_font)
             plt.ylabel('size [mm]', **axis_font)
 

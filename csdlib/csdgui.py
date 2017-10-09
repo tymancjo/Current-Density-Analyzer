@@ -160,52 +160,14 @@ class currentDensityWindow():
 
 
         voltageVector = np.concatenate((vA, vB, vC), axis=0)
-
-        # Debug print
-        print(voltageVector)
+        
+        # Main equation solve    
         currentVector = np.matmul(admitanceMatrix, voltageVector)
         
-        # Debug print
-        print(currentVector)
-
-
         # And now we need to get solution for each phase to normalize it
         currentPhA = currentVector[0: self.elementsPhaseA]
         currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
         currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
-
-        # As we have complex currents vectors we can caluculate the impedances
-        # Of each phase as Z= U/I
-
-
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        print('first currents: \n')
-        print('Ia: {:.2f}  [A]  mod {:.3f} [A]'.format(Ia, abs(Ia)))
-        print('Ib: {:.2f}  [A]  mod {:.3f} [A]'.format(Ib, abs(Ib)))
-        print('Ic: {:.2f}  [A]  mod {:.3f} [A]'.format(Ic, abs(Ic)))
-        print('########################################################\n \n')
-
-        Za = Ua / Ia
-        Zb = Ub / Ib
-        Zc = Uc / Ic
-
-        La = Za.imag / (2*np.pi*self.f)
-        Lb = Zb.imag / (2*np.pi*self.f)
-        Lc = Zc.imag / (2*np.pi*self.f)
-
-        print('first Impedance calulations results: \n')
-        print('Za: {:.2f}  [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, La * 1e6))
-        print('Zb: {:.2f}  [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Lb * 1e6))
-        print('Zc: {:.2f}  [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Lc * 1e6))
-        print('########################################################\n \n')
-
-
-        Za = 1 / csd.n_getComplexModule(Ia)
-        Zb = csd.n_getComplexModule(-0.5 + (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(Ib)
-        Zc = csd.n_getComplexModule(-0.5 - (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(Ic)
 
         # Normalize the solution vectors fr each phase
         currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
@@ -235,41 +197,12 @@ class currentDensityWindow():
 
         self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
 
-        # Calculatinr resistances from power losses
 
-        # Ra = (powPhA / self.I**2)
-        # Rb = (powPhB / self.I**2)
-        # Rc = (powPhC / self.I**2)
+        # # Calculating phases resistance based on geometry
+        # Ra = 1 / np.sum(1 / resistanceVector[0:self.elementsPhaseA])
+        # Rb = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
+        # Rc = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA+self.elementsPhaseB:])
 
-        # Calculating phases resistance based on geometry
-        Ra = 1 / np.sum(1 / resistanceVector[0:self.elementsPhaseA])
-        Rb = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
-        Rc = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA+self.elementsPhaseB:])
-
-        # Calculating the reactance part of impedance
-        Xa = np.sqrt(Za**2 - Ra**2)
-        Xb = np.sqrt(Zb**2 - Rb**2)
-        Xc = np.sqrt(Zc**2 - Rc**2)
-
-        # calculationg the inductance of the sustem (assuming co capacitance)
-        La = Xa / (2 * np.pi * self.f)
-        Lb = Xb / (2 * np.pi * self.f)
-        Lc = Xc / (2 * np.pi * self.f)
-
-        # printing to system consloe window
-        print('Impedance calulations results: \n')
-        print('Za: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
-        print('Zb: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
-        print('Zc: {:.2f} ~={:.2f} +j{:.2f} [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
-        print('\n \n')
-
-        # printing to GUI console window
-        self.console('Impedance calulations results:')
-        self.console('units: [uOhm], [uH]')
-
-        self.console('Za:{:.2f} Ra:{:.2f} Xa:{:.2f} La:{:.3f}'.format(Za * 1e6, Ra * 1e6, Xa * 1e6, La * 1e6))
-        self.console('Zb:{:.2f} Rb:{:.2f} Xb:{:.2f} Lb:{:.3f}'.format(Zb * 1e6, Rb * 1e6, Xb * 1e6, Lb * 1e6))
-        self.console('Zc:{:.2f} Rc:{:.2f} Xc:{:.2f} Lc:{:.3f}'.format(Zc * 1e6, Rc * 1e6, Xc * 1e6, Lc * 1e6))
 
 
         # Converting resutls to current density
@@ -302,8 +235,6 @@ class currentDensityWindow():
         gamma_phA = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phA*1e-3 * powPhA)
         gamma_phB = (1 + alfa*(self.t - 20)) * 1 * self.I**2 / (a*1e-3 * b_phB*1e-3 * powPhB)
         gamma_phC = (1 + alfa*(self.t - 20)) *1 * self.I**2 / (a*1e-3 * b_phC*1e-3 * powPhC)
-
-
 
 
         print('Equivalent bars for DC based thermal analysis: \n')

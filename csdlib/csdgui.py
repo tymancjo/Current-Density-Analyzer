@@ -149,31 +149,63 @@ class currentDensityWindow():
                                 temperature=self.t))
 
         # Let's put here some voltage vector
-        vA = np.ones(self.elementsPhaseA)
-        vB = np.ones(self.elementsPhaseB)*(-0.5 + (np.sqrt(3)/2)*1j)
-        vC = np.ones(self.elementsPhaseC)*(-0.5 - (np.sqrt(3)/2)*1j)
+        Ua = complex(1, 0)
+        Ub = complex(-0.5, np.sqrt(3)/2)
+        Uc = complex(-0.5, -np.sqrt(3)/2)
+
+
+        vA = np.ones(self.elementsPhaseA) * Ua
+        vB = np.ones(self.elementsPhaseB) * Ub
+        vC = np.ones(self.elementsPhaseC) * Uc
 
 
         voltageVector = np.concatenate((vA, vB, vC), axis=0)
 
+        # Debug print
+        print(voltageVector)
         currentVector = np.matmul(admitanceMatrix, voltageVector)
+        
+        # Debug print
+        print(currentVector)
+
 
         # And now we need to get solution for each phase to normalize it
         currentPhA = currentVector[0: self.elementsPhaseA]
-        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB:1]
+        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
         currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
 
         # As we have complex currents vectors we can caluculate the impedances
         # Of each phase as Z= U/I
 
-        I_PhA = np.sum(currentPhA)
-        I_PhB = np.sum(currentPhB)
-        I_PhC = np.sum(currentPhC)
+
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+
+        print('first currents: \n')
+        print('Ia: {:.2f}  [A]  mod {:.3f} [A]'.format(Ia, abs(Ia)))
+        print('Ib: {:.2f}  [A]  mod {:.3f} [A]'.format(Ib, abs(Ib)))
+        print('Ic: {:.2f}  [A]  mod {:.3f} [A]'.format(Ic, abs(Ic)))
+        print('########################################################\n \n')
+
+        Za = Ua / Ia
+        Zb = Ub / Ib
+        Zc = Uc / Ic
+
+        La = Za.imag / (2*np.pi*self.f)
+        Lb = Zb.imag / (2*np.pi*self.f)
+        Lc = Zc.imag / (2*np.pi*self.f)
+
+        print('first Impedance calulations results: \n')
+        print('Za: {:.2f}  [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, La * 1e6))
+        print('Zb: {:.2f}  [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Lb * 1e6))
+        print('Zc: {:.2f}  [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Lc * 1e6))
+        print('########################################################\n \n')
 
 
-        Za = 1 / csd.n_getComplexModule(I_PhA)
-        Zb = csd.n_getComplexModule(-0.5 + (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(I_PhB)
-        Zc = csd.n_getComplexModule(-0.5 - (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(I_PhC)
+        Za = 1 / csd.n_getComplexModule(Ia)
+        Zb = csd.n_getComplexModule(-0.5 + (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(Ib)
+        Zc = csd.n_getComplexModule(-0.5 - (np.sqrt(3)/2)*1j) / csd.n_getComplexModule(Ic)
 
         # Normalize the solution vectors fr each phase
         currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
@@ -338,6 +370,219 @@ class currentDensityWindow():
 
             plt.tight_layout()
             plt.show()
+
+class zWindow():
+    '''
+    This class define the main control window for handling
+    the analysis of equivalent phase impedance of given geometry.
+    '''
+    def __init__(self, master, XsecArr, dXmm, dYmm):
+
+        self.XsecArr = XsecArr
+        self.dXmm = dXmm
+        self.dYmm = dYmm
+
+        self.master = master
+        self.frame = tk.Frame(self.master)
+        self.frame.pack(padx=10, pady=10)
+
+        self.lab_Freq = tk.Label(self.frame,
+                                 text='Frequency [Hz]')
+        self.lab_Freq.pack()
+        self.Freq_txt = tk.Entry(self.frame)
+        self.Freq_txt.insert(5, '50')
+        self.Freq_txt.pack()
+
+        self.lab_Temp = tk.Label(self.frame,
+                                 text='Conductor temperature [degC]')
+        self.lab_Temp.pack()
+        self.Temp_txt = tk.Entry(self.frame)
+        self.Temp_txt.insert(5, '140')
+        self.Temp_txt.pack()
+
+        self.rButton = tk.Button(self.frame, text='Set Parameters',
+                                 command=self.readSettings)
+        self.rButton.pack()
+
+        self.bframe = tk.Frame(self.master)
+        self.bframe.pack(padx=10, pady=10)
+
+        self.f = float(self.Freq_txt.get())
+        self.t = float(self.Temp_txt.get())
+
+        self.desc_f = tk.Label(self.bframe,
+                               text='Frequency: {:.2f} [Hz]'.format(self.f))
+        self.desc_f.pack()
+        self.desc_t = tk.Label(self.bframe,
+                               text='Temperature: {:.2f} [degC]'
+                               .format(self.t))
+        self.desc_t.pack()
+
+        self.cframe = tk.Frame(self.master)
+        self.cframe.pack(padx=10, pady=10)
+
+        self.tx1 = tk.Text(self.cframe, height=10, width=45)
+        self.tx1.pack()
+
+        self.openButton = tk.Button(self.cframe,
+                                    text='Calculate!',
+                                    command=self.powerAnalysis)
+        self.openButton.pack()
+        
+
+
+    def readSettings(self):
+        self.f = float(self.Freq_txt.get())
+        self.t = float(self.Temp_txt.get())
+
+        self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
+        self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
+
+        self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=1,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+        self.vPhB = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=2,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+        self.vPhC = csd.n_arrayVectorize(inputArray=self.XsecArr,
+                                         phaseNumber=3,
+                                         dXmm=self.dXmm, dYmm=self.dYmm)
+
+        self.elementsPhaseA = len(self.vPhA)
+        self.elementsPhaseB = len(self.vPhB)
+        self.elementsPhaseC = len(self.vPhC)
+
+        if self.elementsPhaseA != 0 and self.elementsPhaseB != 0 and self.elementsPhaseC != 0:
+            self.elementsVector = np.concatenate((self.vPhA,
+                                                  self.vPhB,
+                                                  self.vPhC),
+                                                 axis=0)
+        elif self.elementsPhaseA == 0:
+            if self.elementsPhaseB == 0:
+                self.elementsVector = self.vPhC
+            elif self.elementsPhaseC == 0:
+                self.elementsVector = self.vPhB
+            else:
+                self.elementsVector = np.concatenate((self.vPhB, self.vPhC),
+                                                     axis=0)
+        else:
+            if self.elementsPhaseB == 0 and self.elementsPhaseC == 0:
+                self.elementsVector = self.vPhA
+            elif self.elementsPhaseC == 0:
+                self.elementsVector = np.concatenate((self.vPhA, self.vPhB),
+                                                     axis=0)
+            else:
+                self.elementsVector = np.concatenate((self.vPhA, self.vPhC),
+                                                     axis=0)
+
+    def console(self, string):
+        self.tx1.insert(tk.END, str(string))
+        self.tx1.insert(tk.END, '\n')
+        self.tx1.see(tk.END)
+
+    def powerAnalysis(self):
+        self.readSettings()
+
+        admitanceMatrix = np.linalg.inv(
+                            csd.n_getImpedanceArray(
+                                csd.n_getDistancesArray(self.elementsVector),
+                                freq=self.f,
+                                dXmm=self.dXmm,
+                                dYmm=self.dYmm,
+                                temperature=self.t))
+
+        # Let's put here some voltage vector
+        # initial voltage values 
+        Ua = complex(1, 0)
+        Ub = complex(-0.5, np.sqrt(3)/2)
+        Uc = complex(-0.5, -np.sqrt(3)/2)
+
+        # round one - phase A - other phases shunted
+        vA = np.ones(self.elementsPhaseA) * Ua
+        vB = np.ones(self.elementsPhaseB) * 0
+        vC = np.ones(self.elementsPhaseC) * 0
+
+        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+        currentVector = np.matmul(admitanceMatrix, voltageVector)
+
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0: self.elementsPhaseA]
+        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
+        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+        
+        # As we have complex currents vectors we can caluculate the impedances
+        # Of each phase as Z= U/I
+       
+        Za = Ua / Ia
+        La = Za.imag / (2*np.pi*self.f)
+       
+        # round 2 - phase B - other phases shunted
+        vA = np.ones(self.elementsPhaseA) * 0
+        vB = np.ones(self.elementsPhaseB) * Ub
+        vC = np.ones(self.elementsPhaseC) * 0
+
+        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+        currentVector = np.matmul(admitanceMatrix, voltageVector)
+
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0: self.elementsPhaseA]
+        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
+        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+        
+        # As we have complex currents vectors we can caluculate the impedances
+        # Of each phase as Z= U/I
+
+        Zb = Ub / Ib
+        Lb = Zb.imag / (2*np.pi*self.f)
+
+        # round 3 - phase C - other phases shunted
+        vA = np.ones(self.elementsPhaseA) * 0
+        vB = np.ones(self.elementsPhaseB) * 0
+        vC = np.ones(self.elementsPhaseC) * Uc
+
+        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+        currentVector = np.matmul(admitanceMatrix, voltageVector)
+
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0: self.elementsPhaseA]
+        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
+        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+        
+        # As we have complex currents vectors we can caluculate the impedances
+        # Of each phase as Z= U/I
+
+        Zc = Uc / Ic
+        Lc = Zc.imag / (2*np.pi*self.f)
+
+
+        print('Impedance calulations results: \n')
+        print('Za: {:.2f}  [uOhm]  La = {:.3f} [uH]'.format(Za * 1e6, La * 1e6))
+        print('Zb: {:.2f}  [uOhm]  Lb = {:.3f} [uH]'.format(Zb * 1e6, Lb * 1e6))
+        print('Zc: {:.2f}  [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Lc * 1e6))
+        print('########################################################\n \n')
+
+        
+        # printing to GUI console window
+        self.console('Impedance calulations results:')
+        self.console('Za: {:.2f} [uOhm]'.format(Za * 1e6))
+        self.console('Zb: {:.2f} [uOhm]'.format(Zb * 1e6))
+        self.console('Zc: {:.2f} [uOhm]'.format(Zc * 1e6))
+        self.console('')
+        self.console('La: {:.3f} [uH]'.format(La * 1e6))
+        self.console('Lb: {:.3f} [uH]'.format(Lb * 1e6))
+        self.console('Lc: {:.3f} [uH]'.format(Lc * 1e6))
 
 
 class forceWindow():

@@ -160,10 +160,10 @@ class currentDensityWindow():
 
 
         voltageVector = np.concatenate((vA, vB, vC), axis=0)
-        
-        # Main equation solve    
+
+        # Main equation solve
         currentVector = np.matmul(admitanceMatrix, voltageVector)
-        
+
         # And now we need to get solution for each phase to normalize it
         currentPhA = currentVector[0: self.elementsPhaseA]
         currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
@@ -359,7 +359,7 @@ class zWindow():
                                     text='Calculate!',
                                     command=self.powerAnalysis)
         self.openButton.pack()
-        
+
 
 
     def readSettings(self):
@@ -414,60 +414,52 @@ class zWindow():
     def powerAnalysis(self):
         self.readSettings()
 
-        admitanceMatrix = np.linalg.inv(
-                            csd.n_getImpedanceArray(
-                                csd.n_getDistancesArray(self.elementsVector),
-                                freq=self.f,
-                                dXmm=self.dXmm,
-                                dYmm=self.dYmm,
-                                temperature=self.t))
 
         # Let's put here some voltage vector
-        # initial voltage values 
+        # initial voltage values
         Ua = complex(1, 0)
         Ub = complex(-0.5, np.sqrt(3)/2)
         Uc = complex(-0.5, -np.sqrt(3)/2)
 
-        # round one - phase A - other phases shunted
-        vA = np.ones(self.elementsPhaseA) * Ua
-        vB = np.ones(self.elementsPhaseB) * 0
-        vC = np.ones(self.elementsPhaseC) * 0
+        admitanceMatrix = np.linalg.inv(
+        csd.n_getImpedanceArray(
+        csd.n_getDistancesArray(self.vPhA),
+        freq=self.f,
+        dXmm=self.dXmm,
+        dYmm=self.dYmm,
+        temperature=self.t))
 
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+
+        voltageVector = np.ones(len(self.vPhA)) * Ua
+
         currentVector = np.matmul(admitanceMatrix, voltageVector)
 
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0: self.elementsPhaseA]
-        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+        Ia = np.sum(currentVector)
 
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-        
         # As we have complex currents vectors we can caluculate the impedances
         # Of each phase as Z= U/I
-       
+
         Za = Ua / Ia
         La = Za.imag / (2*np.pi*self.f)
-       
-        # round 2 - phase B - other phases shunted
-        vA = np.ones(self.elementsPhaseA) * 0
-        vB = np.ones(self.elementsPhaseB) * Ub
-        vC = np.ones(self.elementsPhaseC) * 0
 
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+        # round 2 - phase B - other phases shunted
+
+        admitanceMatrix = np.linalg.inv(
+        csd.n_getImpedanceArray(
+        csd.n_getDistancesArray(self.vPhB),
+        freq=self.f,
+        dXmm=self.dXmm,
+        dYmm=self.dYmm,
+        temperature=self.t))
+
+
+        voltageVector = np.ones(len(self.vPhB)) * Ub
+
         currentVector = np.matmul(admitanceMatrix, voltageVector)
 
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0: self.elementsPhaseA]
-        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+        Ib = np.sum(currentVector)
 
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-        
+
         # As we have complex currents vectors we can caluculate the impedances
         # Of each phase as Z= U/I
 
@@ -475,22 +467,22 @@ class zWindow():
         Lb = Zb.imag / (2*np.pi*self.f)
 
         # round 3 - phase C - other phases shunted
-        vA = np.ones(self.elementsPhaseA) * 0
-        vB = np.ones(self.elementsPhaseB) * 0
-        vC = np.ones(self.elementsPhaseC) * Uc
+        admitanceMatrix = np.linalg.inv(
+        csd.n_getImpedanceArray(
+        csd.n_getDistancesArray(self.vPhC),
+        freq=self.f,
+        dXmm=self.dXmm,
+        dYmm=self.dYmm,
+        temperature=self.t))
 
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+
+        voltageVector = np.ones(len(self.vPhC)) * Uc
+
         currentVector = np.matmul(admitanceMatrix, voltageVector)
 
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0: self.elementsPhaseA]
-        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
 
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-        
+        Ic = np.sum(currentVector)
+
         # As we have complex currents vectors we can caluculate the impedances
         # Of each phase as Z= U/I
 
@@ -504,7 +496,7 @@ class zWindow():
         print('Zc: {:.2f}  [uOhm]  Lc = {:.3f} [uH]'.format(Zc * 1e6, Lc * 1e6))
         print('########################################################\n \n')
 
-        
+
         # printing to GUI console window
         self.console('Impedance calulations results:')
         self.console('Za: {:.2f} [uOhm]'.format(Za * 1e6))

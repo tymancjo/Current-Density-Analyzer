@@ -326,7 +326,15 @@ def showMePower(*arg):
         root.title('Power Losses Calculator')
         powerCalc = gui.currentDensityWindow(root, XSecArray, dXmm, dYmm)
 
+def showMeZ(*arg):
+    # lets check if there is anything in the xsection geom array
+    setParameters()
 
+    if np.sum(XSecArray) > 0:
+        root = Tk()
+        root.title('Impednaces Calculator')
+        zCalc = gui.zWindow(root, XSecArray, dXmm, dYmm)
+        
 def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
@@ -656,6 +664,9 @@ print_button.grid(row=7, column=0, columnspan=1)
 
 print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
 print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
+
+print_button = Button(master, text='Impednaces\n Calculations', command=showMeZ, height=2, width=16)
+print_button.grid(row=9, column=0, columnspan=1)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8, columnspan=3)

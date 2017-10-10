@@ -86,8 +86,18 @@ def n_getMutualInductance(sizeX, sizeY, lenght, distance):
     '''
     srednica = (sizeX+sizeY)/2
 
-    return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
+    a = srednica * 1e-3
+    l = lenght * 1e-3
+    d = distance * 1e-3
+    mi0 = 4 * np.pi * 1e-7
 
+    # fromula by:
+    # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
+    M = (mi0*l / (2*np.pi)) * (np.log((l+np.sqrt(l**2 + d**2))/d) - np.sqrt(1+(d/l)**2) + d/l)
+
+    # previous formula
+    # return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
+    return M
 
 
 # Calculation of self inductance value function
@@ -106,8 +116,18 @@ def n_getSelfInductance(sizeX, sizeY, lenght):
     L in [H]
     '''
     srednica = (sizeX+sizeY)/2
-    return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
-
+    a = srednica * 1e-3
+    l = lenght * 1e-3
+    mi0 = 4 * np.pi * 1e-7
+    
+    # This calculation is based on the:
+    # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
+    L = (mi0 * l / (2 * np.pi)) * (np.log(2 * l / a) - np.log(2)/3 + 13/12 - np.pi/2)
+    
+    # this was the previous formula
+    # return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
+    
+    return L 
 
 # Calculate the resistance value function
 def n_getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):

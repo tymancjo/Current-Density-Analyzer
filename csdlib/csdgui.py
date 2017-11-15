@@ -21,6 +21,8 @@ class currentDensityWindow():
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
+        self.lenght = 1000
+        self.CuGamma = 385 #[W/mK]
 
         self.master = master
         self.frame = tk.Frame(self.master)
@@ -217,11 +219,13 @@ class currentDensityWindow():
 
         #Doing analysis per bar
         #Checking for the pabrs - separate conductor detecton
+        
         conductors, total, self.phCon = csd.n_getConductors(XsecArr=self.XsecArr,
                                                        vPhA=self.vPhA,
                                                        vPhB=self.vPhB,
                                                        vPhC=self.vPhC)
-        print(phCon)
+        #self.phCon is the list of number of conductors per phase
+        print(self.phCon)
         
         # Going thru the detected bars and preparing the arrays for each of it
         self.bars = []
@@ -242,7 +246,14 @@ class currentDensityWindow():
                                       elementsVector=self.elementsVector,
                                       resultsVector=self.resultsCurrentVector,
                                       initialGeometryArray=self.XsecArr)
+        self.powerResultsArray = csd.n_recreateresultsArray(
+                                      elementsVector=self.elementsVector,
+                                      resultsVector=powerLossesVector,
+                                      initialGeometryArray=self.XsecArr)
 
+        
+        
+        
         #Doing the power losses sums per each bar
         # Vector to keep all power losses per bar data and perymeter size and temp rise by given HTC
         
@@ -252,7 +263,7 @@ class currentDensityWindow():
             BarPowerLoss = 0
             
             for element in bar:
-                BarPowerLoss += self.resultsArray[int(element[0]), int(element[1])]
+                BarPowerLoss += self.powerResultsArray[int(element[0]), int(element[1])]
 
             # Calculating bar perymiter of the current bar
             
@@ -263,6 +274,78 @@ class currentDensityWindow():
             self.barsData.append([BarPowerLoss, perymiter, DT])
             #printing data for each bar 
             print('Bar {0:02d}; Power; {1:06.2f}; [W]; perymeter; {2}; [mm]; TempRise; {3:.1f}; [K]'.format(i, BarPowerLoss,  perymiter, DT))
+        
+        # Lets work with barsData for themral model calculations
+        
+        # first lets prepare for us some thermal data for each bar
+        for bar in self.barsData:
+            #calculationg the bar Ghtc
+            p = bar[1]*1e-3
+            a = 10*1e-3
+            b = (p-2*a)/2
+            l = self.lenght*1e-3
+            
+            Ghtc = p * l * self.HTC # thermal conductance to air
+            Gt = (a*b) * self.CuGamma / l  # thermal conductance to com
+            Q = bar[0] * l  # Power losses value at lenght
+            
+            bar.append(Q)
+            bar.append(Ghtc)
+            bar.append(Gt)
+            # now self.barsData have all the needed info :)    
+        
+        
+        # self.phCon is the list of number of conductors per phase
+        phaseBars = [self.barsData[:self.phCon[0]], 
+                    self.barsData[self.phCon[0]:self.phCon[0]+self.phCon[1]],
+                    self.barsData[self.phCon[0]+self.phCon[1]:]]
+        
+        for bars in phaseBars: # This loops over phases       
+            b = len(bars)
+            Q = []
+            G = []
+            
+            for i in range(b+1):
+                # power vector preparation
+                if i < b:
+                    Q.append(bars[i][3])
+                else:
+                    Q.append(0)
+                
+                Grow = []  # just to keep for the moment the row of G matrix
+                
+                for j in range(b+1):
+                    if j == i and j < b:
+                        Grow.append(bars[j][4] + 2 * bars[j][5])
+                    elif j == b and i < b:
+                        Grow.append(-2 * bars[i][5])
+                    elif i == b and j < b:
+                        Grow.append(2 * bars[j][5])
+                    elif j==i and j==b: # bottom last element in matrix
+                        Gtemp = 0
+                        for k in range(b):
+                            Gtemp += bars[k][5]
+                        Grow.append(-2 * Gtemp)
+                    else:
+                        Grow.append(0)
+                        
+                G.append(Grow)
+                
+            Q = np.array(Q)
+            G_1 = np.linalg.inv(np.array(G))
+            T = np.matmul(G_1, Q)
+           
+            print('***')
+            print(T)
+            print('***')
+            
+            
+            
+                            
+                    
+        
+            
+                    
         
         
         

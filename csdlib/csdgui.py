@@ -47,6 +47,13 @@ class currentDensityWindow():
         self.Temp_txt.insert(5, '140')
         self.Temp_txt.pack()
 
+        self.lab_HTC = tk.Label(self.frame,
+                                 text='HTC [W/m2K]')
+        self.lab_HTC.pack()
+        self.HTC_txt = tk.Entry(self.frame)
+        self.HTC_txt.insert(5, '3.75')
+        self.HTC_txt.pack()
+
         self.rButton = tk.Button(self.frame, text='Set Parameters',
                                  command=self.readSettings)
         self.rButton.pack()
@@ -57,6 +64,8 @@ class currentDensityWindow():
         self.I = float(self.Irms_txt.get())
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
+        self.HTC = float(self.HTC_txt.get())
+        
 
         self.desc_I = tk.Label(self.bframe,
                                text='Current: {:.2f} [A]'.format(self.I))
@@ -68,6 +77,11 @@ class currentDensityWindow():
                                text='Temperature: {:.2f} [degC]'
                                .format(self.t))
         self.desc_t.pack()
+
+        self.desc_htc = tk.Label(self.bframe,
+                                       text='HTC: {:.2f} [W/m2K]'
+                                       .format(self.HTC))
+        self.desc_htc.pack()
 
         self.cframe = tk.Frame(self.master)
         self.cframe.pack(padx=10, pady=10)
@@ -89,11 +103,13 @@ class currentDensityWindow():
         self.I = float(self.Irms_txt.get())
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
+        self.HTC = float(self.HTC_txt.get())
 
         self.desc_I.config(text='Current: {:.2f} [A]'.format(self.I))
         self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
         self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
-
+        self.desc_htc.config(text='HTC: {:.2f} [W/m2K]'.format(self.HTC))
+        
         self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
                                          phaseNumber=1,
                                          dXmm=self.dXmm, dYmm=self.dYmm)
@@ -184,7 +200,9 @@ class currentDensityWindow():
                                                     temperature=self.t)
         resultsCurrentVector *= self.I
 
+        # This is the total power losses vector
         powerLossesVector = resistanceVector * resultsCurrentVector**2
+        # This are the total power losses
         powerLosses = np.sum(powerLossesVector)
 
         # Power losses per phase
@@ -197,13 +215,24 @@ class currentDensityWindow():
 
         self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
 
-
-        # # Calculating phases resistance based on geometry
-        # Ra = 1 / np.sum(1 / resistanceVector[0:self.elementsPhaseA])
-        # Rb = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA:self.elementsPhaseA+self.elementsPhaseB:1])
-        # Rc = 1 / np.sum(1 / resistanceVector[self.elementsPhaseA+self.elementsPhaseB:])
-
-
+        #Doing analysis per bar
+        #Checking for the pabrs - separate conductor detecton
+        conductors, total, self.phCon = csd.n_getConductors(XsecArr=self.XsecArr,
+                                                       vPhA=self.vPhA,
+                                                       vPhB=self.vPhB,
+                                                       vPhC=self.vPhC)
+        print(phCon)
+        
+        # Going thru the detected bars and preparing the arrays for each of it
+        self.bars = []
+        
+        for bar in range(1, total+1):
+            temp = csd.n_arrayVectorize(inputArray=conductors,
+                                             phaseNumber=bar,
+                                             dXmm=self.dXmm, dYmm=self.dYmm)
+            self.bars.append(temp)
+            
+        
 
         # Converting resutls to current density
         self.resultsCurrentVector = resultsCurrentVector / (self.dXmm * self.dYmm)
@@ -214,6 +243,30 @@ class currentDensityWindow():
                                       resultsVector=self.resultsCurrentVector,
                                       initialGeometryArray=self.XsecArr)
 
+        #Doing the power losses sums per each bar
+        # Vector to keep all power losses per bar data and perymeter size and temp rise by given HTC
+        
+        self.barsData = []
+        
+        for i, bar in enumerate(self.bars):
+            BarPowerLoss = 0
+            
+            for element in bar:
+                BarPowerLoss += self.resultsArray[int(element[0]), int(element[1])]
+
+            # Calculating bar perymiter of the current bar
+            
+            perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
+            
+            DT = BarPowerLoss / (perymiter * 1e-3 * self.HTC)
+            
+            self.barsData.append([BarPowerLoss, perymiter, DT])
+            #printing data for each bar 
+            print('Bar {0:02d}; Power; {1:06.2f}; [W]; perymeter; {2}; [mm]; TempRise; {3:.1f}; [K]'.format(i, BarPowerLoss,  perymiter, DT))
+        
+        
+        
+        
         # Calculationg the eqivalent single busbar representative object parameters
         # This will be moved to a separate function place in the future
 
@@ -291,6 +344,17 @@ class currentDensityWindow():
                          alpha=0.5, fraction=0.046)
             plt.axis('scaled')
 
+            # Putting the detected bars numvers on plot to reffer the console data
+            # And doing calculation for each bar
+            
+            for i, bar in enumerate(self.bars):
+                x, y = csd.n_getCenter(bar)
+                
+                ax.text(x, y, '[{}]'.format(i), horizontalalignment='center')
+                self.console('bar {0:02d}: {1:.01f}[K]'.format(i,self.barsData[i][2]))
+            
+            # *** end of the per bar analysis ***
+            
             ax.set_title(str(self.f)+'[Hz] / '+str(self.I)+'[A] / '+str(self.t) +
                          '[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}'.format(self.powerLosses), **title_font)
 
@@ -713,22 +777,16 @@ class forceWindow():
                                                        vPhB=self.vPhB,
                                                        vPhC=self.vPhC)
 
-        # fig2 = plt.figure('Conductors')
-        # fig2.clear()
-        # ax2 = plt.axes()
-
-        # im2 = ax2.imshow(conductors[min_row: max_row, min_col: max_col],
-        #                  cmap=my_cmap, interpolation='none',
-        #                  vmin=0.9,
-        #                  extent=[0, plotWidth, plotHeight, 0])
-
         bars = []
+        
         for bar in range(1, total+1):
             temp = csd.n_arrayVectorize(inputArray=conductors,
                                              phaseNumber=bar,
                                              dXmm=self.dXmm, dYmm=self.dYmm)
             bars.append(temp)
-
+        
+        
+        
         Fx_array = [x[0] for x in self.ForcesVec]
         Fy_array = [-x[1] for x in self.ForcesVec]
 
@@ -750,7 +808,8 @@ class forceWindow():
             for element in bar:
                 Fx += resultsFx[int(element[0]), int(element[1])]
                 Fy += resultsFy[int(element[0]), int(element[1])]
-
-            print('Bar {0:02d}: F(x,y): ({1:06.2f}, {2:06.2f}) [N]'.format(i, Fx, Fy))
+            # Calculating bar perymiter - just for test nod needed in forces
+            perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
+            print('Bar {0:02d}: F(x,y): ({1:06.2f}, {2:06.2f}) [N] pre: {3}'.format(i, Fx, Fy, perymiter))
 
         plt.show()

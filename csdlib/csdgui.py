@@ -22,7 +22,7 @@ class currentDensityWindow():
         self.dXmm = dXmm
         self.dYmm = dYmm
         self.lenght = 1000
-        self.CuGamma = 385 #[W/mK]
+        self.CuGamma = 391.1 #[W/mK]
 
         self.master = master
         self.frame = tk.Frame(self.master)
@@ -53,8 +53,15 @@ class currentDensityWindow():
                                  text='HTC [W/m2K]')
         self.lab_HTC.pack()
         self.HTC_txt = tk.Entry(self.frame)
-        self.HTC_txt.insert(5, '3.75')
-        self.HTC_txt.pack()
+        self.HTC_txt.insert(5, '7')
+        self.HTC_txt.pack() 
+        
+        self.lab_lenght = tk.Label(self.frame,
+                                 text='lenght [mm]')
+        self.lab_lenght.pack()
+        self.lenght_txt = tk.Entry(self.frame)
+        self.lenght_txt.insert(5, '1000')
+        self.lenght_txt.pack()
 
         self.rButton = tk.Button(self.frame, text='Set Parameters',
                                  command=self.readSettings)
@@ -84,6 +91,11 @@ class currentDensityWindow():
                                        text='HTC: {:.2f} [W/m2K]'
                                        .format(self.HTC))
         self.desc_htc.pack()
+        
+        self.desc_lenght = tk.Label(self.bframe,
+                                       text='lenght: {:.2f} [mm]'
+                                       .format(self.lenght))
+        self.desc_lenght.pack()
 
         self.cframe = tk.Frame(self.master)
         self.cframe.pack(padx=10, pady=10)
@@ -106,11 +118,13 @@ class currentDensityWindow():
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
         self.HTC = float(self.HTC_txt.get())
+        self.lenght = float(self.lenght_txt.get())
 
         self.desc_I.config(text='Current: {:.2f} [A]'.format(self.I))
         self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
         self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
         self.desc_htc.config(text='HTC: {:.2f} [W/m2K]'.format(self.HTC))
+        self.desc_lenght.config(text='lenght: {:.2f} [mm]'.format(self.lenght))
         
         self.vPhA = csd.n_arrayVectorize(inputArray=self.XsecArr,
                                          phaseNumber=1,
@@ -179,6 +193,7 @@ class currentDensityWindow():
 
         voltageVector = np.concatenate((vA, vB, vC), axis=0)
 
+        # Initial solve 
         # Main equation solve
         currentVector = np.matmul(admitanceMatrix, voltageVector)
 
@@ -186,22 +201,110 @@ class currentDensityWindow():
         currentPhA = currentVector[0: self.elementsPhaseA]
         currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
         currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+        
+        # Bringin each phase current to the assumer Irms level 
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+        
+        # expected Ia Ib Ic as symmetrical ones
+        exIa = self.I * complex(1, 0)
+        exIb = self.I * complex(-0.5, np.sqrt(3)/2)
+        exIc = self.I * complex(-0.5, -np.sqrt(3)/2)
+        
+        print('***VOLTAGES****')
+        print(Ua, Ub, Uc)
+        
+        #ratios of currents will give us new voltages for phases
+        Ua = Ua * (exIa / Ia)
+        Ub = Ub * (exIb / Ib)
+        Uc = Uc * (exIc / Ic)
+        
+        #for debug:
+        print(Ua, Ub, Uc)
+        print('***XXXXX****')
+        
+        # So we have now new volatges, lets solve again with them
+        vA = np.ones(self.elementsPhaseA) * Ua
+        vB = np.ones(self.elementsPhaseB) * Ub
+        vC = np.ones(self.elementsPhaseC) * Uc
 
-        # Normalize the solution vectors fr each phase
-        currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
-        currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB))
-        currentPhC = currentPhC / csd.n_getComplexModule(np.sum(currentPhC))
+
+        voltageVector = np.concatenate((vA, vB, vC), axis=0)
+
+        # Initial solve 
+        # Main equation solve
+        currentVector = np.matmul(admitanceMatrix, voltageVector)
+
+        # And now we need to get solution for each phase to normalize it
+        currentPhA = currentVector[0: self.elementsPhaseA]
+        currentPhB = currentVector[self.elementsPhaseA: self.elementsPhaseA + self.elementsPhaseB]
+        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB:]
+        
+        # Bringin each phase current to the assumer Irms level 
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+        
+        # end of second solve!
+        
+        
+        #for debug:
+        print('***XXXXX****')
+        print(Ia, Ib, Ic)
+        print(Ia + Ib + Ic)
+        print('***XXXXX****')
+        
+        modIa = np.abs(Ia)
+        modIb = np.abs(Ib)
+        modIc = np.abs(Ic)
+        
+        #for debug:
+        print(modIa, modIb, modIc)
+        
+        currentPhA *= (self.I / modIa)
+        currentPhB *= (self.I / modIb)
+        currentPhC *= (self.I / modIc)
+            
+        Ia = np.sum(currentPhA)
+        Ib = np.sum(currentPhB)
+        Ic = np.sum(currentPhC)
+        
+        #for debug:
+        print('****xxxxx*****')
+        print(Ia, Ib, Ic)
+        print(np.abs(Ia), np.abs(Ib), np.abs(Ic))
+        print('****xxxxx*****')
+        
+#        # Normalize the solution vectors fr each phase
+#        currentPhA = currentPhA / (np.sum(currentPhA))
+#        currentPhB = currentPhB / (np.sum(currentPhB))
+#        currentPhC = currentPhC / (np.sum(currentPhC))
+#        previously used formula with module - gives the same results
+#        # Normalize the solution vectors fr each phase
+#        currentPhA = currentPhA / csd.n_getComplexModule(np.sum(currentPhA))
+#        currentPhB = currentPhB / csd.n_getComplexModule(np.sum(currentPhB))
+#        currentPhC = currentPhC / csd.n_getComplexModule(np.sum(currentPhC))
 
         getMod = np.vectorize(csd.n_getComplexModule)
 
         resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
-
+        # for debug
+        print(resultsCurrentVector)
+        #
         resultsCurrentVector = getMod(resultsCurrentVector)
         resistanceVector = csd.n_getResistanceArray(self.elementsVector,
                                                     dXmm=self.dXmm, dYmm=self.dYmm,
                                                     temperature=self.t)
-        resultsCurrentVector *= self.I
-
+        # for debug
+        print(resultsCurrentVector)
+        #
+#        resultsCurrentVector *= self.I
+        
+        # for debug
+        print(resultsCurrentVector)
+        #
+        
         # This is the total power losses vector
         powerLossesVector = resistanceVector * resultsCurrentVector**2
         # This are the total power losses
@@ -271,7 +374,9 @@ class currentDensityWindow():
             
             DT = BarPowerLoss / (perymiter * 1e-3 * self.HTC)
             
-            self.barsData.append([BarPowerLoss, perymiter, DT])
+            XS = len(bar) * self.dXmm * self.dYmm
+                        
+            self.barsData.append([BarPowerLoss, perymiter, DT, XS])
             #printing data for each bar 
             print('Bar {0:02d}; Power; {1:06.2f}; [W]; perymeter; {2}; [mm]; TempRise; {3:.1f}; [K]'.format(i, BarPowerLoss,  perymiter, DT))
         
@@ -281,12 +386,11 @@ class currentDensityWindow():
         for bar in self.barsData:
             #calculationg the bar Ghtc
             p = bar[1]*1e-3
-            a = 10*1e-3
-            b = (p-2*a)/2
+            A = bar[3]*1e-6
             l = self.lenght*1e-3
             
             Ghtc = p * l * self.HTC # thermal conductance to air
-            Gt = (a*b) * self.CuGamma / l  # thermal conductance to com
+            Gt = A * self.CuGamma / l  # thermal conductance to com
             Q = bar[0] * l  # Power losses value at lenght
             
             bar.append(Q)
@@ -300,6 +404,8 @@ class currentDensityWindow():
                     self.barsData[self.phCon[0]:self.phCon[0]+self.phCon[1]],
                     self.barsData[self.phCon[0]+self.phCon[1]:]]
         
+        Tout = [] # Prepare list of resulting Temps
+        
         for bars in phaseBars: # This loops over phases       
             b = len(bars)
             Q = []
@@ -308,7 +414,7 @@ class currentDensityWindow():
             for i in range(b+1):
                 # power vector preparation
                 if i < b:
-                    Q.append(bars[i][3])
+                    Q.append(bars[i][4])
                 else:
                     Q.append(0)
                 
@@ -316,15 +422,15 @@ class currentDensityWindow():
                 
                 for j in range(b+1):
                     if j == i and j < b:
-                        Grow.append(bars[j][4] + 2 * bars[j][5])
+                        Grow.append(bars[j][5] + 2 * bars[j][6])
                     elif j == b and i < b:
-                        Grow.append(-2 * bars[i][5])
+                        Grow.append(-2 * bars[i][6])
                     elif i == b and j < b:
-                        Grow.append(2 * bars[j][5])
+                        Grow.append(2 * bars[j][6])
                     elif j==i and j==b: # bottom last element in matrix
                         Gtemp = 0
                         for k in range(b):
-                            Gtemp += bars[k][5]
+                            Gtemp += bars[k][6]
                         Grow.append(-2 * Gtemp)
                     else:
                         Grow.append(0)
@@ -340,8 +446,12 @@ class currentDensityWindow():
             print('***')
             
             
+            for x in range(b):
+                Tout.append(T[x])
             
-                            
+            
+        for i, temp in enumerate(Tout):
+            print('Bar {}: {:.2f}[K]'.format(i,temp)) 
                     
         
             

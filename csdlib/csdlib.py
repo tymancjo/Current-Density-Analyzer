@@ -168,6 +168,9 @@ def n_getDistancesArray(inputVector):
                 distanceArray[y, x] = np.sqrt((posXa-posXb)**2 + (posYa-posYb)**2)
             else:
                 distanceArray[y, x] = 0
+    # for debug
+    #print(distanceArray)
+    #
     return distanceArray
 
 
@@ -301,7 +304,9 @@ def n_getImpedanceArray(distanceArray, freq, dXmm, dYmm, lenght=1000, temperatur
                 impedanceArray[Y, X] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe) + 1j*omega*n_getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght)
             else:
                 impedanceArray[Y, X] = 1j*omega*n_getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, distance=distanceArray[Y,X])
-
+    # For debug
+    #print(impedanceArray)
+    #
     return impedanceArray
 
 # Function for calculating resistance array
@@ -321,6 +326,10 @@ def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20
     resistanceArray = np.zeros(elementsVector.shape[0])
     for element in range(elementsVector.shape[0]):
         resistanceArray[element] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe)
+    
+    # for debug
+    #print(resistanceArray)
+    #
     return resistanceArray
 
 # Function that increase the resolution of the main geometry array

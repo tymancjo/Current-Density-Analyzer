@@ -1069,6 +1069,9 @@ class forceWindow():
 
         for i, bar in enumerate(bars):
             x, y = csd.n_getCenter(bar)
+            x -= min_col * self.dXmm
+            y -= min_row * self.dYmm
+            
             ax.text(x, y, '[{}]'.format(i), horizontalalignment='center')
             Fx = 0
             Fy = 0

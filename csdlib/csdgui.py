@@ -10,6 +10,88 @@ from csdlib.vect import Vector as v2
 import numpy as np
 # matplotlib.use('TKAgg')
 
+class MyPtrn:
+
+    def __init__(self, parent):
+        top = self.top = tk.Toplevel(parent)
+
+        back = tk.Frame(master=self.top, width=300, height=5, bg='gray')
+        back.pack()
+
+        self.myLabel = tk.Label(top, text='Define the pattern parameters ')
+        self.myLabel.pack()
+
+        self.myLabel = tk.Label(top, text='Step in X (in cells): ')
+        self.myLabel.pack()
+        self.idX = tk.Entry(top, width=5)
+        self.idX.pack()
+
+        self.myLabel = tk.Label(top, text='Step in Y (in cells): ')
+        self.myLabel.pack()
+        self.idY = tk.Entry(top, width=5)
+        self.idY.pack()
+
+        self.myLabel = tk.Label(top, text='Number of copies: ')
+        self.myLabel.pack()
+        self.iN = tk.Entry(top, width=5)
+        self.iN.pack()
+
+        self.mySubmitButton = tk.Button(top, text='Submit', command=self.send)
+        self.mySubmitButton.pack()
+
+    def send(self):
+        try:
+            self.dX = int(self.idX.get())
+        except ValueError:
+            self.dX = 0
+        try:
+            self.dY = int(self.idY.get())
+        except ValueError:
+            self.dY = 0
+        try:
+            self.N = int(self.iN.get())
+        except ValueError:
+            self.N = 0
+
+        self.top.destroy()
+
+class geometryModWindow():
+    '''
+    This is a class that will be used to generate \
+    the geometry modification Window
+    '''
+    def __init__(self, master, canvas):
+
+        self.master = master
+        self.canvas = canvas
+        self.frame = tk.Frame(self.master)
+        self.frame.pack(padx=10, pady=10)
+
+        self.phase = tk.IntVar()
+
+        self.phase.set(1) # initialize
+
+        tk.Radiobutton(master, text="Phase A", variable=self.phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').pack()
+        tk.Radiobutton(master, text="Phase B", variable=self.phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').pack()
+        tk.Radiobutton(master, text="Phase C", variable=self.phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').pack()
+
+
+        self.aButton = tk.Button(self.frame,
+                                    text='Click Me',
+                                    command=self.shiftL)
+        self.aButton.pack()
+        self.XSecArray = super(geometryModWindow, self).XSecArray
+
+
+    def shiftL(self):
+        '''This is just a zero argumet trigger for the geometry shift Button'''
+        actualPhase = self.phase.get()
+        csd.n_shiftPhase(actualPhase, -1, 0, XSecArray)
+        print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+        csd.n_printTheArray(XSecArray, canvas=self.canvas)
+
+
+
 
 class currentDensityWindow():
     '''

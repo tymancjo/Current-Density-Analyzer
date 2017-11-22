@@ -335,6 +335,34 @@ def showMeZ(*arg):
         root.title('Impednaces Calculator')
         zCalc = gui.zWindow(root, XSecArray, dXmm, dYmm)
 
+def showMeGeom(*arg):
+    # kicking off the geometry navi Window
+    # root = Tk()
+    # root.title('Geometry Modifications')
+    # geomMod = gui.geometryModWindow(root, canvas=w)
+    global XSecArray
+
+    inDialog = gui.MyPtrn(master)
+    master.wait_window(inDialog.top)
+
+    try:
+        dX = inDialog.dX
+        dY = inDialog.dY
+        N = inDialog.N
+    except:
+        dX = 0
+        dY = 0
+        N = 0
+
+
+    if dX != 0 or dY !=0 and N >=1:
+
+        XSecArray = csd.n_cloneGeometry(dX, dY, N, XSecArray)
+        print(XSecArray.shape)
+        csd.n_printTheArray(XSecArray, canvas=w)
+
+
+
 def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
@@ -545,55 +573,38 @@ def showResults():
     else:
         print('No results available! Run the analysis first.')
 
-def shiftPhase(phaseId,dX,dY):
-    '''
-    This procedure is shifting the particucal geometry of the phase in arrays
-    to the specific x and y diretion.
-    input:
-    phaseId - the value in the geometry array t hat describes the phase 1,2 or 3
-    dX - number of cells to shift in columnspan
-    dY - number of cells to shift in rows
-    XSecArray - input geometry array
-    '''
-    global XSecArray
-
-    # making the copy of input geommetry array
-    tempGeometry = np.copy(XSecArray)
-    # deleting the other phases heometry from the array
-    tempGeometry[tempGeometry != phaseId] = 0
-    # deleting the selected phase in oryginal geometry array
-    XSecArray[XSecArray == phaseId] = 0
-
-    for r in range(XSecArray.shape[0]):
-        for c in range(XSecArray.shape[1]):
-            if tempGeometry[r, c] == phaseId:
-                XSecArray[r + dY, c + dX] = tempGeometry[r, c]
-
-    csd.n_printTheArray(XSecArray, canvas=w)
 
 def shiftL():
     '''This is just a zero argumet trigger for the geometry shift Button'''
     actualPhase = phase.get()
-    shiftPhase(actualPhase, -1, 0)
+    csd.n_shiftPhase(actualPhase, -1, 0, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
 
 def shiftR():
     '''This is just a zero argumet trigger for the geometry shift Button'''
     actualPhase = phase.get()
-    shiftPhase(actualPhase, 1, 0)
+    csd.n_shiftPhase(actualPhase, 1, 0, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
 
 def shiftU():
     '''This is just a zero argumet trigger for the geometry shift Button'''
     actualPhase = phase.get()
-    shiftPhase(actualPhase, 0, -1)
+    csd.n_shiftPhase(actualPhase, 0, -1, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
 
 def shiftD():
     '''This is just a zero argumet trigger for the geometry shift Button'''
     actualPhase = phase.get()
-    shiftPhase(actualPhase, 0, 1)
+    csd.n_shiftPhase(actualPhase, 0, 1, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
 
 
 def mainSetup():
@@ -713,6 +724,11 @@ print_button_zoom = Button(master, text='^', command=shiftU, height=1, width=1, 
 print_button_zoom.grid(row=6, column=9, padx=5, pady=5)
 print_button_zoom = Button(master, text='v', command=shiftD, height=1, width=1, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=7, column=9, padx=5, pady=5)
+
+# kick out geometry Window
+print_button_geom = Button(master, text='Ptrn', command=showMeGeom, height=2, width=6)
+print_button_geom.grid(row=6, column=8, columnspan=1)
+
 
 emptyOpis = Label(text='', height=3)
 emptyOpis.grid(row=5, column=0,)

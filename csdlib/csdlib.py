@@ -50,6 +50,82 @@ class cointainer():
 
 # ################# FUNCTIONS & PROCEDURES##############################
 
+def n_shiftPhase(phaseId,dX,dY,XSecArray):
+    '''
+    This procedure is shifting the particucal geometry of the phase in arrays
+    to the specific x and y diretion.
+    input:
+    phaseId - the value in the geometry array t hat describes the phase 1,2 or 3
+    dX - number of cells to shift in columnspan
+    dY - number of cells to shift in rows
+    XSecArray - input geometry array
+    '''
+
+    # making the copy of input geommetry array
+    tempGeometry = np.copy(XSecArray)
+    # deleting the other phases heometry from the array
+    tempGeometry[tempGeometry != phaseId] = 0
+    # deleting the selected phase in oryginal geometry array
+    XSecArray[XSecArray == phaseId] = 0
+
+    oR = XSecArray.shape[0]
+    oC = XSecArray.shape[1]
+
+    for r in range(oR):
+        for c in range(oC):
+            if tempGeometry[r, c] == phaseId:
+                nR = r + dY
+                nC = c + dX
+                if nR >= oR:
+                    nR -= oR
+                if nC >= oC:
+                    nC -= oC
+                XSecArray[nR, nC] = tempGeometry[r, c]
+
+
+def n_cloneGeometry(dX, dY, N, XSecArray):
+    '''
+    This procedure alternate the x section array multiplying the
+    existng geometry as a pattern with defined shift vector
+    in cells
+    input:
+    dX - shift of cells in X (cols)
+    dy - shift of cells in Y (rows)
+    N - number of copies created
+    XSecArray - input array of the base cross section
+    '''
+    # Lets figure out the new shape of the array
+    # Oryginal shape
+    oR = XSecArray.shape[0]
+    oC = XSecArray.shape[1]
+
+    d = max(dX, dY)
+
+    # the new shape can be figured out by the relation
+    nR = N * d + oR
+    nC = N * d + oC
+
+    print('New array shape: {}x{}'.format(nR, nC))
+
+    # creating new empty array of required size
+    NewGeometryArray = np.zeros((nR,nC))
+
+    #placing the existing array into the new one as copies
+    NewGeometryArray[0:oR, 0:oC] = XSecArray
+    for x in range(1, N+1):
+        print('copying to: {} x {}'.format(x * dY, x * dX))
+        for row in range(x * dY, x * dY + oR):
+            for col in range(x * dX, x * dX + oC):
+                if XSecArray[row - x * dY, col - x * dX] != 0:
+                    NewGeometryArray[row, col] = XSecArray[row - x * dY, col - x * dX]
+
+    # and sign new array back to the main one of geometry
+    return NewGeometryArray
+
+
+
+
+
 
 def loadObj(filename):
     '''load object data from file that was saved by saveObj function.
@@ -119,15 +195,15 @@ def n_getSelfInductance(sizeX, sizeY, lenght):
     a = srednica * 1e-3
     l = lenght * 1e-3
     mi0 = 4 * np.pi * 1e-7
-    
+
     # This calculation is based on the:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
     L = (mi0 * l / (2 * np.pi)) * (np.log(2 * l / a) - np.log(2)/3 + 13/12 - np.pi/2)
-    
+
     # this was the previous formula
     # return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
-    
-    return L 
+
+    return L
 
 # Calculate the resistance value function
 def n_getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
@@ -252,34 +328,6 @@ def n_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
 
     return np.array(vectorArray)
 
-# Canvas preparation procedure
-def n_checkered(canvas, cutsX, cutsY):
-    '''
-    This function clean the board and draw grid
-    Inputs:
-    canvas - tkinter canvas object
-    cutsX - elements in X (left right) direction
-    cutsY - elements in Y (top down) direction
-    '''
-
-    # Reading the size of the canvas element
-    canvasHeight = canvas.winfo_height()
-    canvasWidth  = canvas.winfo_width()
-
-    line_distanceX = (canvasWidth / cutsX)
-    line_distanceY = (canvasHeight / cutsY)
-
-
-    # Cleaning up the whole canvas space by drawing a white rectangle
-    canvas.create_rectangle(0, 0, canvasWidth, canvasHeight, fill="white", outline="gray")
-
-    # vertical lines at an interval of "line_distance" pixel
-    for x in range(0,canvasWidth):
-        canvas.create_line(x*line_distanceX, 0, x*line_distanceX, canvasHeight, fill="gray")
-    # horizontal lines at an interval of "line_distance" pixel
-    for y in range(0,canvasHeight):
-        canvas.create_line(0, y*line_distanceY, canvasWidth, y*line_distanceY, fill="gray")
-
 
 # Functions that calculate the master impedance array for given geometry
 def n_getImpedanceArray(distanceArray, freq, dXmm, dYmm, lenght=1000, temperature=20, sigma20C=58e6, temCoRe=3.9e-3):
@@ -326,7 +374,7 @@ def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20
     resistanceArray = np.zeros(elementsVector.shape[0])
     for element in range(elementsVector.shape[0]):
         resistanceArray[element] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe)
-    
+
     # for debug
     #print(resistanceArray)
     #
@@ -354,6 +402,47 @@ def n_getComplexModule(x):
     else:
         return x
 
+# Canvas preparation procedure
+def n_checkered(canvas, cutsX, cutsY, mode=0):
+    '''
+    This function clean the board and draw grid
+    Inputs:
+    canvas - tkinter canvas object
+    cutsX - elements in X (left right) direction
+    cutsY - elements in Y (top down) direction
+    '''
+
+    # Reading the size of the canvas element
+    canvasHeight = canvas.winfo_height()
+    canvasWidth  = canvas.winfo_width()
+
+    line_distanceX = (canvasWidth / cutsX)
+    line_distanceY = (canvasHeight / cutsY)
+
+
+    # Cleaning up the whole canvas space by drawing a white rectangle
+    if mode == 0 or mode == 1:
+        canvas.create_rectangle(0, 0, canvasWidth, canvasHeight, fill="white", outline="gray")
+
+    # vertical lines at an interval of "line_distance" pixel
+    # some limits added - we dont draw it if the line amout is to big
+    # it would be mess anyway if too much
+    if max(cutsX, cutsY) <= 100 and mode == 0 or max(cutsX, cutsY) <= 100 and mode == 2:
+        for x in range(0, cutsX):
+            canvas.create_line(x*line_distanceX, 0, x*line_distanceX, canvasHeight, fill="gray")
+        # horizontal lines at an interval of "line_distance" pixel
+        for y in range(0, cutsY):
+            canvas.create_line(0, y*line_distanceY, canvasWidth, y*line_distanceY, fill="gray")
+
+    # previous implementation - i think too much
+    # for x in range(0,canvasWidth):
+    #     canvas.create_line(x*line_distanceX, 0, x*line_distanceX, canvasHeight, fill="gray")
+    # # horizontal lines at an interval of "line_distance" pixel
+    # for y in range(0,canvasHeight):
+    #     canvas.create_line(0, y*line_distanceY, canvasWidth, y*line_distanceY, fill="gray")
+
+
+
 
 # Procedure that plot the array to canvas
 def n_printTheArray(dataArray, canvas):
@@ -377,21 +466,23 @@ def n_printTheArray(dataArray, canvas):
     dY = canvasHeight / elementsInY
 
     # Now we cleanUp the field
-    n_checkered(canvas, elementsInX, elementsInY)
+    n_checkered(canvas, elementsInX, elementsInY, mode=1)
 
     for Row in range(elementsInY):
         for Col in range(elementsInX):
             if dataArray[Row][Col] == 1:
                 fillColor = "red"
-                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
+                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
 
             elif dataArray[Row][Col] == 2:
                 fillColor = "green"
-                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
+                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
 
             elif dataArray[Row][Col] == 3:
                 fillColor = "blue"
-                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="gray")
+                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+
+    n_checkered(canvas, elementsInX, elementsInY, mode=2)
 
 # Procedure to set up point in the array and display it on canvas
 def n_setUpPoint(event, Set, dataArray, canvas):
@@ -438,6 +529,8 @@ def n_setUpPoint(event, Set, dataArray, canvas):
     elif Set==0 and inCanvas:
         canvas.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
         dataArray[Row][Col] = 0
+
+
 
 # Function that put back together the solution vectr back to represent the crss section shape array
 def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):

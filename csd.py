@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
-from tkinter import * 
+from tkinter import *
 from tkinter import filedialog, messagebox
 import numpy as np
 import os.path
@@ -35,10 +35,10 @@ def saveTheData(filename):
     '''
     # print('Saving to file :' + filename)
     # np.save(filename, XSecArray)
-    
+
     S = csd.cointainer(XSecArray, dXmm, dYmm)
-    S.save(filename) 
-    del(S)   
+    S.save(filename)
+    del(S)
 
 
 def loadArrayFromFile():
@@ -132,7 +132,7 @@ def zoomL():
     if globalX < 0:
         globalX = 0
     csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)   
+                        canvas=w)
 
 
 def zoomR():
@@ -334,7 +334,35 @@ def showMeZ(*arg):
         root = Tk()
         root.title('Impednaces Calculator')
         zCalc = gui.zWindow(root, XSecArray, dXmm, dYmm)
-        
+
+def showMeGeom(*arg):
+    # kicking off the geometry navi Window
+    # root = Tk()
+    # root.title('Geometry Modifications')
+    # geomMod = gui.geometryModWindow(root, canvas=w)
+    global XSecArray
+
+    inDialog = gui.MyPtrn(master)
+    master.wait_window(inDialog.top)
+
+    try:
+        dX = inDialog.dX
+        dY = inDialog.dY
+        N = inDialog.N
+    except:
+        dX = 0
+        dY = 0
+        N = 0
+
+
+    if dX != 0 or dY !=0 and N >=1:
+
+        XSecArray = csd.n_cloneGeometry(dX, dY, N, XSecArray)
+        print(XSecArray.shape)
+        csd.n_printTheArray(XSecArray, canvas=w)
+
+
+
 def vectorizeTheArray(*arg):
     '''
     This function abnalyze the cross section array and returns vector of all set
@@ -435,7 +463,7 @@ def vectorizeTheArray(*arg):
         powPhA = np.sum(powerLossesVector[0:elementsPhaseA])
         powPhB = np.sum(powerLossesVector[elementsPhaseA:elementsPhaseA+elementsPhaseB:1])
         powPhC = np.sum(powerLossesVector[elementsPhaseA+elementsPhaseB:])
-        
+
         print('power losses: {} [W] \n phA: {}[W]\n phB: {}[W]\n phC: {}[W]'
               .format(powerLosses, powPhA, powPhB, powPhC))
 
@@ -443,7 +471,7 @@ def vectorizeTheArray(*arg):
               .format(perymeterA, perymeterB, perymeterC))
 
         powerLosses = [powerLosses, powPhA, powPhB, powPhC]
-        
+
         # Converting results to form of density
         powerLossesVector /= (dXmm*dYmm)
 
@@ -454,7 +482,7 @@ def vectorizeTheArray(*arg):
         resultsArray = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=resultsCurrentVector, initialGeometryArray=XSecArray)
         resultsArrayPower = csd.n_recreateresultsArray(elementsVector=elementsVector, resultsVector=powerLossesVector, initialGeometryArray=XSecArray)
 
-        
+
 
         #Showing the results
         showResults()
@@ -524,7 +552,7 @@ def showResults():
 
         fig = plt.figure('Results Window')
         ax = fig.add_subplot(1,1,1)
-        
+
         my_cmap = matplotlib.cm.get_cmap('jet')
         my_cmap.set_under('w')
 
@@ -534,7 +562,7 @@ def showResults():
 
         ax.set_title(str(frequency)+'[Hz] / '+str(curentRMS)+'[A] / '+str(temperature) +
                      '[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}'.format(powerLosses), **title_font)
-        
+
         plt.xlabel('size [mm]', **axis_font)
         plt.ylabel('size [mm]', **axis_font)
 
@@ -544,6 +572,39 @@ def showResults():
         plt.show()
     else:
         print('No results available! Run the analysis first.')
+
+
+def shiftL():
+    '''This is just a zero argumet trigger for the geometry shift Button'''
+    actualPhase = phase.get()
+    csd.n_shiftPhase(actualPhase, -1, 0, XSecArray)
+    print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
+
+def shiftR():
+    '''This is just a zero argumet trigger for the geometry shift Button'''
+    actualPhase = phase.get()
+    csd.n_shiftPhase(actualPhase, 1, 0, XSecArray)
+    print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
+
+def shiftU():
+    '''This is just a zero argumet trigger for the geometry shift Button'''
+    actualPhase = phase.get()
+    csd.n_shiftPhase(actualPhase, 0, -1, XSecArray)
+    print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
+
+def shiftD():
+    '''This is just a zero argumet trigger for the geometry shift Button'''
+    actualPhase = phase.get()
+    csd.n_shiftPhase(actualPhase, 0, 1, XSecArray)
+    print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
+    csd.n_printTheArray(XSecArray, canvas=w)
+
 
 
 def mainSetup():
@@ -639,11 +700,12 @@ print_button_slice.grid(row=11, column=8, padx=5, pady=5, columnspan=3)
 print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
 print_button_slice.grid(row=12, column=8, padx=5, pady=5, columnspan=3)
 
-print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=16)
-print_button_zoom.grid(row=6, column=8, padx=5, pady=5, columnspan=3)
-print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=16)
-print_button_zoom.grid(row=7, column=8, padx=5, pady=5, columnspan=3)
+print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=8)
+print_button_zoom.grid(row=8, column=10, padx=5, pady=5, columnspan=1)
+print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=8)
+print_button_zoom.grid(row=8, column=8, padx=5, pady=5, columnspan=1)
 
+# first cross navi
 print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=9, column=8, padx=5, pady=5)
 print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
@@ -652,6 +714,21 @@ print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, r
 print_button_zoom.grid(row=8, column=9, padx=5, pady=5)
 print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=10, column=9, padx=5, pady=5)
+
+# second cross navi
+print_button_zoom = Button(master, text='<', command=shiftL, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=7, column=8, padx=5, pady=5)
+print_button_zoom = Button(master, text='>', command=shiftR, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=7, column=10, padx=5, pady=5)
+print_button_zoom = Button(master, text='^', command=shiftU, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=6, column=9, padx=5, pady=5)
+print_button_zoom = Button(master, text='v', command=shiftD, height=1, width=1, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=7, column=9, padx=5, pady=5)
+
+# kick out geometry Window
+print_button_geom = Button(master, text='Ptrn', command=showMeGeom, height=2, width=6)
+print_button_geom.grid(row=6, column=8, columnspan=1)
+
 
 emptyOpis = Label(text='', height=3)
 emptyOpis.grid(row=5, column=0,)

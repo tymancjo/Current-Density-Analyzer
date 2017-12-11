@@ -1139,12 +1139,11 @@ class currentDensityWindowPro():
 
             self.barsData = []
 
-
             for i, bar in enumerate(self.bars):
                 BarPowerLoss = 0
                 BarCurrent = 0
 
-                print(len(bar))
+                # print(len(bar))
 
                 for element in bar:
                     BarPowerLoss += self.powerResultsArray[int(element[0]),
@@ -1152,46 +1151,50 @@ class currentDensityWindowPro():
 
                     BarCurrent += (self.dXmm * self.dYmm) * self.resultsArray[int(element[0]), int(element[1])]
 
-
                 # Calculating bar perymiter of the current bar
-
                 perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
-
-                DT = BarPowerLoss / (perymiter * 1e-3 * self.HTC)
-
                 XS = len(bar) * self.dXmm * self.dYmm
 
-                self.barsData.append([BarPowerLoss, perymiter, BarCurrent, XS])
+                # calculationg the bar Ghtc
+                p = perymiter*1e-3
+                A = XS*1e-6
+                lng = self.lenght*1e-3
+
+                Ghtc = p * lng * self.HTC  # thermal conductance to air
+                Gt = A * self.CuGamma / lng  # thermal conductance to com
+                Q = BarPowerLoss * lng  # Power losses value at lenght
+
+                #  need now to figure out the current phase Number
+                if i >= self.phCon[0]+self.phCon[1]:
+                    phase = 3
+                elif i >= self.phCon[0]:
+                    phase = 2
+                else:
+                    phase = 1
+
+                #  plugin in the data to the list
+                self.barsData.append([BarPowerLoss, perymiter, BarCurrent,
+                                     XS, Q, Ghtc, Gt, phase])
 
                 # barsData structure
                 # 0 power losses
                 # 1 perymeter
                 # 2 bar Current
                 # 3 cross section
-                # 4 Ghtc to air thermal conductance
-                # 5 Gt 1/2lenght thermal conductance
-                # 6 Q power losses value
-                # 7 New Thermal model DT
+                # 4 Q power losses value
+                # 5 Ghtc to air thermal conductance
+                # 6 Gt 1/2lenght thermal conductance
+                # 7 phase number
+                # 8 New Thermal model DT - this one will calculated later below :)
 
-                # printing data for each bar
-                print('Bar {0:02d}; Power; {1:06.2f}; [W]; perymeter; {2} [mm]; Current; {3:.1f}; [A]'.format(i, BarPowerLoss,  perymiter, BarCurrent))
-
-            # first lets prepare for us some thermal data for each bar
-            for bar in self.barsData:
-                # calculationg the bar Ghtc
-                p = bar[1]*1e-3
-                A = bar[3]*1e-6
-                lng = self.lenght*1e-3
-
-                Ghtc = p * lng * self.HTC  # thermal conductance to air
-                print(self.HTC)
-                Gt = A * self.CuGamma / lng  # thermal conductance to com
-                Q = bar[0] * lng  # Power losses value at lenght
-
-                bar.append(Q)
-                bar.append(Ghtc)
-                bar.append(Gt)
                 # now self.barsData have all the needed info :)
+                # printing data for each bar
+                print('Bar {0:02d} ({4:01d}); Power; {1:06.2f}; [W]; perymeter; {2} [mm]; Current; {3:.1f}; [A]'.format(i, BarPowerLoss,
+                                              perymiter, BarCurrent, phase))
+
+            # print('** Bars Data **')
+            # print(self.barsData)
+            # print('** Bars Data **')
 
             # self.phCon is the list of number of conductors per phase
             phaseBars = [self.barsData[:self.phCon[0]],

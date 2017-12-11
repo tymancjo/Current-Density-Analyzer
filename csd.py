@@ -326,6 +326,15 @@ def showMePower(*arg):
         root.title('Power Losses Calculator')
         powerCalc = gui.currentDensityWindow(root, XSecArray, dXmm, dYmm)
 
+def showMePro(*arg):
+    # lets check if there is anything in the xsection geom array
+    setParameters()
+
+    if np.sum(XSecArray) > 0:
+        root = Tk()
+        root.title('Pro Power Losses Solver')
+        powerCalc = gui.currentDensityWindowPro(root, XSecArray, dXmm, dYmm)
+
 def showMeZ(*arg):
     # lets check if there is anything in the xsection geom array
     setParameters()
@@ -744,6 +753,9 @@ print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
 
 print_button = Button(master, text='Impednaces\n Calculations', command=showMeZ, height=2, width=16)
 print_button.grid(row=9, column=0, columnspan=1)
+
+print_button = Button(master, text='Power Losses\n ProSolver', command=showMePro, height=2, width=16)
+print_button.grid(row=10, column=0, columnspan=1)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8, columnspan=3)

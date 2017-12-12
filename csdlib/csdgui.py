@@ -1175,6 +1175,7 @@ class currentDensityWindowPro():
                 #  plugin in the data to the list
                 self.barsData.append([BarPowerLoss, perymiter, BarCurrent,
                                      XS, Q, Ghtc, Gt, phase])
+                # now self.barsData have all the needed info :)
 
                 # barsData structure
                 # 0 power losses
@@ -1185,9 +1186,9 @@ class currentDensityWindowPro():
                 # 5 Ghtc to air thermal conductance
                 # 6 Gt 1/2lenght thermal conductance
                 # 7 phase number
+
                 # 8 New Thermal model DT - this one will calculated later below :)
 
-                # now self.barsData have all the needed info :)
                 # printing data for each bar
                 print('Bar {0:02d} ({4:01d}); Power; {1:06.2f}; [W]; perymeter; {2} [mm]; Current; {3:.1f}; [A]'.format(i, BarPowerLoss,
                                               perymiter, BarCurrent, phase))
@@ -1196,56 +1197,145 @@ class currentDensityWindowPro():
             # print(self.barsData)
             # print('** Bars Data **')
 
-            # self.phCon is the list of number of conductors per phase
-            phaseBars = [self.barsData[:self.phCon[0]],
-                         self.barsData[self.phCon[0]:self.phCon[0]+self.phCon[1]],
-                         self.barsData[self.phCon[0]+self.phCon[1]:]]
+            # TODO: New global thermal solver needed ;)
+            #  lets figure out the needed size of Gthermal matrix
+            #  it will be (bars# +3phases joints)x(the same)
+            vectorSize = len(self.barsData)+3
+            thG = np.zeros((vectorSize, vectorSize), dtype=float)
 
+            # TEMP: Hardcoded Gth between matrix
+            # GthermalMatrix = np.asarray(([1, 2, 3],
+            #                              [2, 1, 3],
+            #                              [3, 2, 1]))
+            GthermalMatrix = np.asarray(([0, 0, 0],
+                                         [0, 0, 0],
+                                         [0, 0, 0]))
 
-            self.Tout = []  # Prepare list of resulting Temps
+            # now we will loop twice over the bars
+            for i, fromBar in enumerate(self.barsData):
+                fromPhase = fromBar[7] - 1  # -1 due to the count from 0
 
-            for bars in phaseBars:  # This loops over phases
-                b = len(bars)
-                Q = []
-                G = []
+                for j, toBar in enumerate(self.barsData):
+                    tempG = 0  # just to make sure we dont have something in it
 
-                for i in range(b+1):
-                    # power vector preparation
-                    if i < b:
-                        Q.append(bars[i][4])
+                    if fromBar is toBar:  # the main digonal with GHtc and Gc and sum for all
+                        # DEBUG
+                        # print('({},{}) it is me!'.format(i,j))
+                        tempG += fromBar[5] + 2 * fromBar[6]
+                        #  now we nwwd to loop again all others to get the sum of G
+                        for otherToBar in self.barsData:
+                            if otherToBar is not fromBar:
+                                otherPhase = otherToBar[7] - 1
+                                tempG += GthermalMatrix[fromPhase, otherPhase]
+
                     else:
-                        Q.append(0)
+                        #  DEBUG
+                        # print('({},{}) someone else'.format(i,j))
+                        otherPhase = toBar[7] - 1
+                        tempG += -GthermalMatrix[fromPhase, otherPhase]
 
-                    Grow = []  # just to keep for the moment the row of G matrix
+                    # putting the calculated vaule in the thG matrix
+                    thG[i, j] = tempG
 
-                    for j in range(b+1):
-                        if j == i and j < b:
-                            Grow.append(bars[j][5] + 2 * bars[j][6])
-                        elif j == b and i < b:
-                            Grow.append(-2 * bars[i][6])
-                        elif i == b and j < b:
-                            Grow.append(2 * bars[j][6])
-                        elif j == i and j == b:  # bottom last element in matrix
-                            Gtemp = 0
-                            for k in range(b):
-                                Gtemp += bars[k][6]
-                            Grow.append(-2 * Gtemp)
-                        else:
-                            Grow.append(0)
+            #  now we need to go for the last 3 rows and columns that
+            #  are for the Tx (joints temperatures)
+            #  the bar phase will determine which Tx we tackle
+            #  Phase = 1 means position -3 in the cols >> col = Phase - 4
+            #  so lets go once more thru the bars to fill last columns
+            for i, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                col = phase - 4
+                thG[i, col] = -2 * fromBar[6]
 
-                    G.append(Grow)
+            #  and one more to fill the last rows
+            for j, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                row = phase - 4
+                thG[row, j] = 2 * fromBar[6]
 
-                Q = np.array(Q)
-                G_1 = np.linalg.inv(np.array(G))
-                T = np.matmul(G_1, Q)
+            # and last thing is the bottom rioght 3x3 area to fill for Tx'es
+            # in each phase as sum by bars -2*Gcondution_to_joint
+            #  this could be incorporated to the loops above
+            #  but is separated for clearer code
+            for fromBar in self.barsData:
+                phase = fromBar[7]
+                col_row = phase - 4
+                thG[col_row, col_row] += -2 * fromBar[6]
 
-                print('***')
-                print(T)
-                print('***')
+            #  and one for the Q vector
+            thQ = np.zeros((vectorSize), dtype=float)
+            for i, fromBar in enumerate(self.barsData):
+                thQ[i] = fromBar[4]
 
 
-                for x in range(b):
-                    self.Tout.append(T[x])
+
+
+            # Solving for thT vector solutions
+            thGinv = np.linalg.inv(thG)
+            thT = np.matmul(thGinv, thQ)
+
+            #  DEBUG
+            print('The G array')
+            print(thG)
+            print('The Q vector')
+            print(thQ)
+            print('The T vector')
+            print(thT)
+            # 
+            #
+            # # self.phCon is the list of number of conductors per phase
+            # phaseBars = [self.barsData[:self.phCon[0]],
+            #              self.barsData[self.phCon[0]:self.phCon[0]+self.phCon[1]],
+            #              self.barsData[self.phCon[0]+self.phCon[1]:]]
+            #
+            #
+            # self.Tout = []  # Prepare list of resulting Temps
+            #
+            # for bars in phaseBars:  # This loops over phases
+            #     b = len(bars)
+            #     Q = []
+            #     G = []
+            #
+            #     for i in range(b+1):
+            #         # power vector preparation
+            #         if i < b:
+            #             Q.append(bars[i][4])
+            #         else:
+            #             Q.append(0)
+            #
+            #         Grow = []  # just to keep for the moment the row of G matrix
+            #
+            #         for j in range(b+1):
+            #             if j == i and j < b:
+            #                 Grow.append(bars[j][5] + 2 * bars[j][6])
+            #             elif j == b and i < b:
+            #                 Grow.append(-2 * bars[i][6])
+            #             elif i == b and j < b:
+            #                 Grow.append(2 * bars[j][6])
+            #             elif j == i and j == b:  # bottom last element in matrix
+            #                 Gtemp = 0
+            #                 for k in range(b):
+            #                     Gtemp += bars[k][6]
+            #                 Grow.append(-2 * Gtemp)
+            #             else:
+            #                 Grow.append(0)
+            #
+            #         G.append(Grow)
+            #
+            #     Q = np.array(Q)
+            #     G_1 = np.linalg.inv(np.array(G))
+            #     T = np.matmul(G_1, Q)
+            #
+            #     print('***')
+            #     print(T)
+            #     print('***')
+            #
+            #
+            #     for x in range(b):
+            #         self.Tout.append(T[x])
+
+            self.Tout = thT[:len(self.barsData)]  # putting result to vector
+                                                # cuts out the Tx joints
 
             # Preparing the output array of the temperatures
             # First we need to rereate vector of temperture for each element

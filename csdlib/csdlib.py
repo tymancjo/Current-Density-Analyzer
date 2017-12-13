@@ -123,6 +123,20 @@ def n_cloneGeometry(dX, dY, N, XSecArray):
     return NewGeometryArray
 
 
+def n_getDistance(A, B):
+    '''
+    This function returns simple in line distance between two points
+    defined by input
+    input:
+    A - tuple (x,y) - first point position on surface
+    B - tuple (x,y) - first point position on surface
+
+    Output
+    Distanc ebetween A and B in the units of position
+    '''
+
+    return np.sqrt((A[0] - B[0])**2 + (A[1] - B[1])**2)
+    
 
 
 

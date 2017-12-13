@@ -831,10 +831,6 @@ class currentDensityWindowPro():
 
         self.Gmx = np.asarray([gx.split(';') for gx in (self.Gmx_txt.get().split('|'))], dtype = float)
 
-        # DEBUG
-        print('The Gmx matrix')
-        print(self.Gmx)
-
         self.desc_I = tk.Label(self.bframe,
                                text='Current: {} [A]'.format(self.I))
         self.desc_I.pack()
@@ -1172,6 +1168,7 @@ class currentDensityWindowPro():
         this procedure solve the thermal equation with given data fromula
         power losses analysis
         '''
+
         # Lets work with barsData for themral model calculations
         if self.isSolved:
             # Doing the power losses sums per each bar
@@ -1253,7 +1250,17 @@ class currentDensityWindowPro():
 
                 GthermalMatrix = self.Gmx
             # DEBUG
+            print('--- Solving for temperatures ---')
+            print('The Thermal Cond Coeff Matrix')
             print(GthermalMatrix)
+
+            print('Thermal Conductivity')
+            print(self.Gcon)
+
+            print('HTC')
+            print(self.HTC)
+
+            print('Results as bars temperatures')
 
 
             # now we will loop twice over the bars
@@ -1330,12 +1337,12 @@ class currentDensityWindowPro():
             thT = np.matmul(thGinv, thQ)
 
             #  DEBUG
-            print('The G array')
-            print(thG)
-            print('The Q vector')
-            print(thQ)
-            print('The T vector')
-            print(thT)
+            # print('The G array')
+            # print(thG)
+            # print('The Q vector')
+            # print(thQ)
+            # print('The T vector')
+            # print(thT)
 
             # cuts out the Tx joints
             self.Tout = thT[:len(self.barsData)]  # putting result to vector

@@ -4,6 +4,7 @@ This is a tkinter gui lib for CSD library and app
 
 import matplotlib.pyplot as plt
 import matplotlib
+import math
 import tkinter as tk
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
@@ -1377,6 +1378,9 @@ class currentDensityWindowPro():
             print('Phase B joint: {:.2f}[K]'.format(thT[-2]))
             print('Phase C joint: {:.2f}[K]'.format(thT[-1]))
 
+            # and now remembering all thermal results
+            self.Tout = thT
+
             # Display the results:
             self.showResults()
 
@@ -1452,8 +1456,8 @@ class currentDensityWindowPro():
 
     def showTemperatureResults(self):
 
-        title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
-        axis_font = { 'size':'10'}
+        title_font = { 'size':'9', 'color':'black', 'weight':'normal'}
+        axis_font = { 'size':'9'}
 
         if np.sum(self.resultsArray) != 0:
 
@@ -1497,13 +1501,20 @@ class currentDensityWindowPro():
                 x -= min_col * self.dXmm
                 y -= min_row * self.dYmm
 
-                ax.text(x, y, '[{}]'.format(i), horizontalalignment='center')
+                DT = self.barsData[i][8]
+
+                ax.text(x, y, '[{}]\n{:.2f}'.format(i, DT), horizontalalignment='center', verticalalignment='center', fontsize=8)
 
             # *** end of the per bar analysis ***
 
-            ax.set_title(str(self.f)+'[Hz] / '+str(self.I)+'[A] / '+str(self.t) +
-                         '[$^o$C] /'+str(self.lenght) +
-                         '[mm]\n Temperature Rises in Bars', **title_font)
+            ax.set_title(str(self.f)+'[Hz] /' + str(self.t) + '[$^o$C] /'+
+                           str(self.lenght) + '[mm] \n'
+                          'Ia:{:.1f}A {:.0f}$^o$ '.format(float(self.I[0]), np.floor(float(self.I[1]))) +
+                          'Ib:{:.1f}A {:.0f}$^o$ '.format(float(self.I[2]), np.floor(float(self.I[3]))) +
+                          'Ic:{:.1f}A {:.0f}$^o$ \n'.format(float(self.I[4]), np.floor(float(self.I[5]))) +
+                          'HTC: {}[W/m$^2$K] / ThermConv: {}[W/mK]'.format(self.HTC, self.Gcon ) +
+                          '\n Joints Temp Rises: Fa:{:.2f}K Fb;{:.2f}K Fc:{:.2f}K'.format(self.Tout[-3], self.Tout[-2], self.Tout[-1])
+                         , **title_font)
 
             plt.xlabel('size [mm]', **axis_font)
             plt.ylabel('size [mm]', **axis_font)

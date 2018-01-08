@@ -348,13 +348,18 @@ def showReplacer(*arg):
 
     global XSecArray
 
+    # TODO: New window phase switcher based on below
+    root = Tk()
+    root.title('Impednaces Calculator')
+    TestWindow = gui.geometryModWindow(root, w)
+
     try:
         sourcePhase = int(input('Source phase [1,2,3]: '))
         toPhase = int(input('to phase [1,2,3]: '))
     except:
         sourcePhase = 0
         toPhase = 0
-        
+
     # some protective checks
     if sourcePhase in [1,2,3] and toPhase in [1,2,3] and sourcePhase != toPhase:
         XSecArray[XSecArray == sourcePhase] = toPhase

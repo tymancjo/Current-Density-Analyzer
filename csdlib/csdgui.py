@@ -4,6 +4,7 @@ This is a tkinter gui lib for CSD library and app
 
 import matplotlib.pyplot as plt
 import matplotlib
+import math
 import tkinter as tk
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
@@ -787,6 +788,25 @@ class currentDensityWindowPro():
         self.HTC_txt.insert(5, '7')
         self.HTC_txt.pack()
 
+        self.lab_Gcon = tk.Label(self.frame,
+                                 text='Thermal Conductivity [W/mK]')
+        self.lab_Gcon.pack()
+        self.Gcon_txt = tk.Entry(self.frame)
+        self.Gcon_txt.insert(5, '0.25')
+        self.Gcon_txt.pack()
+
+        self.lab_Gmx = tk.Label(self.frame,
+                                 text='Thermal Conductance Coef. Matrix')
+        self.lab_Gmx.pack()
+        self.Gmx_txt = tk.Entry(self.frame)
+        self.Gmx_txt.insert(5, '0;0;0|0;0;0|0;0;0')
+        self.Gmx_txt.pack()
+        self.lab_Gmx = tk.Label(self.frame,
+        text='Fa;Fab;Fac|Fba;Fb;Fbc|Fca;Fcb;Fc')
+        self.lab_Gmx.pack()
+
+
+
         self.lab_lenght = tk.Label(self.frame,
                                  text='lenght [mm]')
         self.lab_lenght.pack()
@@ -801,11 +821,16 @@ class currentDensityWindowPro():
         self.bframe = tk.Frame(self.master)
         self.bframe.pack(padx=10, pady=10)
 
+        #  reading the above entered stuff to variables
+
+
         self.I = self.Irms_txt.get().split(';')  #reading I as array
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
         self.HTC = float(self.HTC_txt.get())
+        self.Gcon = float(self.Gcon_txt.get())
 
+        self.Gmx = np.asarray([gx.split(';') for gx in (self.Gmx_txt.get().split('|'))], dtype = float)
 
         self.desc_I = tk.Label(self.bframe,
                                text='Current: {} [A]'.format(self.I))
@@ -822,6 +847,10 @@ class currentDensityWindowPro():
                                        text='HTC: {:.2f} [W/m2K]'
                                        .format(self.HTC))
         self.desc_htc.pack()
+        self.desc_Gcon = tk.Label(self.bframe,
+                                       text='Thermal Cond.: {:.2f} [W/mK]'
+                                       .format(self.Gcon))
+        self.desc_Gcon.pack()
 
         self.desc_lenght = tk.Label(self.bframe,
                                        text='lenght: {:.2f} [mm]'
@@ -852,16 +881,25 @@ class currentDensityWindowPro():
 
         self.readSettings()
 
+
     def readSettings(self):
         self.I = self.Irms_txt.get().split(';')  #reading I as array
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
         self.HTC = float(self.HTC_txt.get())
+        self.Gcon = float(self.Gcon_txt.get())
         self.lenght = float(self.lenght_txt.get())
+
+        self.Gmx = np.asarray([gx.split(';') for gx in (self.Gmx_txt.get().split('|'))], dtype = float)
+        self.console('Thermal Conductance Coef. Matrix')
+        self.console(self.Gmx)
+
+
         self.desc_I.config(text='Current: {} [A]'.format(self.I))
         self.desc_f.config(text='Frequency: {:.2f} [Hz]'.format(self.f))
         self.desc_t.config(text='Temperature: {:.2f} [degC]'.format(self.t))
         self.desc_htc.config(text='HTC: {:.2f} [W/m2K]'.format(self.HTC))
+        self.desc_Gcon.config(text='Thermal Cond.: {:.5f} [W/mK]'.format(self.Gcon))
         self.desc_lenght.config(text='lenght: {:.2f} [mm]'.format(self.lenght))
 
         # lets workout the  current in phases as is defined
@@ -1131,6 +1169,7 @@ class currentDensityWindowPro():
         this procedure solve the thermal equation with given data fromula
         power losses analysis
         '''
+
         # Lets work with barsData for themral model calculations
         if self.isSolved:
             # Doing the power losses sums per each bar
@@ -1139,12 +1178,11 @@ class currentDensityWindowPro():
 
             self.barsData = []
 
-
             for i, bar in enumerate(self.bars):
                 BarPowerLoss = 0
                 BarCurrent = 0
 
-                print(len(bar))
+                # print(len(bar))
 
                 for element in bar:
                     BarPowerLoss += self.powerResultsArray[int(element[0]),
@@ -1152,97 +1190,163 @@ class currentDensityWindowPro():
 
                     BarCurrent += (self.dXmm * self.dYmm) * self.resultsArray[int(element[0]), int(element[1])]
 
-
                 # Calculating bar perymiter of the current bar
-
                 perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
-
-                DT = BarPowerLoss / (perymiter * 1e-3 * self.HTC)
-
+                center = csd.n_getCenter(bar)
                 XS = len(bar) * self.dXmm * self.dYmm
 
-                self.barsData.append([BarPowerLoss, perymiter, BarCurrent, XS])
-
-                # barsData structure
-                # 0 power losses
-                # 1 perymeter
-                # 2 bar Current
-                # 3 cross section
-                # 4 Ghtc to air thermal conductance
-                # 5 Gt 1/2lenght thermal conductance
-                # 6 Q power losses value
-                # 7 New Thermal model DT
-
-                # printing data for each bar
-                print('Bar {0:02d}; Power; {1:06.2f}; [W]; perymeter; {2} [mm]; Current; {3:.1f}; [A]'.format(i, BarPowerLoss,  perymiter, BarCurrent))
-
-            # first lets prepare for us some thermal data for each bar
-            for bar in self.barsData:
                 # calculationg the bar Ghtc
-                p = bar[1]*1e-3
-                A = bar[3]*1e-6
+                p = perymiter*1e-3
+                A = XS*1e-6
                 lng = self.lenght*1e-3
 
                 Ghtc = p * lng * self.HTC  # thermal conductance to air
-                print(self.HTC)
                 Gt = A * self.CuGamma / lng  # thermal conductance to com
-                Q = bar[0] * lng  # Power losses value at lenght
+                Q = BarPowerLoss * lng  # Power losses value at lenght
 
-                bar.append(Q)
-                bar.append(Ghtc)
-                bar.append(Gt)
+                #  need now to figure out the current phase Number
+                if i >= self.phCon[0]+self.phCon[1]:
+                    phase = 3
+                elif i >= self.phCon[0]:
+                    phase = 2
+                else:
+                    phase = 1
+
+                #  plugin in the data to the list
+                self.barsData.append([center, perymiter, BarCurrent,
+                                     XS, Q, Ghtc, Gt, phase])
                 # now self.barsData have all the needed info :)
 
-            # self.phCon is the list of number of conductors per phase
-            phaseBars = [self.barsData[:self.phCon[0]],
-                         self.barsData[self.phCon[0]:self.phCon[0]+self.phCon[1]],
-                         self.barsData[self.phCon[0]+self.phCon[1]:]]
+                # barsData structure
+                # 0 bar center
+                # 1 perymeter
+                # 2 bar Current
+                # 3 cross section
+                # 4 Q power losses value
+                # 5 Ghtc to air thermal conductance
+                # 6 Gt 1/2lenght thermal conductance
+                # 7 phase number
+
+                # 8 New Thermal model DT - this one will calculated later below :)
+
+                # printing data for each bar
+                print('Bar {0:02d} ({5:01d}){1}; Power; {2:06.2f}; [W]; perymeter; {3} [mm]; Current; {4:.1f}; [A]'.format(i, center, Q,                   perymiter, BarCurrent, phase))
+
+            # print('** Bars Data **')
+            # print(self.barsData)
+            # print('** Bars Data **')
+
+            #  lets figure out the needed size of Gthermal matrix
+            #  it will be (bars# +3phases joints)x(the same)
+            vectorSize = len(self.barsData)+3
+            thG = np.zeros((vectorSize, vectorSize), dtype=float)
+
+            # TEMP: Hardcoded Gth between matrix
+
+            if self.Gmx.shape != (3,3):
+                GthermalMatrix = np.asarray(([0, 0, 0],
+                                             [0, 0, 0],
+                                             [0, 0, 0]))
+            else:
+
+                GthermalMatrix = self.Gmx
+            # DEBUG
+            print('--- Solving for temperatures ---')
+            print('The Thermal Cond Coeff Matrix')
+            print(GthermalMatrix)
+
+            print('Thermal Conductivity')
+            print(self.Gcon)
+
+            print('HTC')
+            print(self.HTC)
+
+            print('Results as bars temperatures')
 
 
-            self.Tout = []  # Prepare list of resulting Temps
+            # now we will loop twice over the bars
+            for i, fromBar in enumerate(self.barsData):
+                fromPhase = fromBar[7] - 1  # -1 due to the count from 0
 
-            for bars in phaseBars:  # This loops over phases
-                b = len(bars)
-                Q = []
-                G = []
+                for j, toBar in enumerate(self.barsData):
+                    tempG = 0  # just to make sure we dont have something in it
 
-                for i in range(b+1):
-                    # power vector preparation
-                    if i < b:
-                        Q.append(bars[i][4])
+                    if fromBar is toBar:
+                        # the main digonal with
+                        # GHtc and Gc and sum for all
+
+                        # DEBUG
+                        # print('({},{}) it is me!'.format(i,j))
+                        tempG += fromBar[5] + 2 * fromBar[6]
+                        #  now we nwwd to loop again all
+                        # others to get the sum of G
+                        for otherToBar in self.barsData:
+                            if otherToBar is not fromBar:
+                                #  the distance between to get thermal Conductance
+                                distance = csd.n_getDistance(fromBar[0], otherToBar[0]) * 1e-3
+                                # the area of the fom Bar as xsection for therm cond
+                                thisXs = fromBar[1] * self.lenght * 1e-6
+
+                                otherPhase = otherToBar[7] - 1
+                                tempG += self.Gcon * (thisXs / distance) * GthermalMatrix[fromPhase, otherPhase]
+
                     else:
-                        Q.append(0)
+                        #  DEBUG
+                        # print('({},{}) someone else'.format(i,j))
+                        otherPhase = toBar[7] - 1
+                        #  the distance between to get thermal Conductance
+                        distance = csd.n_getDistance(fromBar[0], toBar[0]) * 1e-3
+                        # the area of the fom Bar as xsection for therm cond
+                        thisXs = fromBar[1] * self.lenght * 1e-6
+                        tempG += -GthermalMatrix[otherPhase, fromPhase] * self.Gcon * (thisXs / distance)
 
-                    Grow = []  # just to keep for the moment the row of G matrix
+                    # putting the calculated vaule in the thG matrix
+                    thG[i, j] = tempG
 
-                    for j in range(b+1):
-                        if j == i and j < b:
-                            Grow.append(bars[j][5] + 2 * bars[j][6])
-                        elif j == b and i < b:
-                            Grow.append(-2 * bars[i][6])
-                        elif i == b and j < b:
-                            Grow.append(2 * bars[j][6])
-                        elif j == i and j == b:  # bottom last element in matrix
-                            Gtemp = 0
-                            for k in range(b):
-                                Gtemp += bars[k][6]
-                            Grow.append(-2 * Gtemp)
-                        else:
-                            Grow.append(0)
+            #  now we need to go for the last 3 rows and columns that
+            #  are for the Tx (joints temperatures)
+            #  the bar phase will determine which Tx we tackle
+            #  Phase = 1 means position -3 in the cols >> col = Phase - 4
+            #  so lets go once more thru the bars to fill last columns
+            for i, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                col = phase - 4
+                thG[i, col] = -2 * fromBar[6]
 
-                    G.append(Grow)
+            #  and one more to fill the last rows
+            for j, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                row = phase - 4
+                thG[row, j] = 2 * fromBar[6]
 
-                Q = np.array(Q)
-                G_1 = np.linalg.inv(np.array(G))
-                T = np.matmul(G_1, Q)
+            # and last thing is the bottom rioght 3x3 area to fill for Tx'es
+            # in each phase as sum by bars -2*Gcondution_to_joint
+            #  this could be incorporated to the loops above
+            #  but is separated for clearer code
+            for fromBar in self.barsData:
+                phase = fromBar[7]
+                col_row = phase - 4
+                thG[col_row, col_row] += -2 * fromBar[6]
 
-                print('***')
-                print(T)
-                print('***')
+            #  and one for the Q vector
+            thQ = np.zeros((vectorSize), dtype=float)
+            for i, fromBar in enumerate(self.barsData):
+                thQ[i] = fromBar[4]
 
+            # Solving for thT vector solutions
+            thGinv = np.linalg.inv(thG)
+            thT = np.matmul(thGinv, thQ)
 
-                for x in range(b):
-                    self.Tout.append(T[x])
+            #  DEBUG
+            # print('The G array')
+            # print(thG)
+            # print('The Q vector')
+            # print(thQ)
+            # print('The T vector')
+            # print(thT)
+
+            # cuts out the Tx joints
+            self.Tout = thT[:len(self.barsData)]  # putting result to vector
 
             # Preparing the output array of the temperatures
             # First we need to rereate vector of temperture for each element
@@ -1268,7 +1372,14 @@ class currentDensityWindowPro():
 
             for i, temp in enumerate(self.Tout):
                 self.barsData[i].append(temp)
-                print('Bar {}: {:.2f}[K]'.format(i,temp))
+                print('Bar {}: {:.2f}[K]'.format(i, temp))
+
+            print('Phase A joint: {:.2f}[K]'.format(thT[-3]))
+            print('Phase B joint: {:.2f}[K]'.format(thT[-2]))
+            print('Phase C joint: {:.2f}[K]'.format(thT[-1]))
+
+            # and now remembering all thermal results
+            self.Tout = thT
 
             # Display the results:
             self.showResults()
@@ -1345,8 +1456,8 @@ class currentDensityWindowPro():
 
     def showTemperatureResults(self):
 
-        title_font = { 'size':'11', 'color':'black', 'weight':'normal'}
-        axis_font = { 'size':'10'}
+        title_font = { 'size':'9', 'color':'black', 'weight':'normal'}
+        axis_font = { 'size':'9'}
 
         if np.sum(self.resultsArray) != 0:
 
@@ -1390,13 +1501,20 @@ class currentDensityWindowPro():
                 x -= min_col * self.dXmm
                 y -= min_row * self.dYmm
 
-                ax.text(x, y, '[{}]'.format(i), horizontalalignment='center')
+                DT = self.barsData[i][8]
+
+                ax.text(x, y, '[{}]\n{:.2f}'.format(i, DT), horizontalalignment='center', verticalalignment='center', fontsize=8)
 
             # *** end of the per bar analysis ***
 
-            ax.set_title(str(self.f)+'[Hz] / '+str(self.I)+'[A] / '+str(self.t) +
-                         '[$^o$C] /'+str(self.lenght) +
-                         '[mm]\n Temperature Rises in Bars', **title_font)
+            ax.set_title(str(self.f)+'[Hz] /' + str(self.t) + '[$^o$C] /'+
+                           str(self.lenght) + '[mm] \n'
+                          'Ia:{:.1f}A {:.0f}$^o$ '.format(float(self.I[0]), np.floor(float(self.I[1]))) +
+                          'Ib:{:.1f}A {:.0f}$^o$ '.format(float(self.I[2]), np.floor(float(self.I[3]))) +
+                          'Ic:{:.1f}A {:.0f}$^o$ \n'.format(float(self.I[4]), np.floor(float(self.I[5]))) +
+                          'HTC: {}[W/m$^2$K] / ThermConv: {}[W/mK]'.format(self.HTC, self.Gcon ) +
+                          '\n Joints Temp Rises: Fa:{:.2f}K Fb;{:.2f}K Fc:{:.2f}K'.format(self.Tout[-3], self.Tout[-2], self.Tout[-1])
+                         , **title_font)
 
             plt.xlabel('size [mm]', **axis_font)
             plt.ylabel('size [mm]', **axis_font)

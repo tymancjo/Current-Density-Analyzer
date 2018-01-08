@@ -344,6 +344,32 @@ def showMeZ(*arg):
         root.title('Impednaces Calculator')
         zCalc = gui.zWindow(root, XSecArray, dXmm, dYmm)
 
+def showReplacer(*arg):
+
+    global XSecArray
+
+    # TODO: New window phase switcher based on below
+    root = Tk()
+    root.title('Impednaces Calculator')
+    TestWindow = gui.geometryModWindow(root, w)
+
+    try:
+        sourcePhase = int(input('Source phase [1,2,3]: '))
+        toPhase = int(input('to phase [1,2,3]: '))
+    except:
+        sourcePhase = 0
+        toPhase = 0
+
+    # some protective checks
+    if sourcePhase in [1,2,3] and toPhase in [1,2,3] and sourcePhase != toPhase:
+        XSecArray[XSecArray == sourcePhase] = toPhase
+        print('Phase {} changed to phase {}'.format(sourcePhase, toPhase))
+        csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                            canvas=w)
+    else:
+        print('cannot swap!')
+
+
 def showMeGeom(*arg):
     # kicking off the geometry navi Window
     # root = Tk()
@@ -737,6 +763,9 @@ print_button_zoom.grid(row=7, column=9, padx=5, pady=5)
 # kick out geometry Window
 print_button_geom = Button(master, text='Ptrn', command=showMeGeom, height=2, width=6)
 print_button_geom.grid(row=6, column=8, columnspan=1)
+
+print_button_geom = Button(master, text='Swap', command=showReplacer, height=2, width=6)
+print_button_geom.grid(row=6, column=10, columnspan=1)
 
 
 emptyOpis = Label(text='', height=3)

@@ -243,7 +243,7 @@ def subdivideArray():
     it take care to not loose any entered data from the modufied array
     '''
 
-    start= time.clock() #just to check the time
+    # start= time.clock() #just to check the time
 
     global XSecArray, dXmm, dYmm
     if dXmm > 1 and dYmm > 1:
@@ -261,8 +261,8 @@ def subdivideArray():
     myEntryDx.insert(END,str(dXmm))
     setParameters()
 
-    end= time.clock()
-    print('subdiv time :'+str(end - start))
+    # end= time.clock()
+    # print('subdiv time :'+str(end - start))
 
 def simplifyArray():
     '''
@@ -774,8 +774,8 @@ emptyOpis.grid(row=5, column=0,)
 emptyOpis = Label(text='Analysis:', height=3)
 emptyOpis.grid(row=6, column=0,)
 
-print_button = Button(master, text='Power Losses\n Calculations', command=showMePower, height=2, width=16)
-print_button.grid(row=7, column=0, columnspan=1)
+# print_button = Button(master, text='Power Losses\n Calculations', command=showMePower, height=2, width=16)
+# print_button.grid(row=7, column=0, columnspan=1)
 
 print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
 print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)

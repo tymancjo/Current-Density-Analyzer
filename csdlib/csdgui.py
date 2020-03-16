@@ -1193,16 +1193,36 @@ class currentDensityWindowPro():
                 # Calculating bar perymiter of the current bar
                 perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
                 center = csd.n_getCenter(bar)
+                # Calculating this bar cross section
                 XS = len(bar) * self.dXmm * self.dYmm
+
 
                 # calculationg the bar Ghtc
                 p = perymiter*1e-3
                 A = XS*1e-6
                 lng = self.lenght*1e-3
+                
+
 
                 Ghtc = p * lng * self.HTC  # thermal conductance to air
                 Gt = A * self.CuGamma / lng  # thermal conductance to com
                 Q = BarPowerLoss * lng  # Power losses value at lenght
+                
+                # Calculating this bar mass
+                # for the moment hard coded as copper roCu=8920 [kg/m3]
+                roCu = 8920
+                # the heat capacity of copper cpcu=385 [J/kgK]
+                cpcu = 385
+                
+                # its needed for the Icw temp rise calculation
+                Vol = A*lng  #[m3]
+                Mass = Vol * roCu
+
+                # Calculating the temp rise for 1s
+                dT1s = (Q * 1)/(Mass * cpcu)
+                
+                # Calculating the temp rise for 3s
+                dT3s = (Q * 3)/(Mass * cpcu)
 
                 #  need now to figure out the current phase Number
                 if i >= self.phCon[0]+self.phCon[1]:
@@ -1214,7 +1234,7 @@ class currentDensityWindowPro():
 
                 #  plugin in the data to the list
                 self.barsData.append([center, perymiter, BarCurrent,
-                                     XS, Q, Ghtc, Gt, phase])
+                                     XS, Q, Ghtc, Gt, phase, dT1s, dT3s])
                 # now self.barsData have all the needed info :)
 
                 # barsData structure
@@ -1230,7 +1250,8 @@ class currentDensityWindowPro():
                 # 8 New Thermal model DT - this one will calculated later below :)
 
                 # printing data for each bar
-                print('Bar {0:02d} ({5:01d}){1}; Power; {2:06.2f}; [W]; perymeter; {3} [mm]; Current; {4:.1f}; [A]'.format(i, center, Q,                   perymiter, BarCurrent, phase))
+                print('Bar {0:02d} ({5:01d}){1}; Power; {2:06.2f}; [W]; perymeter; {3} [mm]; Current; {4:.1f}; [A]'.format(i, center, Q, perymiter, BarCurrent, phase))
+                print('Bar {0:02d} DT(Icu 1s); {1:06.2f}; [K]; DT(Icu 3s); {2:06.2f} [K]'.format(i, dT1s, dT3s))
 
             # print('** Bars Data **')
             # print(self.barsData)
@@ -1381,6 +1402,30 @@ class currentDensityWindowPro():
             # and now remembering all thermal results
             self.Tout = thT
 
+            # Added 05.11.2019 - Adiabatic temperature rise (Icw) analysis for each Bar
+            # Listng results for the Icw DT calculations
+            avT = 0
+            print('****** 1s Icw Adiabatic Temp Rise *******')
+            for i, barDT in enumerate(self.barsData):
+                print('Bar {}: {:.2f}[K]  ({:.2f} degC@35)'.format(i, barDT[8], barDT[8]+35))
+                avT += barDT[8]+35
+
+            avT = avT / len(self.barsData)
+            print('Average 1s: {:.2f} degC@35'.format(avT))
+            avT = 0
+            print('****** 3s Icw Adiabatic Temp Rise *******')
+            for i, barDT in enumerate(self.barsData):
+                print('Bar {}: {:.2f}[K]  ({:.2f} degC@35)'.format(i, barDT[9], barDT[9]+35))
+                avT += barDT[9]+35
+
+            avT = avT / len(self.barsData)
+            print('Average 3s: {:.2f} degC@35'.format(avT))
+
+            print('******* END Icw Adiabatic Temp Rise *****')
+
+
+
+
             # Display the results:
             self.showResults()
 
@@ -1501,9 +1546,9 @@ class currentDensityWindowPro():
                 x -= min_col * self.dXmm
                 y -= min_row * self.dYmm
 
-                DT = self.barsData[i][8]
+                DT = '[{}]\n1s: {:.2f}\n 3s: {:.2f}'.format(i, self.barsData[i][8]+ 35, self.barsData[i][9]+ 35) 
 
-                ax.text(x, y, '[{}]\n{:.2f}'.format(i, DT), horizontalalignment='center', verticalalignment='center', fontsize=8)
+                ax.text(x, y, DT, horizontalalignment='center', verticalalignment='center', fontsize=8)
 
             # *** end of the per bar analysis ***
 

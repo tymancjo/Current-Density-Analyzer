@@ -5,32 +5,29 @@ Its done this way to clean up the code in the main app
 v00 - Initial Build
 '''
 
-### External Loads
+# External Loads
+from csdlib.vect import Vector as v2
+import os.path
+import numpy as np
+import functools
+from tkinter import filedialog, messagebox
+from tkinter import *
+import pickle
+import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
 
-import pickle
 
-from tkinter import *
-from tkinter import filedialog, messagebox
-
-import functools
-import numpy as np
-
-import os.path
-
-from csdlib.vect import Vector as v2
-
-### End of external Loads
+# End of external Loads
 # Classes
+
 
 class cointainer():
     def __init__(self, xArray, dX, dY):
         self.xArray = xArray
         self.dX = dX
         self.dY = dY
-        print('The cointainer is created')
+        print('The container is created')
 
     def save(self, filename):
         filename = str(filename) + '.csd'
@@ -40,7 +37,7 @@ class cointainer():
             with open(tempfile, 'wb') as output:
                 pickle.dump(self, output, pickle.DEFAULT_PROTOCOL)
         except:
-            print('There is issue with pickle. Save aborded to protect file.')
+            print('There is issue with pickle. Save aborted to protect file.')
         else:
             with open(filename, 'wb') as output:
                 pickle.dump(self, output, pickle.DEFAULT_PROTOCOL)
@@ -50,10 +47,11 @@ class cointainer():
 
 # ################# FUNCTIONS & PROCEDURES##############################
 
-def n_shiftPhase(phaseId,dX,dY,XSecArray):
+
+def n_shiftPhase(phaseId, dX, dY, XSecArray):
     '''
     This procedure is shifting the particucal geometry of the phase in arrays
-    to the specific x and y diretion.
+    to the specific x and y direction.
     input:
     phaseId - the value in the geometry array t hat describes the phase 1,2 or 3
     dX - number of cells to shift in columnspan
@@ -63,9 +61,9 @@ def n_shiftPhase(phaseId,dX,dY,XSecArray):
 
     # making the copy of input geommetry array
     tempGeometry = np.copy(XSecArray)
-    # deleting the other phases heometry from the array
+    # deleting the other phases geometry from the array
     tempGeometry[tempGeometry != phaseId] = 0
-    # deleting the selected phase in oryginal geometry array
+    # deleting the selected phase in original geometry array
     XSecArray[XSecArray == phaseId] = 0
 
     oR = XSecArray.shape[0]
@@ -86,7 +84,7 @@ def n_shiftPhase(phaseId,dX,dY,XSecArray):
 def n_cloneGeometry(dX, dY, N, XSecArray):
     '''
     This procedure alternate the x section array multiplying the
-    existng geometry as a pattern with defined shift vector
+    existing geometry as a pattern with defined shift vector
     in cells
     input:
     dX - shift of cells in X (cols)
@@ -95,7 +93,7 @@ def n_cloneGeometry(dX, dY, N, XSecArray):
     XSecArray - input array of the base cross section
     '''
     # Lets figure out the new shape of the array
-    # Oryginal shape
+    # Original shape
     oR = XSecArray.shape[0]
     oC = XSecArray.shape[1]
 
@@ -108,16 +106,17 @@ def n_cloneGeometry(dX, dY, N, XSecArray):
     print('New array shape: {}x{}'.format(nR, nC))
 
     # creating new empty array of required size
-    NewGeometryArray = np.zeros((nR,nC))
+    NewGeometryArray = np.zeros((nR, nC))
 
-    #placing the existing array into the new one as copies
+    # placing the existing array into the new one as copies
     NewGeometryArray[0:oR, 0:oC] = XSecArray
     for x in range(1, N+1):
         print('copying to: {} x {}'.format(x * dY, x * dX))
         for row in range(x * dY, x * dY + oR):
             for col in range(x * dX, x * dX + oC):
                 if XSecArray[row - x * dY, col - x * dX] != 0:
-                    NewGeometryArray[row, col] = XSecArray[row - x * dY, col - x * dX]
+                    NewGeometryArray[row,
+                                     col] = XSecArray[row - x * dY, col - x * dX]
 
     # and sign new array back to the main one of geometry
     return NewGeometryArray
@@ -132,13 +131,10 @@ def n_getDistance(A, B):
     B - tuple (x,y) - first point position on surface
 
     Output
-    Distanc ebetween A and B in the units of position
+    Distance between A and B in the units of position
     '''
 
     return np.sqrt((A[0] - B[0])**2 + (A[1] - B[1])**2)
-    
-
-
 
 
 def loadObj(filename):
@@ -183,7 +179,8 @@ def n_getMutualInductance(sizeX, sizeY, lenght, distance):
 
     # fromula by:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
-    M = (mi0*l / (2*np.pi)) * (np.log((l+np.sqrt(l**2 + d**2))/d) - np.sqrt(1+(d/l)**2) + d/l)
+    M = (mi0*l / (2*np.pi)) * \
+        (np.log((l+np.sqrt(l**2 + d**2))/d) - np.sqrt(1+(d/l)**2) + d/l)
 
     # previous formula
     # return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
@@ -212,7 +209,8 @@ def n_getSelfInductance(sizeX, sizeY, lenght):
 
     # This calculation is based on the:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
-    L = (mi0 * l / (2 * np.pi)) * (np.log(2 * l / a) - np.log(2)/3 + 13/12 - np.pi/2)
+    L = (mi0 * l / (2 * np.pi)) * \
+        (np.log(2 * l / a) - np.log(2)/3 + 13/12 - np.pi/2)
 
     # this was the previous formula
     # return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
@@ -220,6 +218,8 @@ def n_getSelfInductance(sizeX, sizeY, lenght):
     return L
 
 # Calculate the resistance value function
+
+
 def n_getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
     '''
     Calculate the resistance of the al'a square shape in given temperature
@@ -255,11 +255,12 @@ def n_getDistancesArray(inputVector):
                 posXb = inputVector[x][2]
                 posYb = inputVector[x][3]
 
-                distanceArray[y, x] = np.sqrt((posXa-posXb)**2 + (posYa-posYb)**2)
+                distanceArray[y, x] = np.sqrt(
+                    (posXa-posXb)**2 + (posYa-posYb)**2)
             else:
                 distanceArray[y, x] = 0
     # for debug
-    #print(distanceArray)
+    # print(distanceArray)
     #
     return distanceArray
 
@@ -285,7 +286,7 @@ def n_perymiter(vec, arr, dXmm, dYmm):
     perymiter = 0
     for box in vec:
 
-        # checking in x diretions lef and right
+        # checking in x directions lef and right
         if arr[int(box[0] + 1)][int(box[1])] == 0:
             perymiter += dYmm
         if arr[int(box[0] - 1)][int(box[1])] == 0:
@@ -326,11 +327,11 @@ def n_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
     elementsInY = inputArray.shape[0]
     elementsInX = inputArray.shape[1]
 
-    #lets define the empty vectorArray
+    # lets define the empty vectorArray
     vectorArray = []
 
-    #lets go for each input array position and check if is set
-    #and if yes then put it into putput vectorArray
+    # lets go for each input array position and check if is set
+    # and if yes then put it into putput vectorArray
     for Row in range(elementsInY):
         for Col in range(elementsInX):
             if inputArray[Row][Col] == phaseNumber:
@@ -359,20 +360,24 @@ def n_getImpedanceArray(distanceArray, freq, dXmm, dYmm, lenght=1000, temperatur
     '''
     omega = 2*np.pi*freq
 
-    impedanceArray = np.zeros((distanceArray.shape),dtype=np.complex_)
+    impedanceArray = np.zeros((distanceArray.shape), dtype=np.complex_)
     for X in range(distanceArray.shape[0]):
         for Y in range(distanceArray.shape[0]):
             if X == Y:
-                impedanceArray[Y, X] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe) + 1j*omega*n_getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght)
+                impedanceArray[Y, X] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C,
+                                                       temCoRe=temCoRe) + 1j*omega*n_getSelfInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght)
             else:
-                impedanceArray[Y, X] = 1j*omega*n_getMutualInductance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, distance=distanceArray[Y,X])
+                impedanceArray[Y, X] = 1j*omega*n_getMutualInductance(
+                    sizeX=dXmm, sizeY=dYmm, lenght=lenght, distance=distanceArray[Y, X])
     # For debug
-    #print(impedanceArray)
+    # print(impedanceArray)
     #
     return impedanceArray
 
 # Function for calculating resistance array
-def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20,sigma20C=58e6, temCoRe=3.9e-3):
+
+
+def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20, sigma20C=58e6, temCoRe=3.9e-3):
     '''
     Calculate the array of resistance values for each element
     Input:
@@ -387,23 +392,28 @@ def n_getResistanceArray(elementsVector, dXmm, dYmm, lenght=1000, temperature=20
 
     resistanceArray = np.zeros(elementsVector.shape[0])
     for element in range(elementsVector.shape[0]):
-        resistanceArray[element] = n_getResistance(sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe)
+        resistanceArray[element] = n_getResistance(
+            sizeX=dXmm, sizeY=dYmm, lenght=lenght, temp=temperature, sigma20C=sigma20C, temCoRe=temCoRe)
 
     # for debug
-    #print(resistanceArray)
+    # print(resistanceArray)
     #
     return resistanceArray
 
 # Function that increase the resolution of the main geometry array
+
+
 def n_arraySlicer(inputArray, subDivisions=2):
     '''
     This function increase the resolution of the cross section array
     inputArray -  oryginal geometry matrix
     subDivisions -  number of subdivisions / factor of increase of resoluttion / default = 2
     '''
-    return inputArray.repeat(subDivisions,axis=0).repeat(subDivisions,axis=1)
+    return inputArray.repeat(subDivisions, axis=0).repeat(subDivisions, axis=1)
 
 # Functions that calculate module of complex number
+
+
 def n_getComplexModule(x):
     '''
     returns the module of complex number
@@ -417,6 +427,8 @@ def n_getComplexModule(x):
         return x
 
 # Canvas preparation procedure
+
+
 def n_checkered(canvas, cutsX, cutsY, mode=0):
     '''
     This function clean the board and draw grid
@@ -428,25 +440,27 @@ def n_checkered(canvas, cutsX, cutsY, mode=0):
 
     # Reading the size of the canvas element
     canvasHeight = canvas.winfo_height()
-    canvasWidth  = canvas.winfo_width()
+    canvasWidth = canvas.winfo_width()
 
     line_distanceX = (canvasWidth / cutsX)
     line_distanceY = (canvasHeight / cutsY)
 
-
     # Cleaning up the whole canvas space by drawing a white rectangle
     if mode == 0 or mode == 1:
-        canvas.create_rectangle(0, 0, canvasWidth, canvasHeight, fill="white", outline="gray")
+        canvas.create_rectangle(
+            0, 0, canvasWidth, canvasHeight, fill="white", outline="gray")
 
     # vertical lines at an interval of "line_distance" pixel
     # some limits added - we dont draw it if the line amout is to big
     # it would be mess anyway if too much
     if max(cutsX, cutsY) <= 100 and mode == 0 or max(cutsX, cutsY) <= 100 and mode == 2:
         for x in range(0, cutsX):
-            canvas.create_line(x*line_distanceX, 0, x*line_distanceX, canvasHeight, fill="gray")
+            canvas.create_line(x*line_distanceX, 0, x *
+                               line_distanceX, canvasHeight, fill="gray")
         # horizontal lines at an interval of "line_distance" pixel
         for y in range(0, cutsY):
-            canvas.create_line(0, y*line_distanceY, canvasWidth, y*line_distanceY, fill="gray")
+            canvas.create_line(0, y*line_distanceY, canvasWidth,
+                               y*line_distanceY, fill="gray")
 
     # previous implementation - i think too much
     # for x in range(0,canvasWidth):
@@ -454,8 +468,6 @@ def n_checkered(canvas, cutsX, cutsY, mode=0):
     # # horizontal lines at an interval of "line_distance" pixel
     # for y in range(0,canvasHeight):
     #     canvas.create_line(0, y*line_distanceY, canvasWidth, y*line_distanceY, fill="gray")
-
-
 
 
 # Procedure that plot the array to canvas
@@ -474,7 +486,7 @@ def n_printTheArray(dataArray, canvas):
 
     # Now we calculate the propper dX and dY for this array
     canvasHeight = canvas.winfo_height()
-    canvasWidth  = canvas.winfo_width()
+    canvasWidth = canvas.winfo_width()
 
     dX = canvasWidth / elementsInX
     dY = canvasHeight / elementsInY
@@ -486,19 +498,24 @@ def n_printTheArray(dataArray, canvas):
         for Col in range(elementsInX):
             if dataArray[Row][Col] == 1:
                 fillColor = "red"
-                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+                canvas.create_rectangle(
+                    (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
 
             elif dataArray[Row][Col] == 2:
                 fillColor = "green"
-                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+                canvas.create_rectangle(
+                    (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
 
             elif dataArray[Row][Col] == 3:
                 fillColor = "blue"
-                canvas.create_rectangle((Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+                canvas.create_rectangle(
+                    (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
 
     n_checkered(canvas, elementsInX, elementsInY, mode=2)
 
 # Procedure to set up point in the array and display it on canvas
+
+
 def n_setUpPoint(event, Set, dataArray, canvas):
     '''
     This procedure track the mouse position from event ad setup or reset propper element
@@ -531,19 +548,22 @@ def n_setUpPoint(event, Set, dataArray, canvas):
         actualPhase = Set
 
         if actualPhase == 3:
-            canvas.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
+            canvas.create_rectangle(
+                Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
             dataArray[Row][Col] = 3
         elif actualPhase == 2:
-            canvas.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
+            canvas.create_rectangle(
+                Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
             dataArray[Row][Col] = 2
         else:
-            canvas.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
+            canvas.create_rectangle(
+                Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
             dataArray[Row][Col] = 1
 
-    elif Set==0 and inCanvas:
-        canvas.create_rectangle(Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="white", outline="gray")
+    elif Set == 0 and inCanvas:
+        canvas.create_rectangle(Col*dX, Row*dY, Col *
+                                dX+dX, Row*dY+dY, fill="white", outline="gray")
         dataArray[Row][Col] = 0
-
 
 
 # Function that put back together the solution vectr back to represent the crss section shape array
@@ -558,15 +578,18 @@ def n_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
     localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
 
     for vectorIndex, result in enumerate(resultsVector):
-        localResultsArray[int(elementsVector[vectorIndex][0]),int(elementsVector[vectorIndex][1])] = result
+        localResultsArray[int(elementsVector[vectorIndex][0]), int(
+            elementsVector[vectorIndex][1])] = result
 
     return localResultsArray
 
+
 def n_sumVecList(list):
-        sumV = v2(0, 0)
-        for v in list:
-            sumV = sumV + v
-        return sumV
+    sumV = v2(0, 0)
+    for v in list:
+        sumV = sumV + v
+    return sumV
+
 
 def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
     '''
@@ -583,14 +606,14 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
         return sumV
 
     mi0_o2pi = 2e-7
-    lPh = (len(vPhA), len(vPhB), len(vPhC))  # Memorizing each phaze elements count
+    # Memorizing each phaze elements count
+    lPh = (len(vPhA), len(vPhB), len(vPhC))
     Iph = (Ia / len(vPhA), Ib / len(vPhB), Ic / len(vPhC))
 
-    vPhAll = np.concatenate((vPhA, vPhB, vPhC), axis=0)  # One vector for all phases
+    # One vector for all phases
+    vPhAll = np.concatenate((vPhA, vPhB, vPhC), axis=0)
 
     totalForceVec = []
-
-
 
     for this in vPhAll:
         forceVec = v2(0, 0)  # initial reset for this element force
@@ -603,7 +626,8 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
                 Ithis = Iph[int(XsecArr[int(this[0])][int(this[1])])-1]
                 Iother = Iph[int(XsecArr[int(other[0])][int(other[1])])-1]
 
-                forceVec += Lenght * (mi0_o2pi * Iother * Ithis / distance) * direction
+                forceVec += Lenght * \
+                    (mi0_o2pi * Iother * Ithis / distance) * direction
 
         totalForceVec.append(forceVec)
 
@@ -614,6 +638,7 @@ def n_getForces(XsecArr, vPhA, vPhB, vPhC, Ia, Ib, Ic, Lenght=1):
     ForceMagVect = [force.norm() for force in totalForceVec]
 
     return ForceA, ForceB, ForceC, ForceMagVect, totalForceVec
+
 
 def n_getPhasesCenters(vPhA, vPhB, vPhC):
     '''
@@ -635,6 +660,7 @@ def n_getPhasesCenters(vPhA, vPhB, vPhC):
     Phc = (sum(tempX) / len(tempX), sum(tempY) / len(tempY))
 
     return Pha, Phb, Phc
+
 
 def n_getCenter(v):
     '''

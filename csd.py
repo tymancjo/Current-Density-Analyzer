@@ -125,6 +125,11 @@ def zoomOut():
                         canvas=w)
 
 
+def redraw(*args):
+    # global globalX, globalY
+    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w)
+
 def zoomL():
     global globalX, globalY
 
@@ -400,11 +405,11 @@ def showMeGeom(*arg):
 
 def vectorizeTheArray(*arg):
     '''
-    This function abnalyze the cross section array and returns vector of all set
+    This function analyze the cross section array and returns vector of all set
     (equal to 1) elements. This allows to minimize the size of further calculation
     arrays only to active elements.
 
-    and for te moment do the all math for calulations.
+    and for te moment do the all math for calculations.
     '''
     global elementsVector, resultsArray, resultsCurrentVector, frequency, powerLosses,resultsArrayPower, powerLossesVector
 
@@ -567,7 +572,7 @@ def showResults():
 
     if np.sum(resultsArray) != 0:
 
-        # Cecking the area in array that is used by geometry to limit the display
+        # Checking the area in array that is used by geometry to limit the display
         min_row = int(np.min(elementsVector[:,0]))
         max_row = int(np.max(elementsVector[:,0])+1)
 
@@ -658,8 +663,6 @@ def mainSetup():
     dXmm = 10
     dYmm = 10
 
-
-
     dX = (canvas_width / elementsInX)
     dY = (canvas_height / elementsInY)
 
@@ -708,15 +711,20 @@ master.tk.call('wm', 'iconphoto', master._w, img)
 canvas_width = 650
 canvas_height = 650
 
+# master.resizable(width=False, height=False)
+master.resizable(width=not False, height=not False)
+
 mainSetup()
 
-
+# bindind the resize event
+master.bind( "<Configure>", redraw )
 
 w = Canvas(master,
            width=canvas_width,
            height=canvas_height)
 w.configure(background='white')
 w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1)
+
 
 
 print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
@@ -829,8 +837,13 @@ Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,hei
 print_button = Button(master, text='CAD view', command=displayArrayAsImage, height=1, width=18)
 print_button.grid(row=1, column=8, padx=5, pady=0, columnspan=3)
 
+master.grid_rowconfigure(0, weight=0)
+master.grid_rowconfigure(12, weight=1)
+master.grid_columnconfigure(0, weight=0)
+master.grid_columnconfigure(1, weight=1)
 
-master.resizable(width=False, height=False)
+# master.resizable(width=False, height=False)
+# master.resizable(width=not False, height=not False)
 master.update()
 
 canvas_height = w.winfo_height()

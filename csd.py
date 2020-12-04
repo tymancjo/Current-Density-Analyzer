@@ -73,7 +73,7 @@ def loadTheData(filename):
     myEntryDx.delete(0, END)
     myEntryDx.insert(END, str(dXmm))
     setParameters()
-    csd.n_printTheArray(XSecArray, canvas=w)
+    printTheArray(XSecArray, canvas=w )
     del(S)
 
 def zoomInArray(inputArray, zoomSize=2, startX=0, startY=0):
@@ -99,8 +99,8 @@ def zoomIn():
     if globalZoom < 5:
         globalZoom +=1
 
-    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+    printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w )
 
 
 def zoomOut():
@@ -121,14 +121,14 @@ def zoomOut():
         globalX = 0
         globalY = 0
 
-    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+    printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w )
 
 
 def redraw(*args):
     # global globalX, globalY
-    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+    printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w )
 
 def zoomL():
     global globalX, globalY
@@ -136,8 +136,8 @@ def zoomL():
     globalX -= 2
     if globalX < 0:
         globalX = 0
-    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+    printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w )
 
 
 def zoomR():
@@ -148,8 +148,8 @@ def zoomR():
     if globalX > XSecArray.shape[1]-XSecArray.shape[1]//globalZoom:
         globalX = XSecArray.shape[1]-XSecArray.shape[1]//globalZoom
 
-    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+    printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w )
 
 
 def zoomU():
@@ -159,7 +159,7 @@ def zoomU():
     if globalY < 0:
         globalY =0
 
-    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+    printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w )
 
 
 def zoomD():
@@ -169,7 +169,7 @@ def zoomD():
     if globalY > XSecArray.shape[0]-XSecArray.shape[0]//globalZoom:
         globalY = XSecArray.shape[0]-XSecArray.shape[0]//globalZoom
 
-    csd.n_printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+    printTheArray(zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w )
 
 def displayArrayAsImage():
     '''
@@ -179,8 +179,8 @@ def displayArrayAsImage():
     '''
     print(XSecArray)
     print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-    csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                        canvas=w)
+    printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                        canvas=w )
 
     drawGeometryArray(XSecArray)
 
@@ -258,7 +258,7 @@ def subdivideArray():
         dYmm = dYmm/2
 
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-        csd.n_printTheArray(dataArray=XSecArray, canvas=w)
+        printTheArray(dataArray=XSecArray, canvas=w )
     else:
         print('No further subdivisions make sense :)')
 
@@ -296,7 +296,7 @@ def simplifyArray():
         dYmm = dYmm*2
 
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
-        csd.n_printTheArray(dataArray=XSecArray, canvas=w)
+        printTheArray(dataArray=XSecArray, canvas=w )
     else:
         print('No further simplification make sense :)')
 
@@ -369,8 +369,8 @@ def showReplacer(*arg):
     if sourcePhase in [1,2,3] and toPhase in [1,2,3] and sourcePhase != toPhase:
         XSecArray[XSecArray == sourcePhase] = toPhase
         print('Phase {} changed to phase {}'.format(sourcePhase, toPhase))
-        csd.n_printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
-                            canvas=w)
+        printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY),
+                            canvas=w )
     else:
         print('cannot swap!')
 
@@ -399,7 +399,7 @@ def showMeGeom(*arg):
 
         XSecArray = csd.n_cloneGeometry(dX, dY, N, XSecArray)
         print(XSecArray.shape)
-        csd.n_printTheArray(XSecArray, canvas=w)
+        printTheArray(XSecArray, canvas=w )
 
 
 
@@ -619,7 +619,7 @@ def shiftL():
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, -1, 0, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
-    csd.n_printTheArray(XSecArray, canvas=w)
+    printTheArray(XSecArray, canvas=w )
 
 
 def shiftR():
@@ -627,7 +627,7 @@ def shiftR():
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, 1, 0, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
-    csd.n_printTheArray(XSecArray, canvas=w)
+    printTheArray(XSecArray, canvas=w )
 
 
 def shiftU():
@@ -635,7 +635,7 @@ def shiftU():
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, 0, -1, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
-    csd.n_printTheArray(XSecArray, canvas=w)
+    printTheArray(XSecArray, canvas=w )
 
 
 def shiftD():
@@ -643,7 +643,7 @@ def shiftD():
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, 0, 1, XSecArray)
     print('Phase: {} shifed by {} x {}'.format(actualPhase, dXmm, 0))
-    csd.n_printTheArray(XSecArray, canvas=w)
+    printTheArray(XSecArray, canvas=w )
 
 
 
@@ -697,6 +697,61 @@ def setParameters(*arg):
     analysisDX.config(text='dx:\n '+str(dXmm)+'[mm]')
     analysisDY.config(text='dy:\n '+str(dYmm)+'[mm]')
 
+def printTheArray(dataArray, canvas):
+    '''
+    This procedure allows to print the array back to the graphical board
+    usefull for redraw or draw loaded data
+    Inputs:
+    dataArray -  the array to display on canvas
+    canvas - tkinter canvas object
+    '''
+    global canvasElements
+
+    # Let's check the size
+    elementsInY = dataArray.shape[0]
+    elementsInX = dataArray.shape[1]
+
+    # Now we calculate the propper dX and dY for this array
+    canvasHeight = canvas.winfo_height()
+    canvasWidth = canvas.winfo_width()
+
+    dX = canvasWidth / elementsInX
+    dY = canvasHeight / elementsInY
+
+    # protection for backward compatibility
+    # & cleaning stuff
+    for graphElement in canvasElements:
+        try:
+            print(graphElement)
+            canvas.delete(graphElement)
+        except:
+            print("Error in removing stuff")
+            pass
+    canvasElements = []
+
+
+    colorList = ["red", "green", "blue"]
+    
+    for Row in range(elementsInY):
+        for Col in range(elementsInX):
+            theNumber = int(dataArray[Row][Col])
+            if  theNumber in [1,2,3]:
+                
+                fillColor = colorList[theNumber-1]
+                
+                canvasElements.append(canvas.create_rectangle(
+                    (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline=""))
+
+            # elif dataArray[Row][Col] == 2:
+            #     canvas.create_rectangle(
+            #         (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+
+            # elif dataArray[Row][Col] == 3:
+            #     canvas.create_rectangle(
+            #         (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+
+    # n_checkered(canvas, elementsInX, elementsInY, mode=2)
+
 
 ######## End of functions definition ############
 
@@ -725,6 +780,7 @@ w = Canvas(master,
 w.configure(background='white')
 w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1)
 
+canvasElements = []
 
 
 print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
@@ -849,7 +905,7 @@ master.update()
 canvas_height = w.winfo_height()
 canvas_width  = w.winfo_width()
 
-csd.n_printTheArray(dataArray=XSecArray, canvas=w)
+printTheArray(dataArray=XSecArray, canvas=w )
 
 
 print(phase)

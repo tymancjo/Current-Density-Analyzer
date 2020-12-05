@@ -283,18 +283,42 @@ def n_perymiter(vec, arr, dXmm, dYmm):
     perymiter lenght in the same units as dXmm and dYmm
     '''
     # TODO: adding check if we dont exeed dimensions of array
+    # its done
     perymiter = 0
     for box in vec:
 
+        # checking the size of the arr array
+        x, y = arr.shape
+
         # checking in x directions lef and right
-        if arr[int(box[0] + 1)][int(box[1])] == 0:
-            perymiter += dYmm
-        if arr[int(box[0] - 1)][int(box[1])] == 0:
+        A, B = int(box[0] + 1), int(box[1])
+
+        if A < x:
+            if arr[A][B] == 0:
+                perymiter += dYmm
+        else:
             perymiter += dYmm
 
-        if arr[int(box[0])][int(box[1] + 1)] == 0:
+        A, B = int(box[0] - 1), int(box[1])
+        if A >= 0:
+            if arr[A][B] == 0:
+                perymiter += dYmm
+        else:
+            perymiter += dYmm
+
+        A, B = int(box[0]), int(box[1] + 1)
+        if B < y:
+            if arr[A][B] == 0:
+                perymiter += dXmm
+        else:
             perymiter += dXmm
-        if arr[int(box[0])][int(box[1] - 1)] == 0:
+
+        A, B = int(box[0]), int(box[1] - 1)
+
+        if B >= 0:
+            if arr[A][B] == 0:
+                perymiter += dXmm
+        else:
             perymiter += dXmm
 
     return perymiter
@@ -472,6 +496,63 @@ def n_checkered(canvas, cutsX, cutsY, mode=0):
 
 # Procedure that plot the array to canvas
 def n_printTheArray(dataArray, canvas):
+    '''
+    This procedure allows to print the array back to the graphical board
+    usefull for redraw or draw loaded data
+    Inputs:
+    dataArray -  the array to display on canvas
+    canvas - tkinter canvas object
+    '''
+    global canvasElements
+
+    # Let's check the size
+    elementsInY = dataArray.shape[0]
+    elementsInX = dataArray.shape[1]
+
+    # Now we calculate the propper dX and dY for this array
+    canvasHeight = canvas.winfo_height()
+    canvasWidth = canvas.winfo_width()
+
+    dX = canvasWidth / elementsInX
+    dY = canvasHeight / elementsInY
+
+    # protection for backward compatibility
+    # & cleaning stuff
+    for graphElement in canvasElements:
+        try:
+            print(graphElement)
+            canvas.delete(graphElement)
+        except:
+            print("Error in removing stuff")
+            pass
+    canvasElements = []
+
+
+    colorList = ["red", "green", "blue"]
+    
+    for Row in range(elementsInY):
+        for Col in range(elementsInX):
+            theNumber = int(dataArray[Row][Col])
+            if  theNumber in [1,2,3]:
+                
+                fillColor = colorList[theNumber-1]
+                
+                canvasElements.append(canvas.create_rectangle(
+                    (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline=""))
+
+            # elif dataArray[Row][Col] == 2:
+            #     canvas.create_rectangle(
+            #         (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+
+            # elif dataArray[Row][Col] == 3:
+            #     canvas.create_rectangle(
+            #         (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+
+    # n_checkered(canvas, elementsInX, elementsInY, mode=2)
+
+
+# Procedure that plot the array to canvas
+def n_printTheArrayOld(dataArray, canvas):
     '''
     This procedure allows to print the array back to the graphical board
     usefull for redraw or draw loaded data

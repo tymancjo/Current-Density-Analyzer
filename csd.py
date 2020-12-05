@@ -228,7 +228,8 @@ def clearArrayAndDisplay():
             XSecArray = np.zeros(XSecArray.shape)
             #checkered(w, dX, dY)
             mainSetup()
-            csd.n_checkered(w, elementsInX, elementsInY)
+            # csd.n_checkered(w, elementsInX, elementsInY)
+            printTheArray(XSecArray, w)
             myEntryDx.delete(0,END)
             myEntryDx.insert(END,str(dXmm))
             setParameters()
@@ -237,7 +238,8 @@ def clearArrayAndDisplay():
             XSecArray = np.zeros(XSecArray.shape)
             #checkered(w, dX, dY)
             mainSetup()
-            csd.n_checkered(w, elementsInX, elementsInY)
+            # csd.n_checkered(w, elementsInX, elementsInY)
+            printTheArray(XSecArray, w)
             myEntryDx.delete(0,END)
             myEntryDx.insert(END,str(dXmm))
             setParameters()
@@ -703,11 +705,13 @@ def setParameters(*arg):
 
 def printTheArray(dataArray, canvas):
     '''
-    This procedure allows to print the array back to the graphical board
+    This procedure draw the geometry contained array to given canvas.
     usefull for redraw or draw loaded data
     Inputs:
     dataArray -  the array to display on canvas
     canvas - tkinter canvas object
+
+    it's using global variable canvasElements.
     '''
     global canvasElements
 
@@ -722,15 +726,23 @@ def printTheArray(dataArray, canvas):
     dX = canvasWidth / elementsInX
     dY = canvasHeight / elementsInY
 
-    # protection for backward compatibility
-    # & cleaning stuff
-    for graphElement in canvasElements:
+    dXY = min(dX, dY)
+
+    startX = (canvasWidth - dXY * elementsInX) / 2
+    startY = (canvasHeight - dXY * elementsInY) / 2
+
+    for anyDrawedElement in canvasElements:
         try:
-            canvas.delete(graphElement)
+            canvas.delete(anyDrawedElement)
         except:
             print("Error in removing stuff")
             pass
     canvasElements = []
+
+    canvasElements.append(canvas.create_rectangle(
+        startX , startY , canvasWidth - startX,
+        canvasHeight - startY, fill="white", outline="gray"))                       
+
 
 
     colorList = ["red", "green", "blue"]
@@ -742,15 +754,22 @@ def printTheArray(dataArray, canvas):
             if  theNumber in [1,2,3]:
                 
                 fillColor = colorList[theNumber-1]
-                
+
                 canvasElements.append(canvas.create_rectangle(
-                    (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline=""))
+                startX + (Col)*dXY, startY + (Row)*dXY, startX + (Col)*dXY+dXY, 
+                startY + (Row)*dXY+dXY, fill=fillColor, outline=""))
+                
+                # canvasElements.append(canvas.create_rectangle(
+                    # (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline=""))
 
             # Handling the lines for the grid
             if Row == 0:
-                canvasElements.append(canvas.create_line(Col*dX, 0, Col*dX, canvasHeight, fill="gray")) 
+                canvasElements.append(
+                canvas.create_line(startX + Col*dXY, startY, startX + Col*dXY, 
+                canvasHeight - startY, fill="gray")) 
         
-        canvasElements.append(canvas.create_line(0, Row*dY, canvasWidth, Row*dY, fill="gray")) 
+        canvasElements.append(canvas.create_line(startX, startY + Row*dXY, 
+        canvasWidth - startX, startY + Row*dXY, fill="gray")) 
 
 def setUpPoint(event, Set, dataArray, canvas):
     '''
@@ -772,37 +791,23 @@ def setUpPoint(event, Set, dataArray, canvas):
     dX = canvasWidth / elementsInX
     dY = canvasHeight / elementsInY
 
-    Col = int(event.x/dX)
-    Row = int(event.y/dY)
+    dXY = min(dX, dY)
+    
+    startX = (canvasWidth - dXY * elementsInX) / 2
+    startY = (canvasHeight - dXY * elementsInY) / 2
+    
 
-    if event.x < canvasWidth and event.y < canvasHeight and event.x > 0 and event.y > 0:
+
+    if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
+
+        Col = int((event.x - startX)/dXY)
+        Row = int((event.y - startY)/dXY)
+
         if Set in [0,1,2,3]:
             dataArray[Row][Col] = Set
 
     printTheArray(dataArray, canvas)
 
-    # else:
-    #     inCanvas = False
-
-    # if Set != 0 and inCanvas:
-    #     actualPhase = Set
-
-    #     if actualPhase == 3:
-    #         canvas.create_rectangle(
-    #             Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
-    #     elif actualPhase == 2:
-    #         canvas.create_rectangle(
-    #             Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
-    #         dataArray[Row][Col] = 2
-    #     else:
-    #         canvas.create_rectangle(
-    #             Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
-    #         dataArray[Row][Col] = 1
-
-    # elif Set == 0 and inCanvas:
-    #     canvas.create_rectangle(Col*dX, Row*dY, Col *
-    #                             dX+dX, Row*dY+dY, fill="white", outline="gray")
-    #     dataArray[Row][Col] = 0
 
 ######## End of functions definition ############
 
@@ -828,7 +833,7 @@ master.bind( "<Configure>", redraw )
 w = Canvas(master,
            width=canvas_width,
            height=canvas_height)
-w.configure(background='white')
+w.configure(background='gray69')
 w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1)
 
 canvasElements = []
@@ -918,10 +923,10 @@ myEntryDx.bind("<FocusOut>", setParameters)
 
 
 
-w.bind( "<Button 1>", setPoint)
-w.bind( "<Button 3>", resetPoint)
-w.bind( "<B1-Motion>", setPoint)
-w.bind( "<B3-Motion>", resetPoint)
+w.bind("<Button 1>", setPoint)
+w.bind("<Button 3>", resetPoint)
+w.bind("<B1-Motion>", setPoint)
+w.bind("<B3-Motion>", resetPoint)
 
 w.bind( "<Button 2>", showXsecArray)
 
@@ -959,6 +964,6 @@ canvas_width  = w.winfo_width()
 printTheArray(dataArray=XSecArray, canvas=w )
 
 
-print(phase)
+# print(phase)
 
 mainloop()

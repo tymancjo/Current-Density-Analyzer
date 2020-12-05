@@ -189,7 +189,10 @@ def setPoint(event):
     '''Trigger procesdure for GUI action'''
     actualPhase = phase.get()
 
-    csd.n_setUpPoint(event, Set=actualPhase,
+    # csd.n_setUpPoint(event, Set=actualPhase,
+    #                  dataArray=zoomInArray(XSecArray, globalZoom, globalX,
+    #                                        globalY), canvas=w)
+    setUpPoint(event, Set=actualPhase,
                      dataArray=zoomInArray(XSecArray, globalZoom, globalX,
                                            globalY), canvas=w)
 
@@ -203,7 +206,8 @@ def setPoint(event):
 
 def resetPoint(event):
     '''Trigger procesdure for GUI action'''
-    csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+    # csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+    setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
 
     #  Plotting on CAD view if exist
     try:
@@ -722,7 +726,6 @@ def printTheArray(dataArray, canvas):
     # & cleaning stuff
     for graphElement in canvasElements:
         try:
-            print(graphElement)
             canvas.delete(graphElement)
         except:
             print("Error in removing stuff")
@@ -734,6 +737,7 @@ def printTheArray(dataArray, canvas):
     
     for Row in range(elementsInY):
         for Col in range(elementsInX):
+
             theNumber = int(dataArray[Row][Col])
             if  theNumber in [1,2,3]:
                 
@@ -742,16 +746,63 @@ def printTheArray(dataArray, canvas):
                 canvasElements.append(canvas.create_rectangle(
                     (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline=""))
 
-            # elif dataArray[Row][Col] == 2:
-            #     canvas.create_rectangle(
-            #         (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+            # Handling the lines for the grid
+            if Row == 0:
+                canvasElements.append(canvas.create_line(Col*dX, 0, Col*dX, canvasHeight, fill="gray")) 
+        
+        canvasElements.append(canvas.create_line(0, Row*dY, canvasWidth, Row*dY, fill="gray")) 
 
-            # elif dataArray[Row][Col] == 3:
-            #     canvas.create_rectangle(
-            #         (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline="")
+def setUpPoint(event, Set, dataArray, canvas):
+    '''
+    This procedure track the mouse position from event ad setup or reset propper element
+    in the cross section array
+    Inputs
+    event - the event object from tkinter that create the point (or reset)
+    Set - Number of phase to set or 0 to reset
+    dataArray -  the array that keeps the cross section design data
+    canvas - tk inter canvas object
+    '''
+    # gathering some current data
+    elementsInY = dataArray.shape[0]
+    elementsInX = dataArray.shape[1]
 
-    # n_checkered(canvas, elementsInX, elementsInY, mode=2)
+    canvasHeight = canvas.winfo_height()
+    canvasWidth = canvas.winfo_width()
 
+    dX = canvasWidth / elementsInX
+    dY = canvasHeight / elementsInY
+
+    Col = int(event.x/dX)
+    Row = int(event.y/dY)
+
+    if event.x < canvasWidth and event.y < canvasHeight and event.x > 0 and event.y > 0:
+        if Set in [0,1,2,3]:
+            dataArray[Row][Col] = Set
+
+    printTheArray(dataArray, canvas)
+
+    # else:
+    #     inCanvas = False
+
+    # if Set != 0 and inCanvas:
+    #     actualPhase = Set
+
+    #     if actualPhase == 3:
+    #         canvas.create_rectangle(
+    #             Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="blue", outline="gray")
+    #     elif actualPhase == 2:
+    #         canvas.create_rectangle(
+    #             Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="green", outline="gray")
+    #         dataArray[Row][Col] = 2
+    #     else:
+    #         canvas.create_rectangle(
+    #             Col*dX, Row*dY, Col*dX+dX, Row*dY+dY, fill="red", outline="gray")
+    #         dataArray[Row][Col] = 1
+
+    # elif Set == 0 and inCanvas:
+    #     canvas.create_rectangle(Col*dX, Row*dY, Col *
+    #                             dX+dX, Row*dY+dY, fill="white", outline="gray")
+    #     dataArray[Row][Col] = 0
 
 ######## End of functions definition ############
 

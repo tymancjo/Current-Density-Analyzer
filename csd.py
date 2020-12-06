@@ -28,7 +28,7 @@ def saveArrayToFile():
     if filename:
         saveTheData(filename)
 
-
+    
 def saveTheData(filename):
     '''
     This is the subfunction for saving data
@@ -36,7 +36,7 @@ def saveTheData(filename):
     # print('Saving to file :' + filename)
     # np.save(filename, XSecArray)
 
-    S = csd.cointainer(XSecArray, dXmm, dYmm)
+    S = csd.cointainer(XSecArray, dXmm, dYmm) 
     S.save(filename)
     del(S)
 
@@ -840,38 +840,42 @@ analyze_menu.add_command(label="Electro Dynamic Forces", command=showMeForces)
 analyze_menu.add_command(label="Equivalent Impedance Model", command=showMeZ)
 menu_bar.add_cascade(label="Analyze...", menu=analyze_menu)
 
+geometry_menu = Menu(menu_bar)
+geometry_menu.add_command(label="Pattern", command=showMeGeom)
+geometry_menu.add_command(label="Swap", command=showReplacer)
+geometry_menu.add_separator()
+geometry_menu.add_command(label="Subdivide(+)", command=subdivideArray)
+geometry_menu.add_command(label="Simplify(-)", command=simplifyArray)
+menu_bar.add_cascade(label="Geometry", menu=geometry_menu)
+
 master.config(menu=menu_bar)
 
-# print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
-# print_button_clear.grid(row=1, column=0, padx=5, pady=5)
-# 
-# print_button_load = Button(master, text='Load from File', command=loadArrayFromFile, height=2, width=16)
-# print_button_load.grid(row=2, column=0, padx=5, pady=5)
-# 
-# print_button_save = Button(master, text='Save to File', command=saveArrayToFile, height=2, width=16)
-# print_button_save.grid(row=3, column=0, padx=5, pady=5)
 
+cross_row = 9
+zoom_in_icon  = PhotoImage(file='csdicons/zoomin.png')
+zoom_out_icon = PhotoImage(file='csdicons/zoomout.png')
+up_icon = PhotoImage(file='csdicons/up.png')
+down_icon = PhotoImage(file='csdicons/down.png')
+left_icon = PhotoImage(file='csdicons/left.png')
+right_icon = PhotoImage(file='csdicons/right.png')
 
-print_button_slice = Button(master, text='Subdivide', command=subdivideArray, height=2, width=16)
-print_button_slice.grid(row=11, column=8, padx=5, pady=5, columnspan=3)
+navi_frame = LabelFrame(master, text="View navi")
+navi_frame.grid(row=cross_row, column=8, rowspan=4, columnspan=3, sticky="S")
 
-print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
-print_button_slice.grid(row=12, column=8, padx=5, pady=5, columnspan=3)
-
-print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=8)
-print_button_zoom.grid(row=8, column=10, padx=5, pady=5, columnspan=1)
-print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=8)
-print_button_zoom.grid(row=8, column=8, padx=5, pady=5, columnspan=1)
+print_button_zoom = Button(navi_frame, image=zoom_in_icon, width=32, height=32, relief=FLAT, command=zoomIn)
+print_button_zoom.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
+print_button_zoom = Button(navi_frame, image=zoom_out_icon, width=32, height=32, relief=FLAT, command=zoomOut)
+print_button_zoom.grid(row=0, column=2, padx=5, pady=5, columnspan=1)
 
 # first cross navi
-print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=9, column=8, padx=5, pady=5)
-print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=9, column=10, padx=5, pady=5)
-print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=8, column=9, padx=5, pady=5)
-print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=10, column=9, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=left_icon, width=24, height=24, relief=FLAT, command=zoomL, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=0, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=right_icon, width=24, height=24, relief=FLAT, command=zoomR, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=2, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=up_icon, width=24, height=24, relief=FLAT, command=zoomU, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=down_icon, width=24, height=24, relief=FLAT, command=zoomD, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
 
 # second cross navi
 print_button_zoom = Button(master, text='<', command=shiftL, height=1, width=1, repeatdelay=100, repeatinterval=100)
@@ -883,35 +887,11 @@ print_button_zoom.grid(row=6, column=9, padx=5, pady=5)
 print_button_zoom = Button(master, text='v', command=shiftD, height=1, width=1, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=7, column=9, padx=5, pady=5)
 
-# kick out geometry Window
-print_button_geom = Button(master, text='Ptrn', command=showMeGeom, height=2, width=6)
-print_button_geom.grid(row=6, column=8, columnspan=1)
-
-print_button_geom = Button(master, text='Swap', command=showReplacer, height=2, width=6)
-print_button_geom.grid(row=6, column=10, columnspan=1)
-
-
 emptyOpis = Label(text='', height=3)
 emptyOpis.grid(row=5, column=0,)
 
-# emptyOpis = Label(text='Analysis:', height=3)
-# emptyOpis.grid(row=6, column=0,)
-
-# print_button = Button(master, text='Power Losses\n Calculations', command=showMePower, height=2, width=16)
-# print_button.grid(row=7, column=0, columnspan=1)
-
-# print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
-# print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
-# 
-# print_button = Button(master, text='Impednaces\n Calculations', command=showMeZ, height=2, width=16)
-# print_button.grid(row=9, column=0, columnspan=1)
-# 
-# print_button = Button(master, text='Power Losses\n ProSolver', command=showMePro, height=2, width=16)
-# print_button.grid(row=10, column=0, columnspan=1)
-
 GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8, columnspan=3)
-
 
 analysisDX = Label(text='grid:', height=2  )
 analysisDX.grid(row=5, column=8, columnspan=1)
@@ -923,8 +903,6 @@ myEntryDx.insert(END,str(dXmm))
 myEntryDx.grid(row=5, column=9, columnspan=1, padx=1, pady=1)
 myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
-
-
 
 w.bind("<Button 1>", setPoint)
 w.bind("<Button 3>", resetPoint)

@@ -848,9 +848,13 @@ geometry_menu.add_command(label="Subdivide(+)", command=subdivideArray)
 geometry_menu.add_command(label="Simplify(-)", command=simplifyArray)
 menu_bar.add_cascade(label="Geometry", menu=geometry_menu)
 
+view_menu = Menu(menu_bar)
+view_menu.add_command(label="Open CAD view window", command=displayArrayAsImage)
+menu_bar.add_cascade(label="View", menu=view_menu)
+
 master.config(menu=menu_bar)
 
-
+# Geoetry navigation frame
 cross_row = 9
 zoom_in_icon  = PhotoImage(file='csdicons/zoomin.png')
 zoom_out_icon = PhotoImage(file='csdicons/zoomout.png')
@@ -926,10 +930,10 @@ phase.set(1) # initialize
 Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').grid(row=2, column=8, columnspan=3)
 Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').grid(row=3, column=8, columnspan=3)
 Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').grid(row=4, column=8, columnspan=3)
-
-print_button = Button(master, text='CAD view', command=displayArrayAsImage, height=1, width=18)
-print_button.grid(row=1, column=8, padx=5, pady=0, columnspan=3)
-
+# 
+# print_button = Button(master, text='CAD view', command=displayArrayAsImage, height=1, width=18)
+# print_button.grid(row=1, column=8, padx=5, pady=0, columnspan=3)
+# 
 master.grid_rowconfigure(0, weight=0)
 master.grid_rowconfigure(12, weight=1)
 master.grid_columnconfigure(0, weight=0)

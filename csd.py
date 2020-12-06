@@ -17,7 +17,7 @@ def showXsecArray(event):
     This function print the array to the terminal
     '''
     print(XSecArray)
-
+    
 
 def saveArrayToFile():
     '''
@@ -283,25 +283,13 @@ def simplifyArray():
     global XSecArray, dXmm, dYmm
 
     if dXmm < 30 and dYmm < 30:
-        # Below was working just fine for single phase solver where only 0 or 1 was in the array
-        # if np.sum(XSecArray) == 0:
-        #     XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
-        # else:
-        #     for Row in range(0,XSecArray.shape[0],2):
-        #         for Col in range(0,XSecArray.shape[0],2):
-        #             # Calculating sume in rows&cols we about to drop
-        #             # to be sure we keep all set point transferred
-        #
-        #             XSecArray[Row,Col] = np.sum(XSecArray[Row:Row+2,Col:Col+2])
-        #             if XSecArray[Row,Col] > 0: XSecArray[Row,Col] = 1
 
         XSecArray = XSecArray[::2,::2]
-
 
         dXmm = dXmm*2
         dYmm = dYmm*2
 
-        print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
+        # print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
         printTheArray(dataArray=XSecArray, canvas=w )
     else:
         print('No further simplification make sense :)')
@@ -796,8 +784,6 @@ def setUpPoint(event, Set, dataArray, canvas):
     startX = (canvasWidth - dXY * elementsInX) / 2
     startY = (canvasHeight - dXY * elementsInY) / 2
     
-
-
     if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
 
         Col = int((event.x - startX)/dXY)
@@ -838,15 +824,32 @@ w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1
 
 canvasElements = []
 
+# the menu bar stuff
+menu_bar = Menu(master)
 
-print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
-print_button_clear.grid(row=1, column=0, padx=5, pady=5)
+file_menu = Menu(menu_bar)
+file_menu.add_command(label="New geometry", command=clearArrayAndDisplay)
+file_menu.add_separator()
+file_menu.add_command(label="Load from file", command=loadArrayFromFile)
+file_menu.add_command(label="Save to file", command=saveArrayToFile)
+menu_bar.add_cascade(label="File", menu=file_menu)
 
-print_button_load = Button(master, text='Load from File', command=loadArrayFromFile, height=2, width=16)
-print_button_load.grid(row=2, column=0, padx=5, pady=5)
+analyze_menu = Menu(menu_bar)
+analyze_menu.add_command(label="Power Losses ProSolver", command=showMePro)
+analyze_menu.add_command(label="Electro Dynamic Forces", command=showMeForces)
+analyze_menu.add_command(label="Equivalent Impedance Model", command=showMeZ)
+menu_bar.add_cascade(label="Analyze...", menu=analyze_menu)
 
-print_button_save = Button(master, text='Save to File', command=saveArrayToFile, height=2, width=16)
-print_button_save.grid(row=3, column=0, padx=5, pady=5)
+master.config(menu=menu_bar)
+
+# print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
+# print_button_clear.grid(row=1, column=0, padx=5, pady=5)
+# 
+# print_button_load = Button(master, text='Load from File', command=loadArrayFromFile, height=2, width=16)
+# print_button_load.grid(row=2, column=0, padx=5, pady=5)
+# 
+# print_button_save = Button(master, text='Save to File', command=saveArrayToFile, height=2, width=16)
+# print_button_save.grid(row=3, column=0, padx=5, pady=5)
 
 
 print_button_slice = Button(master, text='Subdivide', command=subdivideArray, height=2, width=16)
@@ -891,20 +894,20 @@ print_button_geom.grid(row=6, column=10, columnspan=1)
 emptyOpis = Label(text='', height=3)
 emptyOpis.grid(row=5, column=0,)
 
-emptyOpis = Label(text='Analysis:', height=3)
-emptyOpis.grid(row=6, column=0,)
+# emptyOpis = Label(text='Analysis:', height=3)
+# emptyOpis.grid(row=6, column=0,)
 
 # print_button = Button(master, text='Power Losses\n Calculations', command=showMePower, height=2, width=16)
 # print_button.grid(row=7, column=0, columnspan=1)
 
-print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
-print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
-
-print_button = Button(master, text='Impednaces\n Calculations', command=showMeZ, height=2, width=16)
-print_button.grid(row=9, column=0, columnspan=1)
-
-print_button = Button(master, text='Power Losses\n ProSolver', command=showMePro, height=2, width=16)
-print_button.grid(row=10, column=0, columnspan=1)
+# print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
+# print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
+# 
+# print_button = Button(master, text='Impednaces\n Calculations', command=showMeZ, height=2, width=16)
+# print_button.grid(row=9, column=0, columnspan=1)
+# 
+# print_button = Button(master, text='Power Losses\n ProSolver', command=showMePro, height=2, width=16)
+# print_button.grid(row=10, column=0, columnspan=1)
 
 GeometryOpis = Label(text='Geometry setup:', height=1)
 GeometryOpis.grid(row=0, column=8, columnspan=3)

@@ -870,9 +870,9 @@ phase.set(1) # initialize
 # Radiobutton(phase_frame, text="A", variable=phase, value=1 , indicatoron=0 ,height=2, width=5, bg='red', highlightbackground='red').grid(row=0, column=0)
 # Radiobutton(phase_frame, text="B", variable=phase, value=2 , indicatoron=0 ,height=2, width=5, bg='green', highlightbackground='green').grid(row=0, column=1)
 # Radiobutton(phase_frame, text="C", variable=phase, value=3 , indicatoron=0 ,height=2, width=5, bg='blue', highlightbackground='blue').grid(row=0, column=2)
-Radiobutton(phase_frame, image=A_icon_white, variable=phase, value=1 , indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red').grid(row=0, column=0)
-Radiobutton(phase_frame, image=B_icon_white, variable=phase, value=2 , indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green').grid(row=0, column=1)
-Radiobutton(phase_frame, image=C_icon_white, variable=phase, value=3 , indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue').grid(row=0, column=2)
+Radiobutton(phase_frame, image=A_icon_white, variable=phase, value=1 , indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red').grid(row=0, column=0, padx=3, pady=2)
+Radiobutton(phase_frame, image=B_icon_white, variable=phase, value=2 , indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green').grid(row=0, column=1, padx=3, pady=2)
+Radiobutton(phase_frame, image=C_icon_white, variable=phase, value=3 , indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue').grid(row=0, column=2, padx=3, pady=2)
 
 
 # geometry modyfication pane

@@ -854,8 +854,64 @@ menu_bar.add_cascade(label="View", menu=view_menu)
 
 master.config(menu=menu_bar)
 
-# Geoetry navigation frame
-cross_row = 9
+
+# phase selection pane
+A_icon_white = PhotoImage(file='csdicons/A_white.png')
+B_icon_white = PhotoImage(file='csdicons/B_white.png')
+C_icon_white = PhotoImage(file='csdicons/C_white.png')
+
+
+phase_frame = LabelFrame(master, text="Active phase")
+phase_frame.grid(row=1, column=8, columnspan=3)
+
+phase = IntVar()
+phase.set(1) # initialize
+
+# Radiobutton(phase_frame, text="A", variable=phase, value=1 , indicatoron=0 ,height=2, width=5, bg='red', highlightbackground='red').grid(row=0, column=0)
+# Radiobutton(phase_frame, text="B", variable=phase, value=2 , indicatoron=0 ,height=2, width=5, bg='green', highlightbackground='green').grid(row=0, column=1)
+# Radiobutton(phase_frame, text="C", variable=phase, value=3 , indicatoron=0 ,height=2, width=5, bg='blue', highlightbackground='blue').grid(row=0, column=2)
+Radiobutton(phase_frame, image=A_icon_white, variable=phase, value=1 , indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red').grid(row=0, column=0)
+Radiobutton(phase_frame, image=B_icon_white, variable=phase, value=2 , indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green').grid(row=0, column=1)
+Radiobutton(phase_frame, image=C_icon_white, variable=phase, value=3 , indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue').grid(row=0, column=2)
+
+
+# geometry modyfication pane
+up_icon_white = PhotoImage(file='csdicons/up_white.png')
+down_icon_white = PhotoImage(file='csdicons/down_white.png')
+left_icon_white = PhotoImage(file='csdicons/left_white.png')
+right_icon_white = PhotoImage(file='csdicons/right_white.png')
+
+mod_frame = LabelFrame(master, text="Shift sel. phase")
+mod_frame.grid(row=6, column=8,  columnspan=3, sticky="S")
+
+# geometry shift cross navi
+print_button_zoom = Button(mod_frame, image=left_icon_white, width=24, height=24, relief=FLAT, command=shiftL, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=0, padx=5, pady=5)
+print_button_zoom = Button(mod_frame, image=right_icon_white, width=24, height=24, relief=FLAT, command=shiftR, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=2, padx=5, pady=5)
+print_button_zoom = Button(mod_frame, image=up_icon_white, width=24, height=24, relief=FLAT, command=shiftU, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
+print_button_zoom = Button(mod_frame, image=down_icon_white, width=24, height=24, relief=FLAT, command=shiftD, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
+
+
+
+emptyOpis = Label(text='', height=3)
+emptyOpis.grid(row=5, column=0,)
+
+analysisDX = Label(text='grid:', height=2  )
+analysisDX.grid(row=5, column=8, columnspan=1)
+analysisDY = Label(text='[mm]', height=2  )
+analysisDY.grid(row=5, column=10, columnspan=1)
+
+myEntryDx = Entry(master, width = 5)
+myEntryDx.insert(END,str(dXmm))
+myEntryDx.grid(row=5, column=9, columnspan=1, padx=1, pady=1)
+myEntryDx.bind("<Return>", setParameters)
+myEntryDx.bind("<FocusOut>", setParameters)
+
+
+# Geometry navigation frame
 zoom_in_icon  = PhotoImage(file='csdicons/zoomin.png')
 zoom_out_icon = PhotoImage(file='csdicons/zoomout.png')
 up_icon = PhotoImage(file='csdicons/up.png')
@@ -864,7 +920,7 @@ left_icon = PhotoImage(file='csdicons/left.png')
 right_icon = PhotoImage(file='csdicons/right.png')
 
 navi_frame = LabelFrame(master, text="View navi")
-navi_frame.grid(row=cross_row, column=8, rowspan=4, columnspan=3, sticky="S")
+navi_frame.grid(row=9, column=8, rowspan=4, columnspan=3, sticky="S")
 
 print_button_zoom = Button(navi_frame, image=zoom_in_icon, width=32, height=32, relief=FLAT, command=zoomIn)
 print_button_zoom.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
@@ -881,32 +937,6 @@ print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
 print_button_zoom = Button(navi_frame, image=down_icon, width=24, height=24, relief=FLAT, command=zoomD, repeatdelay=100, repeatinterval=100)
 print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
 
-# second cross navi
-print_button_zoom = Button(master, text='<', command=shiftL, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=8, padx=5, pady=5)
-print_button_zoom = Button(master, text='>', command=shiftR, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=10, padx=5, pady=5)
-print_button_zoom = Button(master, text='^', command=shiftU, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=6, column=9, padx=5, pady=5)
-print_button_zoom = Button(master, text='v', command=shiftD, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=9, padx=5, pady=5)
-
-emptyOpis = Label(text='', height=3)
-emptyOpis.grid(row=5, column=0,)
-
-GeometryOpis = Label(text='Geometry setup:', height=1)
-GeometryOpis.grid(row=0, column=8, columnspan=3)
-
-analysisDX = Label(text='grid:', height=2  )
-analysisDX.grid(row=5, column=8, columnspan=1)
-analysisDY = Label(text='[mm]', height=2  )
-analysisDY.grid(row=5, column=10, columnspan=1)
-
-myEntryDx = Entry(master, width = 5)
-myEntryDx.insert(END,str(dXmm))
-myEntryDx.grid(row=5, column=9, columnspan=1, padx=1, pady=1)
-myEntryDx.bind("<Return>", setParameters)
-myEntryDx.bind("<FocusOut>", setParameters)
 
 w.bind("<Button 1>", setPoint)
 w.bind("<Button 3>", resetPoint)
@@ -923,24 +953,12 @@ w.bind("<Down>",zoomD)
 message = Label( master, text = "use: Left Mouse Button to Set conductor, Right to reset" )
 message.grid(row=13, column=1, columnspan=3)
 
-phase = IntVar()
-
-phase.set(1) # initialize
-
-Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').grid(row=2, column=8, columnspan=3)
-Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').grid(row=3, column=8, columnspan=3)
-Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').grid(row=4, column=8, columnspan=3)
-# 
-# print_button = Button(master, text='CAD view', command=displayArrayAsImage, height=1, width=18)
-# print_button.grid(row=1, column=8, padx=5, pady=0, columnspan=3)
-# 
+# rescaling behaviour 
 master.grid_rowconfigure(0, weight=0)
 master.grid_rowconfigure(12, weight=1)
 master.grid_columnconfigure(0, weight=0)
 master.grid_columnconfigure(1, weight=1)
 
-# master.resizable(width=False, height=False)
-# master.resizable(width=not False, height=not False)
 master.update()
 
 canvas_height = w.winfo_height()

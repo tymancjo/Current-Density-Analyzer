@@ -794,6 +794,48 @@ def setUpPoint(event, Set, dataArray, canvas):
 
     printTheArray(dataArray, canvas)
 
+def moveShadowPoint(event, dataArray, canvas):
+    '''
+    This procedure make the gray box folloe the mause moves
+    '''
+    global shadowBox
+    try:
+        canvas.delete(shadowBox)
+    except:
+        pass
+    
+    # gathering some current data
+    elementsInY = dataArray.shape[0]
+    elementsInX = dataArray.shape[1]
+
+    canvasHeight = canvas.winfo_height()
+    canvasWidth = canvas.winfo_width()
+
+    dX = canvasWidth / elementsInX
+    dY = canvasHeight / elementsInY
+
+    dXY = min(dX, dY)
+    
+    startX = (canvasWidth - dXY * elementsInX) / 2
+    startY = (canvasHeight - dXY * elementsInY) / 2
+    
+    if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
+        Col = int((event.x - startX)/dXY)
+        Row = int((event.y - startY)/dXY)
+
+        shadowBox = canvas.create_rectangle(
+                        startX + (Col)*dXY, startY + (Row)*dXY, startX + (Col)*dXY+dXY, 
+                        startY + (Row)*dXY+dXY, fill="gray", outline="yellow")
+        
+        
+
+        
+
+def shadowPoint(event):
+    '''
+    This is a trigger function for moveShadowPoint
+    '''
+    moveShadowPoint(event, XSecArray, w)
 
 ######## End of functions definition ############
 
@@ -823,6 +865,7 @@ w.configure(background='gray69')
 w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1)
 
 canvasElements = []
+shadowBox = None
 
 # the menu bar stuff
 menu_bar = Menu(master)
@@ -859,9 +902,10 @@ master.config(menu=menu_bar)
 A_icon_white = PhotoImage(file='csdicons/A_white.png')
 B_icon_white = PhotoImage(file='csdicons/B_white.png')
 C_icon_white = PhotoImage(file='csdicons/C_white.png')
+cut_icon_white = PhotoImage(file='csdicons/cut_white.png')
 
 
-phase_frame = LabelFrame(master, text="Active phase")
+phase_frame = LabelFrame(master, text="Active operation")
 phase_frame.grid(row=1, column=8, columnspan=3)
 
 phase = IntVar()
@@ -870,9 +914,10 @@ phase.set(1) # initialize
 # Radiobutton(phase_frame, text="A", variable=phase, value=1 , indicatoron=0 ,height=2, width=5, bg='red', highlightbackground='red').grid(row=0, column=0)
 # Radiobutton(phase_frame, text="B", variable=phase, value=2 , indicatoron=0 ,height=2, width=5, bg='green', highlightbackground='green').grid(row=0, column=1)
 # Radiobutton(phase_frame, text="C", variable=phase, value=3 , indicatoron=0 ,height=2, width=5, bg='blue', highlightbackground='blue').grid(row=0, column=2)
-Radiobutton(phase_frame, image=A_icon_white, variable=phase, value=1 , indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red').grid(row=0, column=0, padx=3, pady=2)
-Radiobutton(phase_frame, image=B_icon_white, variable=phase, value=2 , indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green').grid(row=0, column=1, padx=3, pady=2)
-Radiobutton(phase_frame, image=C_icon_white, variable=phase, value=3 , indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue').grid(row=0, column=2, padx=3, pady=2)
+Radiobutton(phase_frame, image=A_icon_white, variable=phase, value=1 , indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red').grid(row=0, column=0, padx=1, pady=2)
+Radiobutton(phase_frame, image=B_icon_white, variable=phase, value=2 , indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green').grid(row=0, column=1, padx=1, pady=2)
+Radiobutton(phase_frame, image=C_icon_white, variable=phase, value=3 , indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue').grid(row=0, column=2, padx=1, pady=2)
+Radiobutton(phase_frame, image=cut_icon_white, variable=phase, value=0 , indicatoron=0 ,height=32, width=32, bg='gray', highlightbackground='gray').grid(row=0, column=3, padx=1, pady=2)
 
 
 # geometry modyfication pane
@@ -942,6 +987,7 @@ w.bind("<Button 1>", setPoint)
 w.bind("<Button 3>", resetPoint)
 w.bind("<B1-Motion>", setPoint)
 w.bind("<B3-Motion>", resetPoint)
+w.bind("<Motion>", shadowPoint)
 
 w.bind( "<Button 2>", showXsecArray)
 

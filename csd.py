@@ -226,13 +226,15 @@ def subdivideArray():
 
     # start= time.clock() #just to check the time
 
-    global XSecArray, dXmm, dYmm
+    global XSecArray, dXmm, dYmm, selectionArray
     if dXmm > 1 and dYmm > 1:
         XSecArray = csd.n_arraySlicer(inputArray = XSecArray, subDivisions = 2)
 
         dXmm = dXmm/2
         dYmm = dYmm/2
 
+        selectionArray = None
+        
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
         printTheArray(dataArray=XSecArray, canvas=w )
     else:
@@ -250,7 +252,7 @@ def simplifyArray():
     This function simplified array - but it take more care to not loose any data
     entered by user
     '''
-    global XSecArray, dXmm, dYmm
+    global XSecArray, dXmm, dYmm, selectionArray
 
     if dXmm < 30 and dYmm < 30:
 
@@ -259,6 +261,7 @@ def simplifyArray():
         dXmm = dXmm*2
         dYmm = dYmm*2
 
+        selectionArray = None
         # print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
         printTheArray(dataArray=XSecArray, canvas=w )
     else:
@@ -945,6 +948,9 @@ def endSelection(event):
         selectionMaskArray[R1:R2, C1:C2] = 1
         selectionArray = np.copy(XSecArray[R1:R2, C1:C2])
 
+        # auto switch to paste mode after selection is done
+        phase.set(5)
+         
         # development debug
         # print(selectionArray)
         
@@ -999,9 +1005,9 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
                 # overwite all data 
                 XSecArray[R1:R2, C1:C2] = selectionArray[:R2-R1, :C2-C1]
 
-            elif selectedPasteMode == 3:
+            elif 10 < selectedPasteMode < 20:
                 # paste as target phase
-                targetPhase = paste_phase.get()
+                targetPhase = selectedPasteMode - 10
                 XSecArray[R1:R2, C1:C2] = np.where(selectionArray[:R2-R1, :C2-C1] >0, targetPhase, XSecArray[R1:R2, C1:C2])
               
             
@@ -1089,6 +1095,10 @@ C_icon_white = PhotoImage(file='csdicons/C_white.png')
 cut_icon_white = PhotoImage(file='csdicons/cut_white.png')
 select_icon_white = PhotoImage(file='csdicons/select_white.png')
 paste_icon_white = PhotoImage(file='csdicons/paste_white.png')
+paste_icon_all = PhotoImage(file='csdicons/paste_full.png')
+paste_icon_A = PhotoImage(file='csdicons/paste_A.png')
+paste_icon_B = PhotoImage(file='csdicons/paste_B.png')
+paste_icon_C = PhotoImage(file='csdicons/paste_C.png')
 
 
 phase_frame = LabelFrame(master, text="Active operation")
@@ -1125,27 +1135,18 @@ paste_mode.set(1)
 Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=1, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
 Btn.grid(row=0, column=0, padx=1, pady=1)
 
-Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=2, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
+Btn = Radiobutton(paste_frame, image=paste_icon_all, variable=paste_mode, value=2, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
 Btn.grid(row=0, column=1, padx=1, pady=1)
 
-Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=3, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
-Btn.grid(row=0, column=2, padx=1, pady=1)
+Btn = Radiobutton(paste_frame, image=paste_icon_A, variable=paste_mode, value=11, indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red')
+Btn.grid(row=1, column=0, padx=1, pady=2)
 
-# paste as selection pane
-paste_as_phase = LabelFrame(master, text="paste as phase:")
-paste_as_phase.grid(row=4, column=8, columnspan=3)
+Btn = Radiobutton(paste_frame, image=paste_icon_B, variable=paste_mode, value=12, indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green')
+Btn.grid(row=1, column=1, padx=1, pady=2)
 
-paste_phase = IntVar()
-paste_phase.set(1)
+Btn = Radiobutton(paste_frame, image=paste_icon_C, variable=paste_mode, value=13, indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue')
+Btn.grid(row=1, column=2, padx=1, pady=2)
 
-Btn = Radiobutton(paste_as_phase, image=A_icon_white, variable=paste_phase, value=1, indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red')
-Btn.grid(row=0, column=0, padx=1, pady=2)
-
-Btn = Radiobutton(paste_as_phase, image=B_icon_white, variable=paste_phase, value=2, indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green')
-Btn.grid(row=0, column=1, padx=1, pady=2)
-
-Btn = Radiobutton(paste_as_phase, image=C_icon_white, variable=paste_phase, value=3, indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue')
-Btn.grid(row=0, column=2, padx=1, pady=2)
 
 # geometry modyfication pane
 up_icon_white = PhotoImage(file='csdicons/up_white.png')

@@ -671,7 +671,7 @@ def printTheArray(dataArray, canvas):
 
     it's using global variable canvasElements.
     '''
-    global canvasElements
+    global canvasElements, selectShadowBox, selectEndPoint, selectStartPoint
 
     # Let's check the size
     elementsInY = dataArray.shape[0]
@@ -685,6 +685,12 @@ def printTheArray(dataArray, canvas):
     dY = canvasHeight / elementsInY
 
     dXY = min(dX, dY)
+
+    lineSkip = 1
+    if dXY <= 2:
+        lineSkip = 5
+    elif dXY < 5:
+        lineSkip = 2
 
     startX = (canvasWidth - dXY * elementsInX) / 2
     startY = (canvasHeight - dXY * elementsInY) / 2
@@ -721,23 +727,43 @@ def printTheArray(dataArray, canvas):
             if Row == elementsInY - 1:
                 lineFillColor = "gray"
                 lineWidth = 1
-                if (Col + globalX) % 5 == 0:
+                
+                if (Col + globalX) % 5 == 0 and lineSkip == 1:
                     lineFillColor = "dim gray"
                     lineWidth = 2
-                
-                canvasElements.append(
-                canvas.create_line(startX + Col*dXY, startY, startX + Col*dXY, 
-                canvasHeight - startY, fill=lineFillColor, width=lineWidth)) 
+
+                if Col % lineSkip == 0:
+                    canvasElements.append(
+                    canvas.create_line(startX + Col*dXY, startY, startX + Col*dXY, 
+                    canvasHeight - startY, fill=lineFillColor, width=lineWidth)) 
 
         lineFillColor = "gray"
         lineWidth = 1
-        if (Row + globalY) % 5 == 0:
+        if (Row + globalY) % 5 == 0 and lineSkip == 1:
             lineFillColor = "dim gray"
             lineWidth = 2
-                        
-        canvasElements.append(canvas.create_line(startX, startY + Row*dXY, 
-        canvasWidth - startX, startY + Row*dXY, fill=lineFillColor, width=lineWidth)) 
 
+        if Row % lineSkip == 0:                
+            canvasElements.append(canvas.create_line(startX, startY + Row*dXY, 
+            canvasWidth - startX, startY + Row*dXY, fill=lineFillColor, width=lineWidth)) 
+
+    # selection rectangle visualisation
+
+    if selectionArray is not None and len(selectionArray) > 0:
+        R1 = min(selectEndPoint[0], selectStartPoint[0]) - globalY
+        R2 = max(selectEndPoint[0], selectStartPoint[0]) - globalY
+
+        C1 = min(selectEndPoint[1], selectStartPoint[1]) - globalX
+        C2 = max(selectEndPoint[1], selectStartPoint[1]) - globalX
+
+        try:
+            canvas.delete(selectShadowBox)
+        except:
+            pass
+            
+        selectShadowBox = canvas.create_rectangle(
+                          startX + (C1)*dXY, startY + (R1)*dXY, startX + (C2)*dXY, 
+                          startY + (R2)*dXY, fill="", outline="yellow", width=3)
 
 def setPoint(event):
     '''Trigger procesdure for GUI action'''
@@ -904,7 +930,8 @@ def endSelection(event):
     '''
     global inSelectMode, selectStartPoint, selectEndPoint, selectionMaskArray, selectionArray
 
-    if inSelectMode:
+    if inSelectMode and selectEndPoint is not None and selectStartPoint is not None:
+    
         inSelectMode = False
 
 
@@ -921,8 +948,8 @@ def endSelection(event):
         # development debug
         # print(selectionArray)
         
-        selectStartPoint = None
-        selectEndPoint = None
+        # selectStartPoint = None
+        # selectEndPoint = None
 
 def pasteSelectionAtPoint(event, dataArray, canvas):
     '''
@@ -931,7 +958,7 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
     '''
     global selectionArray, XSecArray
 
-    if selectionArray is not None and len(selectionArray):
+    if selectionArray is not None and len(selectionArray) and not inSelectMode:
 
         pasteRows = selectionArray.shape[0]
         pasteCols = selectionArray.shape[1]
@@ -961,10 +988,23 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
             C1 = Col + globalX
             C2 = C1 + pasteCols
             C2 = min(C2, XSecArray.shape[1])    
-                        
-            # take the clipboard if its > 0 else take oryginal data
-            XSecArray[R1:R2, C1:C2] = np.where(selectionArray[:R2-R1, :C2-C1] >0, selectionArray[:R2-R1, :C2-C1],XSecArray[R1:R2, C1:C2])
 
+            selectedPasteMode = paste_mode.get()
+                        
+            if selectedPasteMode == 1:
+                # take the clipboard if its > 0 else take oryginal data
+                XSecArray[R1:R2, C1:C2] = np.where(selectionArray[:R2-R1, :C2-C1] >0, selectionArray[:R2-R1, :C2-C1],XSecArray[R1:R2, C1:C2])
+
+            elif selectedPasteMode == 2:
+                # overwite all data 
+                XSecArray[R1:R2, C1:C2] = selectionArray[:R2-R1, :C2-C1]
+
+            elif selectedPasteMode == 3:
+                # paste as target phase
+                targetPhase = paste_phase.get()
+                XSecArray[R1:R2, C1:C2] = np.where(selectionArray[:R2-R1, :C2-C1] >0, targetPhase, XSecArray[R1:R2, C1:C2])
+              
+            
             printTheArray(dataArray, canvas)
 
             # if this is active we drop the clipboard data at paste.
@@ -1074,6 +1114,38 @@ Btn.grid(row=1, column=1, padx=1, pady=2)
 
 Btn = Radiobutton(phase_frame, image=paste_icon_white, variable=phase, value=5, indicatoron=0 ,height=32, width=32, bg='gray', highlightbackground='gray')
 Btn.grid(row=1, column=2, padx=1, pady=2)
+
+# paste mode frame
+paste_frame = LabelFrame(master, text="Paste mode")
+paste_frame.grid(row=3, column=8, columnspan=3)
+
+paste_mode = IntVar()
+paste_mode.set(1)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=1, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
+Btn.grid(row=0, column=0, padx=1, pady=1)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=2, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
+Btn.grid(row=0, column=1, padx=1, pady=1)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=3, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
+Btn.grid(row=0, column=2, padx=1, pady=1)
+
+# paste as selection pane
+paste_as_phase = LabelFrame(master, text="paste as phase:")
+paste_as_phase.grid(row=4, column=8, columnspan=3)
+
+paste_phase = IntVar()
+paste_phase.set(1)
+
+Btn = Radiobutton(paste_as_phase, image=A_icon_white, variable=paste_phase, value=1, indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red')
+Btn.grid(row=0, column=0, padx=1, pady=2)
+
+Btn = Radiobutton(paste_as_phase, image=B_icon_white, variable=paste_phase, value=2, indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green')
+Btn.grid(row=0, column=1, padx=1, pady=2)
+
+Btn = Radiobutton(paste_as_phase, image=C_icon_white, variable=paste_phase, value=3, indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue')
+Btn.grid(row=0, column=2, padx=1, pady=2)
 
 # geometry modyfication pane
 up_icon_white = PhotoImage(file='csdicons/up_white.png')

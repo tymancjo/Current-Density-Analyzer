@@ -17,7 +17,7 @@ def showXsecArray(event):
     This function print the array to the terminal
     '''
     print(XSecArray)
-
+    
 
 def saveArrayToFile():
     '''
@@ -28,7 +28,7 @@ def saveArrayToFile():
     if filename:
         saveTheData(filename)
 
-
+    
 def saveTheData(filename):
     '''
     This is the subfunction for saving data
@@ -36,7 +36,7 @@ def saveTheData(filename):
     # print('Saving to file :' + filename)
     # np.save(filename, XSecArray)
 
-    S = csd.cointainer(XSecArray, dXmm, dYmm)
+    S = csd.cointainer(XSecArray, dXmm, dYmm) 
     S.save(filename)
     del(S)
 
@@ -185,36 +185,6 @@ def displayArrayAsImage():
     drawGeometryArray(XSecArray)
 
 
-def setPoint(event):
-    '''Trigger procesdure for GUI action'''
-    actualPhase = phase.get()
-
-    # csd.n_setUpPoint(event, Set=actualPhase,
-    #                  dataArray=zoomInArray(XSecArray, globalZoom, globalX,
-    #                                        globalY), canvas=w)
-    setUpPoint(event, Set=actualPhase,
-                     dataArray=zoomInArray(XSecArray, globalZoom, globalX,
-                                           globalY), canvas=w)
-
-    #  Plotting on CAD view if exist
-    try:
-        geomim.set_data(XSecArray)
-        plt.draw()
-    except:
-        pass
-
-
-def resetPoint(event):
-    '''Trigger procesdure for GUI action'''
-    # csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
-    setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
-
-    #  Plotting on CAD view if exist
-    try:
-        geomim.set_data(XSecArray)
-        plt.draw()
-    except:
-        pass
 
 def clearArrayAndDisplay():
     '''
@@ -256,13 +226,15 @@ def subdivideArray():
 
     # start= time.clock() #just to check the time
 
-    global XSecArray, dXmm, dYmm
+    global XSecArray, dXmm, dYmm, selectionArray
     if dXmm > 1 and dYmm > 1:
         XSecArray = csd.n_arraySlicer(inputArray = XSecArray, subDivisions = 2)
 
         dXmm = dXmm/2
         dYmm = dYmm/2
 
+        selectionArray = None
+        
         print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
         printTheArray(dataArray=XSecArray, canvas=w )
     else:
@@ -280,28 +252,17 @@ def simplifyArray():
     This function simplified array - but it take more care to not loose any data
     entered by user
     '''
-    global XSecArray, dXmm, dYmm
+    global XSecArray, dXmm, dYmm, selectionArray
 
     if dXmm < 30 and dYmm < 30:
-        # Below was working just fine for single phase solver where only 0 or 1 was in the array
-        # if np.sum(XSecArray) == 0:
-        #     XSecArray = XSecArray[::2,::2] #this is vast and easy but can destory defined Geometry so we do it only for empty array
-        # else:
-        #     for Row in range(0,XSecArray.shape[0],2):
-        #         for Col in range(0,XSecArray.shape[0],2):
-        #             # Calculating sume in rows&cols we about to drop
-        #             # to be sure we keep all set point transferred
-        #
-        #             XSecArray[Row,Col] = np.sum(XSecArray[Row:Row+2,Col:Col+2])
-        #             if XSecArray[Row,Col] > 0: XSecArray[Row,Col] = 1
 
         XSecArray = XSecArray[::2,::2]
-
 
         dXmm = dXmm*2
         dYmm = dYmm*2
 
-        print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
+        selectionArray = None
+        # print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
         printTheArray(dataArray=XSecArray, canvas=w )
     else:
         print('No further simplification make sense :)')
@@ -713,7 +674,7 @@ def printTheArray(dataArray, canvas):
 
     it's using global variable canvasElements.
     '''
-    global canvasElements
+    global canvasElements, selectShadowBox, selectEndPoint, selectStartPoint
 
     # Let's check the size
     elementsInY = dataArray.shape[0]
@@ -727,6 +688,12 @@ def printTheArray(dataArray, canvas):
     dY = canvasHeight / elementsInY
 
     dXY = min(dX, dY)
+
+    lineSkip = 1
+    if dXY <= 2:
+        lineSkip = 5
+    elif dXY < 5:
+        lineSkip = 2
 
     startX = (canvasWidth - dXY * elementsInX) / 2
     startY = (canvasHeight - dXY * elementsInY) / 2
@@ -759,17 +726,78 @@ def printTheArray(dataArray, canvas):
                 startX + (Col)*dXY, startY + (Row)*dXY, startX + (Col)*dXY+dXY, 
                 startY + (Row)*dXY+dXY, fill=fillColor, outline=""))
                 
-                # canvasElements.append(canvas.create_rectangle(
-                    # (Col)*dX, (Row)*dY, (Col)*dX+dX, (Row)*dY+dY, fill=fillColor, outline=""))
-
             # Handling the lines for the grid
-            if Row == 0:
-                canvasElements.append(
-                canvas.create_line(startX + Col*dXY, startY, startX + Col*dXY, 
-                canvasHeight - startY, fill="gray")) 
-        
-        canvasElements.append(canvas.create_line(startX, startY + Row*dXY, 
-        canvasWidth - startX, startY + Row*dXY, fill="gray")) 
+            if Row == elementsInY - 1:
+                lineFillColor = "gray"
+                lineWidth = 1
+                
+                if (Col + globalX) % 5 == 0 and lineSkip == 1:
+                    lineFillColor = "dim gray"
+                    lineWidth = 2
+
+                if Col % lineSkip == 0:
+                    canvasElements.append(
+                    canvas.create_line(startX + Col*dXY, startY, startX + Col*dXY, 
+                    canvasHeight - startY, fill=lineFillColor, width=lineWidth)) 
+
+        lineFillColor = "gray"
+        lineWidth = 1
+        if (Row + globalY) % 5 == 0 and lineSkip == 1:
+            lineFillColor = "dim gray"
+            lineWidth = 2
+
+        if Row % lineSkip == 0:                
+            canvasElements.append(canvas.create_line(startX, startY + Row*dXY, 
+            canvasWidth - startX, startY + Row*dXY, fill=lineFillColor, width=lineWidth)) 
+
+    # selection rectangle visualisation
+
+    if selectionArray is not None and len(selectionArray) > 0:
+        R1 = min(selectEndPoint[0], selectStartPoint[0]) - globalY
+        R2 = max(selectEndPoint[0], selectStartPoint[0]) - globalY
+
+        C1 = min(selectEndPoint[1], selectStartPoint[1]) - globalX
+        C2 = max(selectEndPoint[1], selectStartPoint[1]) - globalX
+
+        try:
+            canvas.delete(selectShadowBox)
+        except:
+            pass
+            
+        selectShadowBox = canvas.create_rectangle(
+                          startX + (C1)*dXY, startY + (R1)*dXY, startX + (C2)*dXY, 
+                          startY + (R2)*dXY, fill="", outline="yellow", width=3)
+
+def setPoint(event):
+    '''Trigger procesdure for GUI action'''
+    actualPhase = phase.get()
+
+    if actualPhase < 4:
+        setUpPoint(event, actualPhase, zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
+    elif actualPhase == 4:
+        startSelection(event, zoomInArray(XSecArray, globalZoom, globalX, globalY), w)    
+    elif actualPhase == 5:
+        pasteSelectionAtPoint(event, zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
+
+    #  Plotting on CAD view if exist
+    try:
+        geomim.set_data(XSecArray)
+        plt.draw()
+    except:
+        pass
+
+
+def resetPoint(event):
+    '''Trigger procesdure for GUI action'''
+    # csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+    setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
+
+    #  Plotting on CAD view if exist
+    try:
+        geomim.set_data(XSecArray)
+        plt.draw()
+    except:
+        pass
 
 def setUpPoint(event, Set, dataArray, canvas):
     '''
@@ -787,7 +815,7 @@ def setUpPoint(event, Set, dataArray, canvas):
 
     canvasHeight = canvas.winfo_height()
     canvasWidth = canvas.winfo_width()
-
+    
     dX = canvasWidth / elementsInX
     dY = canvasHeight / elementsInY
 
@@ -796,8 +824,6 @@ def setUpPoint(event, Set, dataArray, canvas):
     startX = (canvasWidth - dXY * elementsInX) / 2
     startY = (canvasHeight - dXY * elementsInY) / 2
     
-
-
     if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
 
         Col = int((event.x - startX)/dXY)
@@ -808,6 +834,189 @@ def setUpPoint(event, Set, dataArray, canvas):
 
     printTheArray(dataArray, canvas)
 
+def moveShadowPoint(event, dataArray, canvas):
+    '''
+    This procedure make the gray box folloe the mause moves
+    '''
+    global shadowBox
+    try:
+        canvas.delete(shadowBox)
+    except:
+        pass
+    
+    # gathering some current data
+    elementsInY = dataArray.shape[0]
+    elementsInX = dataArray.shape[1]
+
+    canvasHeight = canvas.winfo_height()
+    canvasWidth = canvas.winfo_width()
+
+    dX = canvasWidth / elementsInX
+    dY = canvasHeight / elementsInY
+
+    dXY = min(dX, dY)
+    
+    startX = (canvasWidth - dXY * elementsInX) / 2
+    startY = (canvasHeight - dXY * elementsInY) / 2
+    
+    if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
+        Col = int((event.x - startX)/dXY)
+        Row = int((event.y - startY)/dXY)
+
+        shadowBox = canvas.create_rectangle(
+                        startX + (Col)*dXY, startY + (Row)*dXY, startX + (Col)*dXY+dXY, 
+                        startY + (Row)*dXY+dXY, fill="gray", outline="yellow")
+        
+        
+
+def shadowPoint(event):
+    '''
+    This is a trigger function for moveShadowPoint
+    '''
+    # moveShadowPoint(event, XSecArray, w)
+    moveShadowPoint(event, zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
+
+def startSelection(event, dataArray, canvas):
+    '''
+    Procedure to start selecting area in the canvas
+    and in the dataArray
+    '''    
+    global inSelectMode, selectStartPoint, selectEndPoint, selectShadowBox
+
+    elementsInY = dataArray.shape[0]
+    elementsInX = dataArray.shape[1]
+
+    canvasHeight = canvas.winfo_height()
+    canvasWidth = canvas.winfo_width()
+
+    dX = canvasWidth / elementsInX
+    dY = canvasHeight / elementsInY
+
+    dXY = min(dX, dY)
+    
+    startX = (canvasWidth - dXY * elementsInX) / 2
+    startY = (canvasHeight - dXY * elementsInY) / 2
+    
+    if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
+        Col = int((event.x - startX)/dXY)
+        Row = int((event.y - startY)/dXY)
+
+        if not inSelectMode:
+            inSelectMode = True 
+            selectStartPoint = (Row, Col)
+
+        else:
+            selectEndPoint = (Row+1, Col+1)
+            
+            R1 = min(selectEndPoint[0], selectStartPoint[0])
+            R2 = max(selectEndPoint[0], selectStartPoint[0])
+
+            C1 = min(selectEndPoint[1], selectStartPoint[1])
+            C2 = max(selectEndPoint[1], selectStartPoint[1])
+
+            try:
+                canvas.delete(selectShadowBox)
+            except:
+                pass
+                
+            selectShadowBox = canvas.create_rectangle(
+                              startX + (C1)*dXY, startY + (R1)*dXY, startX + (C2)*dXY, 
+                              startY + (R2)*dXY, fill="", outline="yellow", width=3)
+            # temporary solution to visualise in developement
+            # dataArray[R1:R2, C1:C2] = 3
+            # printTheArray(dataArray, canvas)
+
+
+def endSelection(event):
+    '''
+    procedutr to end the selection process 
+    '''
+    global inSelectMode, selectStartPoint, selectEndPoint, selectionMaskArray, selectionArray
+
+    if inSelectMode and selectEndPoint is not None and selectStartPoint is not None:
+    
+        inSelectMode = False
+
+
+        R1 = min(selectEndPoint[0], selectStartPoint[0])
+        R2 = max(selectEndPoint[0], selectStartPoint[0])
+
+        C1 = min(selectEndPoint[1], selectStartPoint[1])
+        C2 = max(selectEndPoint[1], selectStartPoint[1])
+
+        selectionMaskArray = np.empty_like(XSecArray)
+        selectionMaskArray[R1:R2, C1:C2] = 1
+        selectionArray = np.copy(XSecArray[R1:R2, C1:C2])
+
+        # auto switch to paste mode after selection is done
+        phase.set(5)
+         
+        # development debug
+        # print(selectionArray)
+        
+        # selectStartPoint = None
+        # selectEndPoint = None
+
+def pasteSelectionAtPoint(event, dataArray, canvas):
+    '''
+    Procedure that paste the selectionArray into the 
+    dataArray at the click position
+    '''
+    global selectionArray, XSecArray
+
+    if selectionArray is not None and len(selectionArray) and not inSelectMode:
+
+        pasteRows = selectionArray.shape[0]
+        pasteCols = selectionArray.shape[1]
+        
+        elementsInY = dataArray.shape[0]
+        elementsInX = dataArray.shape[1]
+
+        canvasHeight = canvas.winfo_height()
+        canvasWidth = canvas.winfo_width()
+
+        dX = canvasWidth / elementsInX
+        dY = canvasHeight / elementsInY
+
+        dXY = min(dX, dY)
+        
+        startX = (canvasWidth - dXY * elementsInX) / 2
+        startY = (canvasHeight - dXY * elementsInY) / 2
+        
+        if event.x < canvasWidth - startX and event.y < canvasHeight - startY and event.x > startX and event.y > startY:
+            Col = int((event.x - startX)/dXY)
+            Row = int((event.y - startY)/dXY)
+
+            R1 = Row + globalY
+            R2 = R1 + pasteRows
+            R2 = min(R2, XSecArray.shape[0])    
+
+            C1 = Col + globalX
+            C2 = C1 + pasteCols
+            C2 = min(C2, XSecArray.shape[1])    
+
+            selectedPasteMode = paste_mode.get()
+                        
+            if selectedPasteMode == 1:
+                # take the clipboard if its > 0 else take oryginal data
+                XSecArray[R1:R2, C1:C2] = np.where(selectionArray[:R2-R1, :C2-C1] >0, selectionArray[:R2-R1, :C2-C1],XSecArray[R1:R2, C1:C2])
+
+            elif selectedPasteMode == 2:
+                # overwite all data 
+                XSecArray[R1:R2, C1:C2] = selectionArray[:R2-R1, :C2-C1]
+
+            elif 10 < selectedPasteMode < 20:
+                # paste as target phase
+                targetPhase = selectedPasteMode - 10
+                XSecArray[R1:R2, C1:C2] = np.where(selectionArray[:R2-R1, :C2-C1] >0, targetPhase, XSecArray[R1:R2, C1:C2])
+              
+            
+            printTheArray(dataArray, canvas)
+
+            # if this is active we drop the clipboard data at paste.
+            # selectionArray = None
+            
+            
 
 ######## End of functions definition ############
 
@@ -837,78 +1046,131 @@ w.configure(background='gray69')
 w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W+E+N+S, padx=1, pady=1)
 
 canvasElements = []
+shadowBox = None
+
+inSelectMode = False
+selectStartPoint = None
+selectEndPoint = None
+selectShadowBox = None
+
+selectionMaskArray = None
+selectionArray = None
 
 
-print_button_clear = Button(master, text='New Geometry', command=clearArrayAndDisplay, height=2, width=16)
-print_button_clear.grid(row=1, column=0, padx=5, pady=5)
+# the menu bar stuff
+menu_bar = Menu(master)
 
-print_button_load = Button(master, text='Load from File', command=loadArrayFromFile, height=2, width=16)
-print_button_load.grid(row=2, column=0, padx=5, pady=5)
+file_menu = Menu(menu_bar)
+file_menu.add_command(label="New geometry", command=clearArrayAndDisplay)
+file_menu.add_separator()
+file_menu.add_command(label="Load from file", command=loadArrayFromFile)
+file_menu.add_command(label="Save to file", command=saveArrayToFile)
+menu_bar.add_cascade(label="File", menu=file_menu)
 
-print_button_save = Button(master, text='Save to File', command=saveArrayToFile, height=2, width=16)
-print_button_save.grid(row=3, column=0, padx=5, pady=5)
+analyze_menu = Menu(menu_bar)
+analyze_menu.add_command(label="Power Losses ProSolver", command=showMePro)
+analyze_menu.add_command(label="Electro Dynamic Forces", command=showMeForces)
+analyze_menu.add_command(label="Equivalent Impedance Model", command=showMeZ)
+menu_bar.add_cascade(label="Analyze...", menu=analyze_menu)
+
+geometry_menu = Menu(menu_bar)
+geometry_menu.add_command(label="Pattern", command=showMeGeom)
+geometry_menu.add_command(label="Swap", command=showReplacer)
+geometry_menu.add_separator()
+geometry_menu.add_command(label="Subdivide(+)", command=subdivideArray)
+geometry_menu.add_command(label="Simplify(-)", command=simplifyArray)
+menu_bar.add_cascade(label="Geometry", menu=geometry_menu)
+
+view_menu = Menu(menu_bar)
+view_menu.add_command(label="Open CAD view window", command=displayArrayAsImage)
+menu_bar.add_cascade(label="View", menu=view_menu)
+
+master.config(menu=menu_bar)
+
+# tools selector bar
+# phase selection pane
+A_icon_white = PhotoImage(file='csdicons/A_white.png')
+B_icon_white = PhotoImage(file='csdicons/B_white.png')
+C_icon_white = PhotoImage(file='csdicons/C_white.png')
+cut_icon_white = PhotoImage(file='csdicons/cut_white.png')
+select_icon_white = PhotoImage(file='csdicons/select_white.png')
+paste_icon_white = PhotoImage(file='csdicons/paste_white.png')
+paste_icon_all = PhotoImage(file='csdicons/paste_full.png')
+paste_icon_A = PhotoImage(file='csdicons/paste_A.png')
+paste_icon_B = PhotoImage(file='csdicons/paste_B.png')
+paste_icon_C = PhotoImage(file='csdicons/paste_C.png')
 
 
-print_button_slice = Button(master, text='Subdivide', command=subdivideArray, height=2, width=16)
-print_button_slice.grid(row=11, column=8, padx=5, pady=5, columnspan=3)
+phase_frame = LabelFrame(master, text="Active operation")
+phase_frame.grid(row=1, column=8, columnspan=3)
 
-print_button_slice = Button(master, text='Simplify', command=simplifyArray, height=2, width=16)
-print_button_slice.grid(row=12, column=8, padx=5, pady=5, columnspan=3)
+phase = IntVar()
+phase.set(1) # initialize
 
-print_button_zoom = Button(master, text='Zoom In', command=zoomIn, height=2, width=8)
-print_button_zoom.grid(row=8, column=10, padx=5, pady=5, columnspan=1)
-print_button_zoom = Button(master, text='Zoom Out', command=zoomOut, height=2, width=8)
-print_button_zoom.grid(row=8, column=8, padx=5, pady=5, columnspan=1)
+Btn = Radiobutton(phase_frame, image=A_icon_white, variable=phase, value=1, indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red')
+Btn.grid(row=0, column=0, padx=1, pady=2)
 
-# first cross navi
-print_button_zoom = Button(master, text='<', command=zoomL, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=9, column=8, padx=5, pady=5)
-print_button_zoom = Button(master, text='>', command=zoomR, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=9, column=10, padx=5, pady=5)
-print_button_zoom = Button(master, text='^', command=zoomU, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=8, column=9, padx=5, pady=5)
-print_button_zoom = Button(master, text='v', command=zoomD, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=10, column=9, padx=5, pady=5)
+Btn = Radiobutton(phase_frame, image=B_icon_white, variable=phase, value=2, indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green')
+Btn.grid(row=0, column=1, padx=1, pady=2)
 
-# second cross navi
-print_button_zoom = Button(master, text='<', command=shiftL, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=8, padx=5, pady=5)
-print_button_zoom = Button(master, text='>', command=shiftR, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=10, padx=5, pady=5)
-print_button_zoom = Button(master, text='^', command=shiftU, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=6, column=9, padx=5, pady=5)
-print_button_zoom = Button(master, text='v', command=shiftD, height=1, width=1, repeatdelay=100, repeatinterval=100)
-print_button_zoom.grid(row=7, column=9, padx=5, pady=5)
+Btn = Radiobutton(phase_frame, image=C_icon_white, variable=phase, value=3, indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue')
+Btn.grid(row=0, column=2, padx=1, pady=2)
 
-# kick out geometry Window
-print_button_geom = Button(master, text='Ptrn', command=showMeGeom, height=2, width=6)
-print_button_geom.grid(row=6, column=8, columnspan=1)
+Btn = Radiobutton(phase_frame, image=cut_icon_white, variable=phase, value=0, indicatoron=0 ,height=32, width=32, bg='gray', highlightbackground='gray')
+Btn.grid(row=1, column=0, padx=1, pady=2)
 
-print_button_geom = Button(master, text='Swap', command=showReplacer, height=2, width=6)
-print_button_geom.grid(row=6, column=10, columnspan=1)
+Btn = Radiobutton(phase_frame, image=select_icon_white, variable=phase, value=4, indicatoron=0 ,height=32, width=32, bg='gray', highlightbackground='gray')
+Btn.grid(row=1, column=1, padx=1, pady=2)
+
+Btn = Radiobutton(phase_frame, image=paste_icon_white, variable=phase, value=5, indicatoron=0 ,height=32, width=32, bg='gray', highlightbackground='gray')
+Btn.grid(row=1, column=2, padx=1, pady=2)
+
+# paste mode frame
+paste_frame = LabelFrame(master, text="Paste mode")
+paste_frame.grid(row=3, column=8, columnspan=3)
+
+paste_mode = IntVar()
+paste_mode.set(1)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_white, variable=paste_mode, value=1, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
+Btn.grid(row=0, column=0, padx=1, pady=1)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_all, variable=paste_mode, value=2, indicatoron=0, height=32, width=32, bg='gray', highlightbackground='dark gray' )
+Btn.grid(row=0, column=1, padx=1, pady=1)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_A, variable=paste_mode, value=11, indicatoron=0 ,height=32, width=32, bg='red', highlightbackground='red')
+Btn.grid(row=1, column=0, padx=1, pady=2)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_B, variable=paste_mode, value=12, indicatoron=0 ,height=32, width=32, bg='green', highlightbackground='green')
+Btn.grid(row=1, column=1, padx=1, pady=2)
+
+Btn = Radiobutton(paste_frame, image=paste_icon_C, variable=paste_mode, value=13, indicatoron=0 ,height=32, width=32, bg='blue', highlightbackground='blue')
+Btn.grid(row=1, column=2, padx=1, pady=2)
+
+
+# geometry modyfication pane
+up_icon_white = PhotoImage(file='csdicons/up_white.png')
+down_icon_white = PhotoImage(file='csdicons/down_white.png')
+left_icon_white = PhotoImage(file='csdicons/left_white.png')
+right_icon_white = PhotoImage(file='csdicons/right_white.png')
+
+mod_frame = LabelFrame(master, text="Shift sel. phase")
+mod_frame.grid(row=6, column=8,  columnspan=3, sticky="S")
+
+# geometry shift cross navi
+print_button_zoom = Button(mod_frame, image=left_icon_white, width=24, height=24, relief=FLAT, command=shiftL, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=0, padx=5, pady=5)
+print_button_zoom = Button(mod_frame, image=right_icon_white, width=24, height=24, relief=FLAT, command=shiftR, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=2, padx=5, pady=5)
+print_button_zoom = Button(mod_frame, image=up_icon_white, width=24, height=24, relief=FLAT, command=shiftU, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
+print_button_zoom = Button(mod_frame, image=down_icon_white, width=24, height=24, relief=FLAT, command=shiftD, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
+
 
 
 emptyOpis = Label(text='', height=3)
 emptyOpis.grid(row=5, column=0,)
-
-emptyOpis = Label(text='Analysis:', height=3)
-emptyOpis.grid(row=6, column=0,)
-
-# print_button = Button(master, text='Power Losses\n Calculations', command=showMePower, height=2, width=16)
-# print_button.grid(row=7, column=0, columnspan=1)
-
-print_button = Button(master, text='ElDyn Forces\n Calculations', command=showMeForces, height=2, width=16)
-print_button.grid(row=8, column=0, padx=5, pady=5, columnspan=1)
-
-print_button = Button(master, text='Impednaces\n Calculations', command=showMeZ, height=2, width=16)
-print_button.grid(row=9, column=0, columnspan=1)
-
-print_button = Button(master, text='Power Losses\n ProSolver', command=showMePro, height=2, width=16)
-print_button.grid(row=10, column=0, columnspan=1)
-
-GeometryOpis = Label(text='Geometry setup:', height=1)
-GeometryOpis.grid(row=0, column=8, columnspan=3)
-
 
 analysisDX = Label(text='grid:', height=2  )
 analysisDX.grid(row=5, column=8, columnspan=1)
@@ -922,11 +1184,39 @@ myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
 
+# Geometry navigation frame
+zoom_in_icon  = PhotoImage(file='csdicons/zoomin.png')
+zoom_out_icon = PhotoImage(file='csdicons/zoomout.png')
+up_icon = PhotoImage(file='csdicons/up.png')
+down_icon = PhotoImage(file='csdicons/down.png')
+left_icon = PhotoImage(file='csdicons/left.png')
+right_icon = PhotoImage(file='csdicons/right.png')
+
+navi_frame = LabelFrame(master, text="View navi")
+navi_frame.grid(row=9, column=8, rowspan=4, columnspan=3, sticky="S")
+
+print_button_zoom = Button(navi_frame, image=zoom_in_icon, width=32, height=32, relief=FLAT, command=zoomIn)
+print_button_zoom.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
+print_button_zoom = Button(navi_frame, image=zoom_out_icon, width=32, height=32, relief=FLAT, command=zoomOut)
+print_button_zoom.grid(row=0, column=2, padx=5, pady=5, columnspan=1)
+
+# first cross navi
+print_button_zoom = Button(navi_frame, image=left_icon, width=24, height=24, relief=FLAT, command=zoomL, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=0, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=right_icon, width=24, height=24, relief=FLAT, command=zoomR, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=2, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=up_icon, width=24, height=24, relief=FLAT, command=zoomU, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
+print_button_zoom = Button(navi_frame, image=down_icon, width=24, height=24, relief=FLAT, command=zoomD, repeatdelay=100, repeatinterval=100)
+print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
+
 
 w.bind("<Button 1>", setPoint)
 w.bind("<Button 3>", resetPoint)
 w.bind("<B1-Motion>", setPoint)
 w.bind("<B3-Motion>", resetPoint)
+w.bind("<Motion>", shadowPoint)
+w.bind("<ButtonRelease-1>", endSelection)
 
 w.bind( "<Button 2>", showXsecArray)
 
@@ -938,24 +1228,12 @@ w.bind("<Down>",zoomD)
 message = Label( master, text = "use: Left Mouse Button to Set conductor, Right to reset" )
 message.grid(row=13, column=1, columnspan=3)
 
-phase = IntVar()
-
-phase.set(1) # initialize
-
-Radiobutton(master, text="Phase A", variable=phase, value=1 , indicatoron=0 ,height=1, width=16, bg='red', highlightbackground='red').grid(row=2, column=8, columnspan=3)
-Radiobutton(master, text="Phase B", variable=phase, value=2 , indicatoron=0 ,height=1, width=16, bg='green', highlightbackground='green').grid(row=3, column=8, columnspan=3)
-Radiobutton(master, text="Phase C", variable=phase, value=3 , indicatoron=0 ,height=1, width=16, bg='blue', highlightbackground='blue').grid(row=4, column=8, columnspan=3)
-
-print_button = Button(master, text='CAD view', command=displayArrayAsImage, height=1, width=18)
-print_button.grid(row=1, column=8, padx=5, pady=0, columnspan=3)
-
+# rescaling behaviour 
 master.grid_rowconfigure(0, weight=0)
 master.grid_rowconfigure(12, weight=1)
 master.grid_columnconfigure(0, weight=0)
 master.grid_columnconfigure(1, weight=1)
 
-# master.resizable(width=False, height=False)
-# master.resizable(width=not False, height=not False)
 master.update()
 
 canvas_height = w.winfo_height()

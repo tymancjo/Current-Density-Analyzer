@@ -109,7 +109,9 @@ In the Canvas area - default behavior of **Right Mouse Click** is set to clear t
 
 Please check the video that shows the basics of the CSD operations. 
 [CSD 2020 Introduction Video](https://youtu.be/Y_QvcZTISQs)
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/Y_QvcZTISQs?controls=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+[![YT video](readme_img/YT_video.png)](https://youtu.be/Y_QvcZTISQs)
+
 
 More in depth text description will be added later on.
 

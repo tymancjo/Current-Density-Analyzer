@@ -14,7 +14,7 @@ The whole idea is based on the assumption of quick-turnaround workflow:
 
 ## Application area and limitation
 
-Tool is based on the AC circuit theory and therefore is capable to simulate only sinusoidal currents _(except the force solver - which assumes constant current)_. Basic underlying calculation methodology is a simple type of FEA method. It's approximating the given _(sketched)_ geometry by set of squares ant treat each of such piese _(element)_ as separate conductor in which the current density is uniform. Whit this assumption taken - the system wide ohm law based matrix equations are solved delivering the currents values in each element - and hence - the current density distribution.
+Tool is based on the AC circuit theory and therefore is capable to simulate only sinusoidal currents _(except the force solver - which assumes constant current)_. Basic underlying calculation methodology is a simple type of FEA method. It's approximating the given _(sketched)_ geometry by set of squares ant treat each of such piece _(element)_ as separate conductor in which the current density is uniform. Whit this assumption taken - the system wide ohm law based matrix equations are solved delivering the currents values in each element - and hence - the current density distribution.
 
 With this principia the tool works well for a currents that are sinusoidal in shape of given frequency. The precision of the solution depends of the _elements_ size and can be increased by subdividing the sketched geometry into smaller _mesh_ approximation. But this comes with the cost of longer calculation times. 
 
@@ -78,96 +78,43 @@ In the Canvas area - default behavior of **Right Mouse Click** is set to clear t
 
 **Right Action Panel (3)** contains five main panels:
 - **Active operation** This panel define the current operation in the Canvas Area. It can be (in order):
-  - Painting the phase A elements ![A](csdicons/A_white.png)
-  - Painting the phase B elements ![B](csdicons/B_white.png)
-  - Painting the phase B elements ![C](csdicons/C_white.png)
-  - Clearing the selected element ![clear](csdicons/cut_white.png)
-  - Selecting & copying to clipboard rectangular area of sketch (by click LMB + drag) ![copy](csdicons/select_white.png). The operation is automatically switched to Paste after copying to clipboard.
-  - Paste the data from clipboard to current location (left top corner) by apply selected **Paste mode** ![paste](csdicons/paste_white.png)
+
+  - Painting the phase A elements ![A](csdicons/A_white.png){ width=25px } 
+  
+  - Painting the phase B elements ![B](csdicons/B_white.png){width=25px} 
+  
+  - Painting the phase B elements ![C](csdicons/C_white.png){width=25px}
+
+  - Clearing the selected element ![clear](csdicons/cut_white.png){width=25px}
+
+  - Selecting & copying to clipboard rectangular area of sketch (by click LMB + drag) ![copy](csdicons/select_white.png){width=25px}. The operation is automatically switched to Paste after copying to clipboard.
+
+  - Paste the data from clipboard to current location (left top corner) by apply selected **Paste mode** ![paste](csdicons/paste_white.png){width=25px}
 
 - **Paste mode** define the behavior during paste operation:
-  - Clean paste in place ![paste in place](csdicons/paste_white.png) put only non empty elements in the current location (clipboard empty cells don't erase destination area).
-  - Full paste in place ![full paste](csdicons/paste_full.png) put all clipboard elements in the current location (clipboard empty cells erase destination area).
-  - Paste elements as phase A ![paste as A](csdicons/paste_A.png), B ![paste as B](csdicons/paste_B.png) or C ![paste as C](csdicons/paste_C.png) put all non empty elements in the current location turning them into elements of phase A,B or C respectively.
+
+  - Clean paste in place ![paste in place](csdicons/paste_white.png){width=25px} put only non empty elements in the current location (clipboard empty cells don't erase destination area).
+
+  - Full paste in place ![full paste](csdicons/paste_full.png){width=25px} put all clipboard elements in the current location (clipboard empty cells erase destination area).
+
+  - Paste elements as phase A ![paste as A](csdicons/paste_A.png){width=25px}, B ![paste as B](csdicons/paste_B.png){width=25px} or C ![paste as C](csdicons/paste_C.png){width=25px} put all non empty elements in the current location turning them into elements of phase A,B or C respectively.
+
 - **grid size** allows to define the real world size of single grid _(mesh)_ element. This can be modified at any time just by entering any number and "de click" the text field area.
-- **Shift selected phase** those directional controls allows to shift all elements of active phase (active by means of ![A](csdicons/A_white.png)![B](csdicons/B_white.png) ![C](csdicons/C_white.png) buttons) in canvas by a 1 _element_ in given direction. Tis functionality is reminiscence of previous version and might be removed with future updates. 
+
+- **Shift selected phase** those directional controls allows to shift all elements of active phase (active by means of ![A](csdicons/A_white.png){width=25px}![B](csdicons/B_white.png){width=25px} ![C](csdicons/C_white.png){width=25px} buttons) in canvas by a 1 _element_ in given direction. Tis functionality is reminiscence of previous version and might be removed with future updates. 
+
 - **View navigation** allows to zoom in and out in the canvas view and move view around if in zoommed mode. 
 
+## App in simple use
+
+Please check the video that shows the basics of the CSD operations. 
+[CSD 2020 Introduction Video](https://youtu.be/Y_QvcZTISQs)
+
+[![YT video](readme_img/YT_video.png)](https://youtu.be/Y_QvcZTISQs)
+
+
+More in depth text description will be added later on.
 
 
 
  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--------------------------------------------
-
-# Old release notes:
-So – long story short – after putting together  a round of 600 lines of code (in python off course) and learning some basic usage of the tkinter GUI building framework I can now for the first time release to you beta version of the CSD app.
-This app is a python based mirror of the calculator of the Current Density Distribution that was available on my webpage (actually still is http://tomasztomanek.pl/pub/webapp/IcwThermal). 
-
-
-Please give it a try!
-
-Installation:
-1.	If you already have python installed you can jump to point 2
-a.	Install on your system the anaconda package from: https://www.continuum.io/downloads
-b.	This should be all you need to do.
-2.	Download the CSD app script from GitHub (use the Clone or Download button and take a ZIP or clone the repo depending on your preferences): 
-a.	https://github.com/tymancjo/Current-Density-Analyzer/tree/master
-b.	If you get ZIP then Unzip the content to a directory of your choice. If you colone the repo - you will know how to handle this ;)
-
-You should be good to go!
-If something is not working – let me know!
-
-# Usage - this shows the  old screenshots - will be updated!
-Run the app:
-***Please note that the screenshots are from previous version of the app. Current one have options for 3 phase analysis. But for information purposes should be just fine***
-1.	Navigate to the directory where you unzipped the app files:
-![Folder with App](readme_img/92.png)
-
-2.	Double click on the “Cross Section Design Analyzer.cmd” if you are in windows world
-3.  Or run the csd.py script from your python interperer 
- 
-3.	You should have app and terminal window pop-up
-![App main window](readme_img/93.png)
-4.	Now you can start using the app. All your actions are done in the main app window. Terminal will display some data that reflect particular calculations steps. But this is nothing you need to worry about.
-
-Using the app:
-
-1.	Let’s use the app for simple case of one copper bar
-2.	Main window description:
-![Main window description](readme_img/94.png)
- 
-3.	Defined geometry of copperbar 100x10 on initial grid 10x10mm size: 
-![Defining simple geometry 10x100mm bar](readme_img/95.png)
-
-4.	Now we can click “Run Analysis!” and we will get the following results:
-![Initial results with low numbers of elements](readme_img/96.png) 
-
-5.	The above results are not very spectacular due to low number of samples per bar. Let’s fix it by clicking “Subdivide” 2 or 3 times getting:
-![Geometry with gihger number of elements](readme_img/97.png)
- 
-6.	And Run it again with results:
-![Results with gihger number of elements](readme_img/98.png)
- 
-7.	From here we can go and try other cross sections and shapes.
-
-![thank you!](readme_img/99.png)
-
-
-

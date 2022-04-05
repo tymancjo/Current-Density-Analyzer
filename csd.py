@@ -372,7 +372,7 @@ def showMeGeom(*arg):
 
 def vectorizeTheArray(*arg):
     '''
-    This function analyze the cross section array and returns vector of all set
+    This function analyse the cross section array and returns vector of all set
     (equal to 1) elements. This allows to minimize the size of further calculation
     arrays only to active elements.
 

@@ -702,7 +702,7 @@ def shiftD():
     printTheArray(XSecArray, canvas=w)
 
 
-def mainSetup():
+def mainSetup(startSize=3):
     """
     This function set up (or reset) all the main elements
     """
@@ -712,8 +712,8 @@ def mainSetup():
     globalY = 0
     globalZoom = 1
 
-    elementsInX = 2 * 25
-    elementsInY = 2 * 25
+    elementsInX = startSize * 25
+    elementsInY = startSize * 25
 
     dXmm = 10
     dYmm = 10

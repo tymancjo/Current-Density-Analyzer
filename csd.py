@@ -1101,9 +1101,17 @@ def endSelection(event):
         C1 = min(selectEndPoint[1], selectStartPoint[1])
         C2 = max(selectEndPoint[1], selectStartPoint[1])
 
-        selectionMaskArray = np.empty_like(XSecArray)
+        # selectionArray = np.copy(XSecArray[R1:R2, C1:C2]) # this seems to work only if not zoomed
+        # selectionMaskArray = np.empty_like(XSecArray)
+
+        selectionMaskArray = np.empty_like(
+            zoomInArray(XSecArray, globalZoom, globalX, globalY)
+        )
         selectionMaskArray[R1:R2, C1:C2] = 1
-        selectionArray = np.copy(XSecArray[R1:R2, C1:C2])
+
+        selectionArray = np.copy(
+            zoomInArray(XSecArray, globalZoom, globalX, globalY)[R1:R2, C1:C2]
+        )  # this makes it copy right data if in zoom mode.
 
         # auto switch to paste mode after selection is done
         phase.set(5)

@@ -13,11 +13,44 @@ if __name__ == "__main__":
 
     # 1 handling the in line parameters
     parser = argparse.ArgumentParser(
-        description="IMG to CSD converter",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="""\
+            IMG to CSD converter.
+            Converts 2D images like PNG or JPG to the CSD data file.
+            Returns the .cds file with the same name and location as input image.
+
+            Info:
+            Use on the picture colors to determine phases: 
+            Red Color as phase A
+            Green as phase B
+            Blue as phase C
+
+            JPEG files due to the compression may lead to artifacts and need for
+            cleaning in the CSD.py.
+            Preferably use .PNG format.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("-x", "--width", type=float, default=500.0)
-    parser.add_argument("-y", "--height", type=float, default=500.0)
+    parser.add_argument(
+        "-x", "--width", type=float, default=500.0, help="Canvas Y size in [mm]"
+    )
+    parser.add_argument(
+        "-y", "--height", type=float, default=500.0, help="Canvas Y size in [mm]"
+    )
+
+    parser.add_argument(
+        "-m",
+        "--maxsize",
+        type=int,
+        default=150,
+        help="Output canvas max size in elements if optimization is used",
+    )
+
+    parser.add_argument(
+        "-opt",
+        "--optimize",
+        action="store_false",
+        help="Disables the optimization of output size.",
+    )
 
     parser.add_argument("image", help="Image input file")
     args = parser.parse_args()
@@ -53,12 +86,18 @@ if __name__ == "__main__":
     for x in range(pixels_x):
         for y in range(pixels_y):
             result = 0
-            # R = array_img[x,y,0]
-            # G = array_img[x,y,1]
-            # B = array_img[x,y,2]
+            # R = array_img[x, y, 0]
+            # G = array_img[x, y, 1]
+            # B = array_img[x, y, 2]
 
+            # if R < 255 or G < 255 or B < 255:
+            #     if abs(R - G) < 20 and B > 40:
+            #         result = 3
+            #     elif abs(R - B) < 20 and G > 40:
+            #         result = 2
+            #     elif abs(G - B) < 20 and R > 40:
+            #         result = 1
             rgb = np.array(array_img[x, y])
-
             if rgb.sum() < 3 * 255:
                 result = 1 + np.where(rgb == np.amax(rgb))[0][0]
             XSecArray[x, y] = result
@@ -70,7 +109,31 @@ if __name__ == "__main__":
 
     print(f"dX: {dXmm} mm,\t dY: {dYmm} mm")
 
+    if config["optimize"]:
+        print()
+        print("Simplifying the geometry...", end="")
+        splits = 1
+        for _ in range(4):
+            print(f"...{splits}", end="")
+            if dXmm < 1 or dYmm < 1 or max(XSecArray.shape) > config["maxsize"]:
+
+                XSecArray = XSecArray[::2, ::2]
+
+                dXmm = dXmm * 2
+                dYmm = dYmm * 2
+
+            else:
+                print()
+                print("No further subdivisions make sense")
+                break
+
+        print()
+        print(f"dX:{dXmm}mm dY:{dYmm}mm")
+        print(f"Data table size: {XSecArray.shape}")
+
     output_csd_file = source_img[:-4] + ".csd"
+    dXmm = round(dXmm, 2)
+    dYmm = round(dYmm, 2)
 
     S = csd.cointainer(XSecArray, dXmm, dYmm)
     S.save(output_csd_file)

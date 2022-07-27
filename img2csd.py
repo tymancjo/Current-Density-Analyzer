@@ -1,9 +1,9 @@
 import numpy as np
-from PIL import Image
 
 import sys
 import argparse
 import os.path
+
 
 from csdlib import csdlib as csd
 
@@ -52,6 +52,20 @@ if __name__ == "__main__":
         help="Disables the optimization of output size.",
     )
 
+    parser.add_argument(
+        "-pil",
+        "--usepil",
+        action="store_true",
+        help="Switch to use PIL to load images instead of Matplotlib.",
+    )
+
+    parser.add_argument(
+        "-s",
+        "--show",
+        action="store_true",
+        help="Display the loaded image before proceed.",
+    )
+
     parser.add_argument("image", help="Image input file")
     args = parser.parse_args()
     config = vars(args)
@@ -61,19 +75,49 @@ if __name__ == "__main__":
     w = config["width"]
     h = config["height"]
 
-    if os.path.isfile(source_img):
-        # loading the picture file
-        try:
-            loaded_img = Image.open(source_img)
-        except:
-            print(f"Problem opening {source_img} file!")
-            sys.exit(1)
-    else:
-        print(f"Can't find the {source_img} file")
-        sys.exit(1)
+    if config["usepil"]:
+        from PIL import Image
 
-    # converting the image to the array
-    array_img = np.array(loaded_img)
+        if os.path.isfile(source_img):
+            # loading the picture file
+            try:
+                loaded_img = Image.open(source_img)
+            except:
+                print(f"Problem opening {source_img} file!")
+                sys.exit(1)
+        else:
+            print(f"Can't find the {source_img} file")
+            sys.exit(1)
+
+        if config["show"]:
+            loaded_img.show()
+
+        # converting the image to the array
+        array_img = np.array(loaded_img)
+
+    else:
+        import matplotlib.pyplot as plt
+        import matplotlib.image as mpimg
+
+        if os.path.isfile(source_img):
+            # loading the picture file
+            try:
+                plt_img = mpimg.imread(source_img)
+            except:
+                print(f"Problem opening {source_img} file!")
+                sys.exit(1)
+        else:
+            print(f"Can't find the {source_img} file")
+            sys.exit(1)
+
+        if config["show"]:
+            plt.imshow(plt_img)
+            plt.show()
+
+        # converting the image to the array
+        # array_img = np.array(loaded_img)
+        array_img = np.array(plt_img) * 255
+
     print(array_img.shape)
 
     pixels_x = array_img.shape[0]
@@ -104,6 +148,10 @@ if __name__ == "__main__":
 
     print(XSecArray)
     print(XSecArray.shape)
+
+    if np.sum(XSecArray) == 0:
+        print("No cross section data found. No output generated.")
+        sys.exit(1)
 
     print("Trimming the empty space...")
     size_y, size_x = XSecArray.shape
@@ -162,7 +210,7 @@ if __name__ == "__main__":
 
             else:
                 print()
-                print("No further subdivisions make sense")
+                print("No further simplification needed")
                 break
 
         print()

@@ -98,12 +98,50 @@ if __name__ == "__main__":
             #     elif abs(G - B) < 20 and R > 40:
             #         result = 1
             rgb = np.array(array_img[x, y])
-            if rgb.sum() < 3 * 255:
+            if 25 < rgb.sum() < 3 * 255:
                 result = 1 + np.where(rgb == np.amax(rgb))[0][0]
             XSecArray[x, y] = result
 
     print(XSecArray)
     print(XSecArray.shape)
+
+    print("Trimming the empty space...")
+    size_y, size_x = XSecArray.shape
+    crop_top = crop_btm = 0
+    crop_left = crop_right = 0
+
+    for row in range(size_y):
+        crop_top = row
+        if np.sum(XSecArray[row, :]) > 0:
+            break
+
+    for row in range(size_y):
+        crop_btm = row
+        if np.sum(XSecArray[-row - 1, :]) > 0:
+            break
+
+    for col in range(size_x):
+        crop_left = col
+        if np.sum(XSecArray[:, col]) > 0:
+            break
+
+    for col in range(size_x):
+        crop_right = col
+        if np.sum(XSecArray[:, -col - 1]) > 0:
+            break
+
+    new_size = 3 + max(size_x - crop_left - crop_right, size_y - crop_top - crop_btm)
+    print(f"Size after cropping: {new_size}x{new_size}")
+
+    print(f"Cropping: top {crop_top}\t btm {crop_btm}")
+    print(f"Cropping: lft {crop_left}\t rgt {crop_right}")
+
+    crop_XSecArray = np.zeros((new_size, new_size))
+    crop_XSecArray[
+        1 : 1 + size_y - crop_top - crop_btm, 1 : 1 + size_x - crop_left - crop_right
+    ] = XSecArray[crop_top:-crop_btm, crop_left:-crop_right]
+
+    XSecArray = crop_XSecArray
 
     dXmm = dYmm = min(w / pixels_x, h / pixels_y)
 

@@ -130,17 +130,6 @@ if __name__ == "__main__":
     for x in range(pixels_x):
         for y in range(pixels_y):
             result = 0
-            # R = array_img[x, y, 0]
-            # G = array_img[x, y, 1]
-            # B = array_img[x, y, 2]
-
-            # if R < 255 or G < 255 or B < 255:
-            #     if abs(R - G) < 20 and B > 40:
-            #         result = 3
-            #     elif abs(R - B) < 20 and G > 40:
-            #         result = 2
-            #     elif abs(G - B) < 20 and R > 40:
-            #         result = 1
             rgb = np.array(array_img[x, y])
             if 25 < rgb.sum() < 3 * 255:
                 result = 1 + np.where(rgb == np.amax(rgb))[0][0]

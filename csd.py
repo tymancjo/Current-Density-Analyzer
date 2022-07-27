@@ -51,15 +51,16 @@ def loadArrayFromFile():
     filename = filedialog.askopenfilename(filetypes=[("CSD files", "*.csd")])
     filename = os.path.normpath(filename)
 
-    if np.sum(XSecArray) != 0:  # Test if there is anything draw on the array
+    if (
+        os.path.isfile(filename) and np.sum(XSecArray) != 0
+    ):  # Test if there is anything draw on the array
         q = messagebox.askquestion(
             "Delete", "This will delete current shape. Are You Sure?", icon="warning"
         )
         if q == "yes":
-            if filename:
-                loadTheData(filename)
+            loadTheData(filename)
     else:
-        if filename:
+        if os.path.isfile(filename):
             loadTheData(filename)
 
 
@@ -69,7 +70,7 @@ def loadTheData(filename):
     """
     global XSecArray, dXmm, dYmm
 
-    print("Readinf from file :" + filename)
+    print("reading from file :" + filename)
     # XSecArray =  np.load(filename)
     S = csd.loadObj(filename)
     XSecArray, dXmm, dYmm = S.restore()

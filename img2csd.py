@@ -8,6 +8,11 @@ import os.path
 from csdlib import csdlib as csd
 
 
+def myLog(s: str = "", *args, **kwargs):
+    if verbose:
+        print(s, args, kwargs)
+
+
 # Doing the main work here.
 if __name__ == "__main__":
 
@@ -66,10 +71,19 @@ if __name__ == "__main__":
         help="Display the loaded image before proceed.",
     )
 
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Display the detailed information along process.",
+    )
+
     parser.add_argument("image", help="Image input file")
     args = parser.parse_args()
     config = vars(args)
-    print(config)
+
+    verbose = config["verbose"]
+    myLog(config)
 
     source_img = config["image"]
     w = config["width"]
@@ -83,10 +97,10 @@ if __name__ == "__main__":
             try:
                 loaded_img = Image.open(source_img)
             except:
-                print(f"Problem opening {source_img} file!")
+                myLog(f"Problem opening {source_img} file!")
                 sys.exit(1)
         else:
-            print(f"Can't find the {source_img} file")
+            myLog(f"Can't find the {source_img} file")
             sys.exit(1)
 
         if config["show"]:
@@ -104,10 +118,10 @@ if __name__ == "__main__":
             try:
                 plt_img = mpimg.imread(source_img)
             except:
-                print(f"Problem opening {source_img} file!")
+                myLog(f"Problem opening {source_img} file!")
                 sys.exit(1)
         else:
-            print(f"Can't find the {source_img} file")
+            myLog(f"Can't find the {source_img} file")
             sys.exit(1)
 
         if config["show"]:
@@ -118,7 +132,7 @@ if __name__ == "__main__":
         # array_img = np.array(loaded_img)
         array_img = np.array(plt_img) * 255
 
-    print(array_img.shape)
+    myLog(array_img.shape)
 
     pixels_x = array_img.shape[0]
     pixels_y = array_img.shape[1]
@@ -135,14 +149,14 @@ if __name__ == "__main__":
                 result = 1 + np.where(rgb == np.amax(rgb))[0][0]
             XSecArray[x, y] = result
 
-    print(XSecArray)
-    print(XSecArray.shape)
+    myLog(XSecArray)
+    myLog(XSecArray.shape)
 
     if np.sum(XSecArray) == 0:
-        print("No cross section data found. No output generated.")
+        myLog("No cross section data found. No output generated.")
         sys.exit(1)
 
-    print("Trimming the empty space...")
+    myLog("Trimming the empty space...")
     size_y, size_x = XSecArray.shape
     crop_top = crop_btm = 0
     crop_left = crop_right = 0
@@ -168,10 +182,10 @@ if __name__ == "__main__":
             break
 
     new_size = 3 + max(size_x - crop_left - crop_right, size_y - crop_top - crop_btm)
-    print(f"Size after cropping: {new_size}x{new_size}")
+    myLog(f"Size after cropping: {new_size}x{new_size}")
 
-    print(f"Cropping: top {crop_top}\t btm {crop_btm}")
-    print(f"Cropping: lft {crop_left}\t rgt {crop_right}")
+    myLog(f"Cropping: top {crop_top}\t btm {crop_btm}")
+    myLog(f"Cropping: lft {crop_left}\t rgt {crop_right}")
 
     crop_XSecArray = np.zeros((new_size, new_size))
     crop_XSecArray[
@@ -182,14 +196,14 @@ if __name__ == "__main__":
 
     dXmm = dYmm = min(w / pixels_x, h / pixels_y)
 
-    print(f"dX: {dXmm} mm,\t dY: {dYmm} mm")
+    myLog(f"dX: {dXmm} mm,\t dY: {dYmm} mm")
 
     if config["optimize"]:
-        print()
-        print("Simplifying the geometry...", end="")
+        myLog()
+        myLog("Simplifying the geometry...", end="")
         splits = 1
         for _ in range(4):
-            print(f"...{splits}", end="")
+            myLog(f"...{splits}", end="")
             if dXmm < 1 or dYmm < 1 or max(XSecArray.shape) > config["maxsize"]:
 
                 XSecArray = XSecArray[::2, ::2]
@@ -198,13 +212,13 @@ if __name__ == "__main__":
                 dYmm = dYmm * 2
 
             else:
-                print()
-                print("No further simplification needed")
+                myLog()
+                myLog("No further simplification needed")
                 break
 
-        print()
-        print(f"dX:{dXmm}mm dY:{dYmm}mm")
-        print(f"Data table size: {XSecArray.shape}")
+        myLog()
+        myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+        myLog(f"Data table size: {XSecArray.shape}")
 
     output_csd_file = source_img[:-4] + ".csd"
     dXmm = round(dXmm, 2)

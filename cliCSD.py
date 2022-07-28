@@ -6,7 +6,7 @@ The idea is to be able to use the saved geometry file
 and deliver the required input as a command line
 parameters. 
 
-As an output the printed info of power losses 
+As an output the myLoged info of power losses 
 is generated on the standard output. 
 """
 
@@ -16,7 +16,7 @@ is generated on the standard output.
 # 3. Setup the solver - done
 # 4. Solve - done
 # 5. Prepare results - done
-# 6. Print results - done
+# 6. myLog results - done
 
 
 # General imports
@@ -39,12 +39,17 @@ def loadTheData(filename):
     """
 
     if os.path.isfile(filename):
-        print("reading from file :" + filename)
+        myLog("reading from file :" + filename)
         XSecArray, dXmm, dYmm = csd.loadObj(filename).restore()
         return XSecArray, dXmm, dYmm
     else:
-        print(f"The file {filename} can't be opened!")
+        myLog(f"The file {filename} can't be opened!")
         sys.exit(1)
+
+
+def myLog(s: str = "", *args, **kwargs):
+    if verbose:
+        print(s, args, kwargs)
 
 
 # Doing the main work here.
@@ -62,6 +67,13 @@ if __name__ == "__main__":
     parser.add_argument("-T", "--Temperature", type=float, default=140.0)
     parser.add_argument("-l", "--length", type=float, default=1000.0)
 
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Display the detailed information along process.",
+    )
+
     parser.add_argument("geometry", help="Geometry description file in .csd format")
     parser.add_argument(
         "current",
@@ -70,37 +82,40 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     config = vars(args)
-    # print(config)
 
-    print()
-    print("Starting operations...")
-    print()
+    verbose = config["verbose"]
+
+    # myLog(config)
+
+    myLog()
+    myLog("Starting operations...")
+    myLog()
 
     # 2 loading the geometry data:
     XSecArray, dXmm, dYmm = loadTheData(config["geometry"])
-    print()
-    print(f"dX:{dXmm}mm dY:{dYmm}mm")
-    print(f"Data table size: {XSecArray.shape}")
+    myLog()
+    myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+    myLog(f"Data table size: {XSecArray.shape}")
 
     if config["split"] > 1:
-        print()
-        print("Splitting the geometry cells...", end="")
+        myLog()
+        myLog("Splitting the geometry cells...", end="")
         splits = 1
         for _ in range(config["split"] - 1):
             if dXmm > 1 and dYmm > 1:
-                print(f"{splits}... ", end="")
+                myLog(f"{splits}... ", end="")
                 splits += 1
                 XSecArray = csd.n_arraySlicer(inputArray=XSecArray, subDivisions=2)
                 dXmm = dXmm / 2
                 dYmm = dYmm / 2
             else:
-                print()
-                print("No further subdivisions make sense")
+                myLog()
+                myLog("No further subdivisions make sense")
                 break
 
-        print()
-        print(f"dX:{dXmm}mm dY:{dYmm}mm")
-        print(f"Data table size: {XSecArray.shape}")
+        myLog()
+        myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+        myLog(f"Data table size: {XSecArray.shape}")
 
     # 3 preparing the solution
     Irms = config["current"]
@@ -110,23 +125,23 @@ if __name__ == "__main__":
     length = config["length"]
     t = config["Temperature"]
 
-    print()
-    print("Starting solver for")
+    myLog()
+    myLog("Starting solver for")
     for k, n in zip([0, 2, 4], ["a", "b", "c"]):
-        print(f"I{n} = {I[k]}[A] \t {I[k+1]}[deg] \t {f}[Hz]")
+        myLog(f"I{n} = {I[k]}[A] \t {I[k+1]}[deg] \t {f}[Hz]")
 
-    print()
-    print("Complex form:")
+    myLog()
+    myLog("Complex form:")
 
     # lets workout the  current in phases as is defined
     in_Ia = I[0] * np.cos(I[1] * np.pi / 180) + I[0] * np.sin(I[1] * np.pi / 180) * 1j
-    print(f"Ia: {in_Ia}")
+    myLog(f"Ia: {in_Ia}")
 
     in_Ib = I[2] * np.cos(I[3] * np.pi / 180) + I[2] * np.sin(I[3] * np.pi / 180) * 1j
-    print(f"Ib: {in_Ib}")
+    myLog(f"Ib: {in_Ib}")
 
     in_Ic = I[4] * np.cos(I[5] * np.pi / 180) + I[4] * np.sin(I[5] * np.pi / 180) * 1j
-    print(f"Ic: {in_Ic}")
+    myLog(f"Ic: {in_Ic}")
 
     vPhA = csd.n_arrayVectorize(
         inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm
@@ -161,17 +176,17 @@ if __name__ == "__main__":
             elementsVector = np.concatenate((vPhA, vPhC), axis=0)
 
     if len(elementsVector) > 1200:
-        print()
-        print(
+        myLog()
+        myLog(
             "!!! Size of the elements vector may lead to very long calculation. Be aware!"
         )
-        print("You can break the process by CTRL+C")
-        print("You may conceder reduce the split steps.")
-        print("Optimal element size is around 1.5x1.5mm")
-        print()
+        myLog("You can break the process by CTRL+C")
+        myLog("You may conceder reduce the split steps.")
+        myLog("Optimal element size is around 1.5x1.5mm")
+        myLog()
 
     if len(elementsVector) > 10000:
-        print("Extreme size of elements vector - long calculations immanent!")
+        myLog("Extreme size of elements vector - long calculations immanent!")
 
     admitanceMatrix = np.linalg.inv(
         csd.n_getImpedanceArray(
@@ -215,11 +230,11 @@ if __name__ == "__main__":
     Ub = Ub * (in_Ib / Ib)
     Uc = Uc * (in_Ic / Ic)
 
-    print()
-    print("Calculated require Source Voltages")
-    print(Ua)
-    print(Ub)
-    print(Uc)
+    myLog()
+    myLog("Calculated require Source Voltages")
+    myLog(Ua)
+    myLog(Ub)
+    myLog(Uc)
 
     # Setting up the voltage vector for final solve
     vA = np.ones(elementsPhaseA) * Ua
@@ -243,14 +258,14 @@ if __name__ == "__main__":
     Ic = np.sum(currentPhC)
     # end of second solve!
 
-    print()
-    print("Solution check...")
-    print("Raw Current results:")
-    print(f"Ia: {Ia}")
-    print(f"Ib: {Ib}")
-    print(f"Ic: {Ic}")
-    print()
-    print(f"Sum: {Ia+Ib+Ic}")
+    myLog()
+    myLog("Solution check...")
+    myLog("Raw Current results:")
+    myLog(f"Ia: {Ia}")
+    myLog(f"Ib: {Ib}")
+    myLog(f"Ic: {Ic}")
+    myLog()
+    myLog(f"Sum: {Ia+Ib+Ic}")
 
     # Now we normalize up to the expecter I - just a polish
     # as we are almost there with the previous second solve for new VOLTAGES
@@ -266,19 +281,19 @@ if __name__ == "__main__":
     Ib = np.sum(currentPhB)
     Ic = np.sum(currentPhC)
 
-    print("Fix Current results:")
-    print(f"Ia: {Ia}")
-    print(f"Ib: {Ib}")
-    print(f"Ic: {Ic}")
-    print()
-    print(f"Sum: {Ia+Ib+Ic}")
+    myLog("Fix Current results:")
+    myLog(f"Ia: {Ia}")
+    myLog(f"Ib: {Ib}")
+    myLog(f"Ic: {Ic}")
+    myLog()
+    myLog(f"Sum: {Ia+Ib+Ic}")
 
     # Data postprocessing
     getMod = np.vectorize(csd.n_getComplexModule)
 
     resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
     # for debug
-    # print(resultsCurrentVector)
+    # myLog(resultsCurrentVector)
     #
     resultsCurrentVector = getMod(resultsCurrentVector)
     resistanceVector = csd.n_getResistanceArray(
@@ -299,12 +314,11 @@ if __name__ == "__main__":
 
     # Results of power losses
     print()
-    print("---------------------------")
+    print("------------------------------------------------------")
     print("Results of power losses")
-    print(f"for I={config['current']}[A], f={f}[Hz], l={length}[mm]")
-    print(f"Total 3 phase power losses: \t {powerLosses:.2f}[W]")
-    print("---------------------------")
-    print("Per phase power losses:")
-    print(f"for I={config['current']}[A], f={f}[Hz], l={length}[mm]")
-    print(f"dPa: {powPhA:.2f} \t dPb: {powPhB:.2f} \t dPc: {powPhC:.2f}")
-    print("---------------------------")
+    print(f"\tgeometry: {config['geometry']}")
+    print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm]")
+    print("------------------------------------------------------")
+    print(f"Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
+    print(f"{powerLosses:.2f}\t| {powPhA:.2f} \t| {powPhB:.2f} \t| {powPhC:.2f}")
+    print("------------------------------------------------------")

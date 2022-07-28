@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
         if config["show"]:
             plt.imshow(plt_img)
-            plt.show()
+            plt.show(block=False)
 
         # converting the image to the array
         # array_img = np.array(loaded_img)

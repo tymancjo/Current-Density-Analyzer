@@ -9,6 +9,25 @@ from numba import jit, njit
 
 from csdlib import csdlib as csd
 
+
+# making the NUMBA decorators optional
+def conditional_decorator(dec, condition):
+    def decorator(func):
+        if not condition:
+            # Return the function unchanged, not decorated.
+            return func
+        return dec(func)
+
+    return decorator
+
+
+try:
+    from numba import njit
+
+    use_njit = True
+except ImportError:
+    use_njit = False
+
 verbose = not True
 
 
@@ -87,7 +106,8 @@ def getArgs():
     return vars(args)
 
 
-@njit
+# @njit
+@conditional_decorator(njit, use_njit)
 def getCSD(array_img):
     pixels_x = array_img.shape[0]
     pixels_y = array_img.shape[1]
@@ -113,7 +133,8 @@ def getCSD(array_img):
     return XSecArray
 
 
-@njit
+# @njit
+@conditional_decorator(njit, use_njit)
 def trimEmpty(XSecArray):
 
     size_y, size_x = XSecArray.shape
@@ -205,13 +226,11 @@ def loadImageFromFile(config):
     return np.array(array_img)
 
 
-# @jit
+# @njit
+@conditional_decorator(njit, use_njit)
 def simplify(XSecArray, dXmm, dYmm, maxsize):
-    myLog()
-    myLog("Simplifying the geometry...", end="")
     splits = 1
     for _ in range(10):
-        myLog(f"...{splits}", end="")
         if dXmm < 1 or dYmm < 1 or max(XSecArray.shape) > maxsize:
 
             XSecArray = XSecArray[::2, ::2]
@@ -220,14 +239,9 @@ def simplify(XSecArray, dXmm, dYmm, maxsize):
             dYmm = dYmm * 2
 
         else:
-            myLog()
-            myLog("No further simplification needed")
             break
 
-    myLog()
-    myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
-    myLog(f"Data table size: {XSecArray.shape}")
-    return XSecArray, dXmm, dYmm
+    return XSecArray, dXmm, dYmm, splits
 
 
 def main():
@@ -264,7 +278,16 @@ def main():
     myLog(f"dX: {dXmm} mm,\t dY: {dYmm} mm")
 
     if optimize:
-        XSecArray, dXmm, dYmm = simplify(XSecArray, dXmm, dYmm, config["maxsize"])
+        myLog()
+        myLog("Simplifying the geometry...", end="")
+        XSecArray, dXmm, dYmm, splits = simplify(
+            XSecArray, dXmm, dYmm, config["maxsize"]
+        )
+
+        myLog(f"done {splits}", end="")
+        myLog()
+        myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+        myLog(f"Data table size: {XSecArray.shape}")
 
     output_csd_file = source_img[:-4] + ".csd"
     dXmm = round(dXmm, 2)

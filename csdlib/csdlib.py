@@ -254,7 +254,7 @@ def n_getDistancesArray(inputVector):
     """
     # lets check for the numbers of elements
     elements = inputVector.shape[0]
-    print(elements)
+    # print(elements)
     # Define the outpur array
     distanceArray = np.zeros((elements, elements))
 

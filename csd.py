@@ -323,6 +323,16 @@ def showMeZ(*arg):
         zCalc = gui.zWindow(root, XSecArray, dXmm, dYmm)
 
 
+def showMeZ3f(*arg):
+    # lets check if there is anything in the xsection geom array
+    setParameters()
+
+    if np.sum(XSecArray) > 0:
+        root = Tk()
+        root.title("Impednaces Calculator")
+        zCalc = gui.zWindow3f(root, XSecArray, dXmm, dYmm)
+
+
 def showReplacer(*arg):
 
     global XSecArray
@@ -511,7 +521,7 @@ def vectorizeTheArray(*arg):
         )
         resultsCurrentVector *= curentRMS
 
-        powerLossesVector = resistanceVector * resultsCurrentVector ** 2
+        powerLossesVector = resistanceVector * resultsCurrentVector**2
         powerLosses = np.sum(powerLossesVector)
 
         # Power losses per phase
@@ -1246,6 +1256,7 @@ analyze_menu = Menu(menu_bar)
 analyze_menu.add_command(label="Power Losses ProSolver", command=showMePro)
 analyze_menu.add_command(label="Electro Dynamic Forces", command=showMeForces)
 analyze_menu.add_command(label="Equivalent Impedance Model", command=showMeZ)
+analyze_menu.add_command(label="Equivalent Impedance Model 3f Shunt", command=showMeZ3f)
 menu_bar.add_cascade(label="Analyze...", menu=analyze_menu)
 
 geometry_menu = Menu(menu_bar)

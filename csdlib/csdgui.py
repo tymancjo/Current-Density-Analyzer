@@ -65,7 +65,6 @@ class geometryModWindow:
     """
 
     def __init__(self, master, canvas):
-
         self.master = master
         self.canvas = canvas
         self.frame = tk.Frame(self.master)
@@ -128,7 +127,6 @@ class currentDensityWindow:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -673,12 +671,10 @@ class currentDensityWindow:
             self.showResults()
 
     def showResults(self):
-
         title_font = {"size": "11", "color": "black", "weight": "normal"}
         axis_font = {"size": "10"}
 
         if np.sum(self.resultsArray) != 0:
-
             # Cecking the area in array that is used by geometry to limit the display
             min_row = int(np.min(self.elementsVector[:, 0]))
             max_row = int(np.max(self.elementsVector[:, 0]) + 1)
@@ -760,12 +756,10 @@ class currentDensityWindow:
             plt.show()
 
     def showTemperatureResults(self):
-
         title_font = {"size": "11", "color": "black", "weight": "normal"}
         axis_font = {"size": "10"}
 
         if np.sum(self.resultsArray) != 0:
-
             # Cecking the area in array that is used by geometry to limit the display
             min_row = int(np.min(self.elementsVector[:, 0]))
             max_row = int(np.max(self.elementsVector[:, 0]) + 1)
@@ -848,7 +842,6 @@ class currentDensityWindowPro:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -875,6 +868,22 @@ class currentDensityWindowPro:
         self.Temp_txt = tk.Entry(self.frame)
         self.Temp_txt.insert(5, "140")
         self.Temp_txt.pack()
+
+        self.lab_Sigma = tk.Label(
+            self.frame, text="Material conductivity at 20degC [S/m]"
+        )
+        self.lab_Sigma.pack()
+        self.Sigma_txt = tk.Entry(self.frame)
+        self.Sigma_txt.insert(5, "56e6")
+        self.Sigma_txt.pack()
+
+        self.lab_temCoRe = tk.Label(
+            self.frame, text="Material Temp coeff of resistance [1/K]"
+        )
+        self.lab_temCoRe.pack()
+        self.temCoRe_txt = tk.Entry(self.frame)
+        self.temCoRe_txt.insert(5, "3.9e-3")
+        self.temCoRe_txt.pack()
 
         self.lab_HTC = tk.Label(self.frame, text="HTC [W/m2K]")
         self.lab_HTC.pack()
@@ -917,6 +926,8 @@ class currentDensityWindowPro:
         self.t = float(self.Temp_txt.get())
         self.HTC = float(self.HTC_txt.get())
         self.Gcon = float(self.Gcon_txt.get())
+        self.sigma20C = float(self.Sigma_txt.get())
+        self.temCoRe = float(self.temCoRe_txt.get())
 
         self.Gmx = np.asarray(
             [gx.split(";") for gx in (self.Gmx_txt.get().split("|"))], dtype=float
@@ -932,6 +943,16 @@ class currentDensityWindowPro:
             self.bframe, text="Temperature: {:.2f} [degC]".format(self.t)
         )
         self.desc_t.pack()
+
+        self.desc_Sigma = tk.Label(
+            self.bframe, text="Sigma: {:.2f} [MS/m]".format(self.sigma20C / 1000000)
+        )
+        self.desc_Sigma.pack()
+
+        self.desc_temCoRe = tk.Label(
+            self.bframe, text="alpha: {:.2f}e-3 [1/K]".format(self.temCoRe * 1000)
+        )
+        self.desc_temCoRe.pack()
 
         self.desc_htc = tk.Label(
             self.bframe, text="HTC: {:.2f} [W/m2K]".format(self.HTC)
@@ -978,6 +999,9 @@ class currentDensityWindowPro:
         self.HTC = float(self.HTC_txt.get())
         self.Gcon = float(self.Gcon_txt.get())
         self.lenght = float(self.lenght_txt.get())
+        # the material properties.
+        self.sigma20C = float(self.Sigma_txt.get())
+        self.temCoRe = float(self.temCoRe_txt.get())
 
         self.Gmx = np.asarray(
             [gx.split(";") for gx in (self.Gmx_txt.get().split("|"))], dtype=float
@@ -988,6 +1012,15 @@ class currentDensityWindowPro:
         self.desc_I.config(text="Current: {} [A]".format(self.I))
         self.desc_f.config(text="Frequency: {:.2f} [Hz]".format(self.f))
         self.desc_t.config(text="Temperature: {:.2f} [degC]".format(self.t))
+
+        self.desc_Sigma.config(
+            text="Sigma: {:.2f} [MS/m]".format(self.sigma20C / 1000000)
+        )
+
+        self.desc_temCoRe.config(
+            text="alpha: {:.2f}e-3 [1/K]".format(self.temCoRe * 1000)
+        )
+
         self.desc_htc.config(text="HTC: {:.2f} [W/m2K]".format(self.HTC))
         self.desc_Gcon.config(text="Thermal Cond.: {:.5f} [W/mK]".format(self.Gcon))
         self.desc_lenght.config(text="lenght: {:.2f} [mm]".format(self.lenght))
@@ -1065,6 +1098,8 @@ class currentDensityWindowPro:
                 dYmm=self.dYmm,
                 temperature=self.t,
                 lenght=self.lenght,
+                sigma20C=self.sigma20C,
+                temCoRe=self.temCoRe,
             )
         )
 
@@ -1177,6 +1212,8 @@ class currentDensityWindowPro:
             dYmm=self.dYmm,
             temperature=self.t,
             lenght=self.lenght,
+            sigma20C=self.sigma20C,
+            temCoRe=self.temCoRe,
         )
 
         # This is the total power losses vector
@@ -1406,7 +1443,6 @@ class currentDensityWindowPro:
             if self.Gmx.shape != (3, 3):
                 GthermalMatrix = np.asarray(([0, 0, 0], [0, 0, 0], [0, 0, 0]))
             else:
-
                 GthermalMatrix = self.Gmx
             # DEBUG
             print("--- Solving for temperatures ---")
@@ -1586,12 +1622,10 @@ class currentDensityWindowPro:
             self.showResults()
 
     def showResults(self):
-
         title_font = {"size": "11", "color": "black", "weight": "normal"}
         axis_font = {"size": "10"}
 
         if np.sum(self.resultsArray) != 0:
-
             # Cecking the area in array that is used by geometry to limit the display
             min_row = int(np.min(self.elementsVector[:, 0]))
             max_row = int(np.max(self.elementsVector[:, 0]) + 1)
@@ -1673,12 +1707,10 @@ class currentDensityWindowPro:
             plt.show()
 
     def showTemperatureResults(self):
-
         title_font = {"size": "9", "color": "black", "weight": "normal"}
         axis_font = {"size": "9"}
 
         if np.sum(self.resultsArray) != 0:
-
             # Cecking the area in array that is used by geometry to limit the display
             min_row = int(np.min(self.elementsVector[:, 0]))
             max_row = int(np.max(self.elementsVector[:, 0]) + 1)
@@ -1783,7 +1815,6 @@ class zWindow:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -1986,7 +2017,6 @@ class zWindow3f:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -2173,7 +2203,6 @@ class forceWindow:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -2336,7 +2365,6 @@ class forceWindow:
         self.forces = [self.Fa, self.Fb, self.Fc]
 
         for k, p in enumerate(["A", "B", "C"]):
-
             if max_col - min_col >= max_row - min_row:
                 x = position[k][0] - min_col * self.dXmm
                 y = -(max_row - min_row) * self.dYmm

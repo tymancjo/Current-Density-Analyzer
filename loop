@@ -1,0 +1,14 @@
+#!/bin/zsh
+
+for b in xsecData/mns*.csd
+
+do
+    echo $b
+    for i in {50..500..50}
+    do
+
+    python3 cliCSD.py $b 1000 -csv -s 2 -f $i
+
+
+    done
+done

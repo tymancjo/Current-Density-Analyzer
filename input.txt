@@ -1,0 +1,5 @@
+xsecData/mns_2x40x10.csd
+xsecData/mns_2x60x10.csd
+xsecData/mns_4x30x10.csd
+xsecData/mns_4x40x10.csd
+xsecData/mns_4x60x10.csd

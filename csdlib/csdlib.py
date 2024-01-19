@@ -189,7 +189,7 @@ def n_getMutualInductance(sizeX, sizeY, lenght, distance):
     # fromula by:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
     M = (mi0 * l / (2 * np.pi)) * (
-        np.log((l + np.sqrt(l ** 2 + d ** 2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
+        np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
     )
 
     # previous formula
@@ -299,7 +299,6 @@ def n_perymiter(vec, arr, dXmm, dYmm):
     # its done
     perymiter = 0
     for box in vec:
-
         # checking the size of the arr array
         x, y = arr.shape
 
@@ -395,14 +394,14 @@ def n_getImpedanceArray(
     """
     Calculate the array of impedance as complex values for each element
     Input:
-    distanceArray -  array of distances beetween the elements in [mm]
+    distanceArray -  array of distances between the elements in [mm]
     freq = frequency in Hz
     dXmm - size of element in x [mm]
     dYmm - size of element in Y [mm]
     lenght - analyzed lenght in [mm] /default= 1000mm
-    temperature - temperature of the conductors in deg C / defoult = 20degC
+    temperature - temperature of the conductors in deg C / default = 20degC
     sigma20C - conductivity of conductor material in 20degC in [S] / default = 58MS (copper)
-    temCoRe - temperature resistance coeficcient / default is copper
+    temCoRe - temperature resistance coefficient / default is copper
     """
     omega = 2 * np.pi * freq
 
@@ -432,7 +431,7 @@ def n_getImpedanceArray(
                     )
                 )
     # For debug
-    # print(impedanceArray)
+    print(impedanceArray)
     #
     return impedanceArray
 
@@ -473,7 +472,7 @@ def n_getResistanceArray(
         )
 
     # for debug
-    # print(resistanceArray)
+    print(resistanceArray)
     #
     return resistanceArray
 
@@ -501,7 +500,7 @@ def n_getComplexModule(x):
 
     """
     if isinstance(x, complex):
-        return np.sqrt(x.real ** 2 + x.imag ** 2)
+        return np.sqrt(x.real**2 + x.imag**2)
     else:
         return x
 

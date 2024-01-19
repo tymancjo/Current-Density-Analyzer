@@ -33,6 +33,7 @@ import argparse
 # # Importing local library
 # from csdlib import csdlib as csd
 
+
 # making the NUMBA decorators optional
 def conditional_decorator(dec, condition):
     def decorator(func):
@@ -86,7 +87,13 @@ def getArgs():
     parser.add_argument("-f", "--frequency", type=float, default=50.0)
     parser.add_argument("-T", "--Temperature", type=float, default=140.0)
     parser.add_argument("-l", "--length", type=float, default=1000.0)
+    parser.add_argument(
+        "-sp", "--simple", action="store_true", help="Show only simple output"
+    ),
 
+    parser.add_argument(
+        "-csv", "--csv", action="store_true", help="Show only simple output as csv f,dP"
+    ),
     parser.add_argument(
         "-v",
         "--verbose",
@@ -260,7 +267,7 @@ def N_getMutualInductance(sizeX, sizeY, lenght, distance):
     # fromula by:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
     M = (mi0 * l / (2 * np.pi)) * (
-        np.log((l + np.sqrt(l ** 2 + d ** 2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
+        np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
     )
 
     # previous formula
@@ -385,7 +392,7 @@ def N_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
 
 
 # @njit
-@conditional_decorator(njit, use_njit)
+# @conditional_decorator(njit, use_njit)
 def N_arraySlicer(inputArray, subDivisions=2):
     """
     This function increase the resolution of the cross section array
@@ -411,9 +418,10 @@ def N_getComplexModule(x):
 
 # Doing the main work here.
 if __name__ == "__main__":
-
     config = getArgs()
     verbose = config["verbose"]
+    simple = config["simple"]
+    csv = config["csv"]
 
     myLog()
     myLog("Starting operations...")
@@ -623,7 +631,7 @@ if __name__ == "__main__":
     )
 
     # This is the total power losses vector
-    powerLossesVector = resistanceVector * resultsCurrentVector ** 2
+    powerLossesVector = resistanceVector * resultsCurrentVector**2
     # This are the total power losses
     powerLosses = np.sum(powerLossesVector)
 
@@ -635,12 +643,17 @@ if __name__ == "__main__":
     powPhC = np.sum(powerLossesVector[elementsPhaseA + elementsPhaseB :])
 
     # Results of power losses
-    print()
-    print("------------------------------------------------------")
-    print("Results of power losses")
-    print(f"\tgeometry: {config['geometry']}")
-    print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm]")
-    print("------------------------------------------------------")
-    print(f"Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
-    print(f"{powerLosses:.2f}\t| {powPhA:.2f} \t| {powPhB:.2f} \t| {powPhC:.2f}")
-    print("------------------------------------------------------")
+    if not simple and not csv:
+        print()
+        print("------------------------------------------------------")
+        print("Results of power losses")
+        print(f"\tgeometry: {config['geometry']}")
+        print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm]")
+        print("------------------------------------------------------")
+        print(f"Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
+        print(f"{powerLosses:.2f}\t| {powPhA:.2f} \t| {powPhB:.2f} \t| {powPhC:.2f}")
+        print("------------------------------------------------------")
+    elif not csv:
+        print(f"{f}[Hz] \t {powerLosses:.2f} [W]")
+    else:
+        print(f"{f},{powerLosses:.2f}")

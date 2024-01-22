@@ -120,6 +120,10 @@ def importTheData(filename):
 
     dXmm = dYmm = min(img_w / pixels_x, img_h / pixels_y)
 
+    print(f"Imported image: {filename}")
+    print(f"Image size: {pixels_x} by {pixels_y} pixels")
+    print(f"Cell size dx: {dXmm}mm dy: {dYmm}mm")
+
     XSecArray = cli.getCSD(array_img)
 
     if np.sum(XSecArray) == 0:
@@ -127,6 +131,10 @@ def importTheData(filename):
     else:
         XSecArray = cli.trimEmpty(XSecArray)
         XSecArray, dXmm, dYmm, _ = cli.simplify(XSecArray, dXmm, dYmm, maxsize=500)
+        XSecArray = cli.trimEmpty(XSecArray)
+
+        myEntryDx.delete(0, END)
+        myEntryDx.insert(END, str(dXmm))
 
         setParameters()
         printTheArray(XSecArray, canvas=w)
@@ -710,7 +718,7 @@ def showResults():
             + "[$^o$C]\n Power Losses {0[0]:.2f}[W] \n phA: {0[1]:.2f} phB: {0[2]:.2f} phC: {0[3]:.2f}".format(
                 powerLosses
             ),
-            **title_font
+            **title_font,
         )
 
         plt.xlabel("size [mm]", **axis_font)

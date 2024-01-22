@@ -49,8 +49,17 @@ def getCSD(array_img):
 
             rgb = np.array((r, g, b))
 
-            if 25 < rgb.sum() < 3 * 255:
-                result = 1 + np.where(rgb == np.amax(rgb))[0][0]
+            av_color = (r + g + b) / 3
+            if r > 1.5 * g and r > 1.5 * b and r > av_color:
+                result = 1
+            elif g > 1.5 * r and g > 1.5 * b and g > av_color:
+                result = 2
+            elif b > 1.5 * r and b > 1.5 * g and b > av_color:
+                result = 3
+
+            # if 25 < rgb.sum() < 3 * 255:
+
+            # result = 1 + np.where(rgb == np.amax(rgb))[0][0]
             XSecArray[x, y] = result
 
     return XSecArray
@@ -84,13 +93,13 @@ def trimEmpty(XSecArray):
             break
 
     new_size = 3 + max(size_x - crop_left - crop_right, size_y - crop_top - crop_btm)
-    # myLog(f"Size after cropping: {new_size}x{new_size}")
-    # myLog(f"Cropping: top {crop_top}\t btm {crop_btm}")
-    # myLog(f"Cropping: lft {crop_left}\t rgt {crop_right}")
+    print(f"Size after cropping: {new_size}x{new_size}")
+    print(f"Cropping: top {crop_top}\t btm {crop_btm}")
+    print(f"Cropping: lft {crop_left}\t rgt {crop_right}")
 
     crop_XSecArray = np.zeros((new_size, new_size))
     crop_XSecArray[
-        1 : 1 + size_y - crop_top - crop_btm, 1 : 1 + size_x - crop_left - crop_right
+        0 : 0 + size_y - crop_top - crop_btm, 0 : 0 + size_x - crop_left - crop_right
     ] = XSecArray[crop_top:-crop_btm, crop_left:-crop_right]
 
     return crop_XSecArray

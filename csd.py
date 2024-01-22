@@ -12,6 +12,7 @@ import time
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
 from csdlib import csdgui as gui
+from csdlib import csdcli as cli
 
 
 def showXsecArray(event):
@@ -64,6 +65,28 @@ def loadArrayFromFile():
             loadTheData(filename)
 
 
+def importArrayFromPicture():
+    """
+    This function triggers the importing data from a picture process
+    """
+    filename = filedialog.askopenfilename(
+        filetypes=[("Pictures", "*.jpg *.jpeg *.JPG *.PNG *.png")]
+    )
+    filename = os.path.normpath(filename)
+
+    if (
+        os.path.isfile(filename) and np.sum(XSecArray) != 0
+    ):  # Test if there is anything draw on the array
+        q = messagebox.askquestion(
+            "Delete", "This will delete current shape. Are You Sure?", icon="warning"
+        )
+        if q == "yes":
+            importTheData(filename)
+    else:
+        if os.path.isfile(filename):
+            importTheData(filename)
+
+
 def loadTheData(filename):
     """
     This is sub function to load data
@@ -82,8 +105,34 @@ def loadTheData(filename):
     del S
 
 
-def zoomInArray(inputArray, zoomSize=2, startX=0, startY=0):
+def importTheData(filename):
+    """
+    This function is to import the picture as a geometry data
+    """
+    global XSecArray, dXmm, dYmm
 
+    img_w = img_h = 1000
+    config = {"image": filename, "usepil": False, "show": True}
+    array_img = cli.loadImageFromFile(config)
+
+    pixels_x = array_img.shape[0]
+    pixels_y = array_img.shape[1]
+
+    dXmm = dYmm = min(img_w / pixels_x, img_h / pixels_y)
+
+    XSecArray = cli.getCSD(array_img)
+
+    if np.sum(XSecArray) == 0:
+        print("No cross section data found. No output generated.")
+    else:
+        XSecArray = cli.trimEmpty(XSecArray)
+        XSecArray, dXmm, dYmm, _ = cli.simplify(XSecArray, dXmm, dYmm, maxsize=500)
+
+        setParameters()
+        printTheArray(XSecArray, canvas=w)
+
+
+def zoomInArray(inputArray, zoomSize=2, startX=0, startY=0):
     oryginalX = inputArray.shape[0]
     oryginalY = inputArray.shape[1]
 
@@ -258,7 +307,6 @@ def simplifyArray():
     global XSecArray, dXmm, dYmm, selectionArray
 
     if dXmm < 30 and dYmm < 30:
-
         XSecArray = XSecArray[::2, ::2]
 
         dXmm = dXmm * 2
@@ -334,7 +382,6 @@ def showMeZ3f(*arg):
 
 
 def showReplacer(*arg):
-
     global XSecArray
 
     # TODO: New window phase switcher based on below
@@ -378,7 +425,6 @@ def showMeGeom(*arg):
         N = 0
 
     if dX != 0 or dY != 0 and N >= 1:
-
         XSecArray = csd.n_cloneGeometry(dX, dY, N, XSecArray)
         print(XSecArray.shape)
         printTheArray(XSecArray, canvas=w)
@@ -568,7 +614,6 @@ def vectorizeTheArray(*arg):
 
 
 def drawGeometryArray(theArrayToDisplay):
-
     global figGeom, geomax, geomim
 
     title_font = {"size": "11", "color": "black", "weight": "normal"}
@@ -612,12 +657,10 @@ def drawGeometryArray(theArrayToDisplay):
 
 
 def showResults():
-
     title_font = {"size": "11", "color": "black", "weight": "normal"}
     axis_font = {"size": "10"}
 
     if np.sum(resultsArray) != 0:
-
         # Checking the area in array that is used by geometry to limit the display
         min_row = int(np.min(elementsVector[:, 0]))
         max_row = int(np.max(elementsVector[:, 0]) + 1)
@@ -819,10 +862,8 @@ def printTheArray(dataArray, canvas):
 
     for Row in range(elementsInY):
         for Col in range(elementsInX):
-
             theNumber = int(dataArray[Row][Col])
             if theNumber in [1, 2, 3]:
-
                 fillColor = colorList[theNumber - 1]
 
                 canvasElements.append(
@@ -972,7 +1013,6 @@ def setUpPoint(event, Set, dataArray, canvas):
         and event.x > startX
         and event.y > startY
     ):
-
         Col = int((event.x - startX) / dXY)
         Row = int((event.y - startY) / dXY)
 
@@ -1103,7 +1143,6 @@ def endSelection(event):
     global inSelectMode, selectStartPoint, selectEndPoint, selectionMaskArray, selectionArray
 
     if inSelectMode and selectEndPoint is not None and selectStartPoint is not None:
-
         inSelectMode = False
 
         R1 = min(selectEndPoint[0], selectStartPoint[0])
@@ -1142,7 +1181,6 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
     global selectionArray, XSecArray
 
     if selectionArray is not None and len(selectionArray) and not inSelectMode:
-
         pasteRows = selectionArray.shape[0]
         pasteCols = selectionArray.shape[1]
 
@@ -1249,6 +1287,8 @@ file_menu = Menu(menu_bar)
 file_menu.add_command(label="New geometry", command=clearArrayAndDisplay)
 file_menu.add_separator()
 file_menu.add_command(label="Load from file", command=loadArrayFromFile)
+file_menu.add_command(label="Import from picture", command=importArrayFromPicture)
+file_menu.add_separator()
 file_menu.add_command(label="Save to file", command=saveArrayToFile)
 menu_bar.add_cascade(label="File", menu=file_menu)
 

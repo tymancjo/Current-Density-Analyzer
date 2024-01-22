@@ -127,6 +127,7 @@ class currentDensityWindowPro:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -134,7 +135,9 @@ class currentDensityWindowPro:
         self.CuGamma = 391.1  # [W/mK]
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.pack(padx=10, pady=10)
+        self.frame.grid(row=0, column=0,ipadx=20,ipady=20)
+        self.bframe = tk.Frame(self.master)
+        self.bframe.grid(row=0, column=2, ipadx=20,ipady=20)
 
         self.lab_I = tk.Label(self.frame, text="Current RMS [A]")
         self.lab_I.pack()
@@ -213,8 +216,6 @@ class currentDensityWindowPro:
         )
         self.rButton.pack()
 
-        self.bframe = tk.Frame(self.master)
-        self.bframe.pack(padx=10, pady=10)
 
         #  reading the above entered stuff to variables
 
@@ -232,8 +233,13 @@ class currentDensityWindowPro:
             [gx.split(";") for gx in (self.Gmx_txt.get().split("|"))], dtype=float
         )
 
-        self.desc_I = tk.Label(self.bframe, text="Current: {} [A]".format(self.I))
-        self.desc_I.pack()
+        self.desc_Ia = tk.Label(self.bframe, text=f"Ia: {self.I[0]} [A]")
+        self.desc_Ia.pack()
+        self.desc_Ib = tk.Label(self.bframe, text=f"Ib: {self.I[2]} [A]")
+        self.desc_Ib.pack()
+        self.desc_Ic = tk.Label(self.bframe, text=f"Ic: {self.I[4]} [A]")
+        self.desc_Ic.pack()
+
         self.desc_f = tk.Label(
             self.bframe, text="Frequency: {:.2f} [Hz]".format(self.f)
         )
@@ -273,23 +279,20 @@ class currentDensityWindowPro:
         )
         self.desc_lenght.pack()
 
-        self.cframe = tk.Frame(self.master)
-        self.cframe.pack(padx=10, pady=10)
-
-        self.tx1 = tk.Text(self.cframe, height=10, width=45)
+        self.tx1 = tk.Text(self.bframe, height=10, width=45)
         self.tx1.pack()
 
         self.openButton = tk.Button(
-            self.cframe, text="Calculate!", command=self.powerAnalysis
+            self.bframe, text="Calculate!", command=self.powerAnalysis
         )
         self.openButton.pack()
         self.resultsButton = tk.Button(
-            self.cframe, text="Recalulate Temp Rises", command=self.calcTempRise
+            self.bframe, text="Recalulate Temp Rises", command=self.calcTempRise
         )
         self.resultsButton.pack()
 
         self.resultsButton = tk.Button(
-            self.cframe, text="Show Results", command=self.showResults
+            self.bframe, text="Show Results", command=self.showResults
         )
         self.resultsButton.pack()
 
@@ -316,7 +319,10 @@ class currentDensityWindowPro:
         self.console("Thermal Conductance Coef. Matrix")
         self.console(self.Gmx)
 
-        self.desc_I.config(text="Current: {} [A]".format(self.I))
+        self.desc_Ia.config(text=f"Ia: {self.I[0]} [A] at {self.I[1]} deg")
+        self.desc_Ib.config(text=f"Ib: {self.I[2]} [A] at {self.I[3]} deg")
+        self.desc_Ic.config(text=f"Ic: {self.I[4]} [A] at {self.I[5]} deg")
+
         self.desc_f.config(text="Frequency: {:.2f} [Hz]".format(self.f))
         self.desc_t.config(text="Temperature: {:.2f} [degC]".format(self.t))
 

@@ -4,7 +4,7 @@ import sys
 import argparse
 import os.path
 
-from numba import jit, njit
+# from numba import jit, njit
 
 
 from csdlib import csdlib as csd
@@ -37,7 +37,6 @@ def myLog(s: str = "", *args, **kwargs):
 
 
 def getArgs():
-
     # 1 handling the in line parameters
     parser = argparse.ArgumentParser(
         description="""\
@@ -136,7 +135,6 @@ def getCSD(array_img):
 # @njit
 @conditional_decorator(njit, use_njit)
 def trimEmpty(XSecArray):
-
     size_y, size_x = XSecArray.shape
     crop_top = crop_btm = 0
     crop_left = crop_right = 0
@@ -175,7 +173,6 @@ def trimEmpty(XSecArray):
 
 
 def loadImageFromFile(config):
-
     source_img = config["image"]
     w = config["width"]
     h = config["height"]
@@ -232,7 +229,6 @@ def simplify(XSecArray, dXmm, dYmm, maxsize):
     splits = 1
     for _ in range(10):
         if dXmm < 1 or dYmm < 1 or max(XSecArray.shape) > maxsize:
-
             XSecArray = XSecArray[::2, ::2]
 
             dXmm = dXmm * 2

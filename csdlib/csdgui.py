@@ -1169,13 +1169,22 @@ class zWindow:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+        self.getMaterials()
+        print(self.Materials)
+
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
 
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.pack(padx=10, pady=10)
+        self.frame.grid(row=0,column=0)
+
+        self.bframe = tk.Frame(self.master)
+        self.bframe.grid(row=0, column=1)
+
+        self.cframe = tk.Frame(self.master)
+        self.cframe.grid(row=1,column=1)
 
         self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
         self.lab_Freq.pack()
@@ -1194,8 +1203,6 @@ class zWindow:
         )
         self.rButton.pack()
 
-        self.bframe = tk.Frame(self.master)
-        self.bframe.pack(padx=10, pady=10)
 
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
@@ -1209,8 +1216,6 @@ class zWindow:
         )
         self.desc_t.pack()
 
-        self.cframe = tk.Frame(self.master)
-        self.cframe.pack(padx=10, pady=10)
 
         self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
@@ -1219,6 +1224,15 @@ class zWindow:
             self.cframe, text="Calculate!", command=self.powerAnalysis
         )
         self.openButton.pack()
+
+        if self.Materials:
+            self.material_buttons =[]
+            for M in self.Materials:
+                self.material_buttons.append(tk.Button(self.frame, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons[-1].pack()
+
+            self.M = self.Materials[0]
+
 
     def readSettings(self):
         self.f = float(self.Freq_txt.get())
@@ -1264,6 +1278,17 @@ class zWindow:
             else:
                 self.elementsVector = np.concatenate((self.vPhA, self.vPhC), axis=0)
 
+    def getMaterials(self):
+            self.Materials = False
+            list = csdos.read_file_to_list("materials.txt")[1:]
+            print(list)
+            if list:
+                self.Materials = csdos.get_material_from_list(list)
+
+    def setMaterial(self,M):
+        self.M = M
+        self.console(f"Set to use: {M.name} as material")
+
     def console(self, string):
         self.tx1.insert(tk.END, str(string))
         self.tx1.insert(tk.END, "\n")
@@ -1285,6 +1310,10 @@ class zWindow:
                 dXmm=self.dXmm,
                 dYmm=self.dYmm,
                 temperature=self.t,
+                # lenght=self.lenght,
+                sigma20C=self.M.sigma,
+                temCoRe=self.M.alpha,
+
             )
         )
 
@@ -1309,6 +1338,9 @@ class zWindow:
                 dXmm=self.dXmm,
                 dYmm=self.dYmm,
                 temperature=self.t,
+                # lenght=self.lenght,
+                sigma20C=self.M.sigma,
+                temCoRe=self.M.alpha,
             )
         )
 
@@ -1332,6 +1364,9 @@ class zWindow:
                 dXmm=self.dXmm,
                 dYmm=self.dYmm,
                 temperature=self.t,
+                # lenght=self.lenght,
+                sigma20C=self.M.sigma,
+                temCoRe=self.M.alpha,
             )
         )
 
@@ -1371,13 +1406,23 @@ class zWindow3f:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+
+        self.getMaterials()
+        print(self.Materials)
+
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
 
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.pack(padx=10, pady=10)
+        self.frame.grid(row=0,column=0)
+
+        self.bframe = tk.Frame(self.master)
+        self.bframe.grid(row=0, column=1)
+
+        self.cframe = tk.Frame(self.master)
+        self.cframe.grid(row=1,column=1)
 
         self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
         self.lab_Freq.pack()
@@ -1396,8 +1441,6 @@ class zWindow3f:
         )
         self.rButton.pack()
 
-        self.bframe = tk.Frame(self.master)
-        self.bframe.pack(padx=10, pady=10)
 
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
@@ -1411,8 +1454,6 @@ class zWindow3f:
         )
         self.desc_t.pack()
 
-        self.cframe = tk.Frame(self.master)
-        self.cframe.pack(padx=10, pady=10)
 
         self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
@@ -1421,6 +1462,14 @@ class zWindow3f:
             self.cframe, text="Calculate!", command=self.powerAnalysis
         )
         self.openButton.pack()
+
+        if self.Materials:
+            self.material_buttons =[]
+            for M in self.Materials:
+                self.material_buttons.append(tk.Button(self.frame, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons[-1].pack()
+
+            self.M = self.Materials[0]
 
     def readSettings(self):
         self.f = float(self.Freq_txt.get())
@@ -1471,6 +1520,17 @@ class zWindow3f:
         self.tx1.insert(tk.END, "\n")
         self.tx1.see(tk.END)
 
+    def getMaterials(self):
+            self.Materials = False
+            list = csdos.read_file_to_list("materials.txt")[1:]
+            print(list)
+            if list:
+                self.Materials = csdos.get_material_from_list(list)
+
+    def setMaterial(self,M):
+        self.M = M
+        self.console(f"Set to use: {M.name} as material")
+
     def powerAnalysis(self):
         self.readSettings()
 
@@ -1481,6 +1541,9 @@ class zWindow3f:
                 dXmm=self.dXmm,
                 dYmm=self.dYmm,
                 temperature=self.t,
+                # lenght=self.lenght,
+                sigma20C=self.M.sigma,
+                temCoRe=self.M.alpha,
             )
         )
 

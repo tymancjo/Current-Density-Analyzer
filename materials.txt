@@ -1,0 +1,3 @@
+name;   conductivity [S/m]; Alpha [1/K]; density [kg/m3]; cp [J/kg.K]
+copper; 56e6; 3.9e-3; 8960;385
+FakeAl; 31e6; 4.4e-3; 4560;885

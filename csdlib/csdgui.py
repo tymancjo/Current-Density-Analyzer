@@ -1,13 +1,14 @@
 """
 This is a tkinter gui lib for CSD library and app
 """
-
+from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib
 import math
 import tkinter as tk
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
+from csdlib import csdos
 import numpy as np
 
 # matplotlib.use('TKAgg')
@@ -128,6 +129,9 @@ class currentDensityWindowPro:
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
 
+        self.getMaterials()
+        print(self.Materials)
+
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
@@ -135,9 +139,12 @@ class currentDensityWindowPro:
         self.CuGamma = 391.1  # [W/mK]
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0, column=0,ipadx=20,ipady=20)
+        self.frame.grid(row=0, column=0, ipadx=20, ipady=20)
         self.bframe = tk.Frame(self.master)
-        self.bframe.grid(row=0, column=2, ipadx=20,ipady=20)
+        self.bframe.grid(row=0, column=2, ipadx=20, ipady=20)
+
+        self.cframe = tk.Frame(self.master)
+        self.cframe.grid(row=0, column=3, ipadx=20, ipady=20)
 
         self.lab_I = tk.Label(self.frame, text="Current RMS [A]")
         self.lab_I.pack()
@@ -215,7 +222,6 @@ class currentDensityWindowPro:
             self.frame, text="Set Parameters", command=self.readSettings
         )
         self.rButton.pack()
-
 
         #  reading the above entered stuff to variables
 
@@ -298,7 +304,32 @@ class currentDensityWindowPro:
 
         self.isSolved = False
 
+        if self.Materials:
+            self.material_buttons =[]
+            for M in self.Materials:
+                self.material_buttons.append(tk.Button(self.cframe, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons[-1].pack()
+                
+
+
         self.readSettings()
+
+    def setMaterial(self,M):
+
+        self.Sigma_txt.delete(0, tk.END)
+        self.Sigma_txt.insert(0, M.sigma)
+
+        self.temCoRe_txt.delete(0, tk.END)
+        self.temCoRe_txt.insert(0, M.alpha)
+
+        self.ro_txt.delete(0, tk.END)
+        self.ro_txt.insert(0,M.ro)
+        
+        self.cp_txt.delete(0, tk.END)
+        self.cp_txt.insert(0,M.cp)
+
+        self.readSettings()
+
 
     def readSettings(self):
         self.I = self.Irms_txt.get().split(";")  # reading I as array
@@ -402,6 +433,13 @@ class currentDensityWindowPro:
         self.tx1.insert(tk.END, str(string))
         self.tx1.insert(tk.END, "\n")
         self.tx1.see(tk.END)
+
+    def getMaterials(self):
+        self.Materials = False
+        list = csdos.read_file_to_list("materials.txt")[1:]
+        print(list)
+        if list:
+            self.Materials = csdos.get_material_from_list(list)
 
     def powerAnalysis(self):
         self.readSettings()

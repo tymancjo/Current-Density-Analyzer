@@ -330,6 +330,22 @@ def simplifyArray():
     myEntryDx.insert(END, str(dXmm))
     setParameters()
 
+def extendArray():
+    """This function modifies the original array of geometry 
+    and extends it by adding a empty space around the existing range
+    it is adding extension (10) rows/cols each side"""
+    global XSecArray
+
+    rows = XSecArray.shape[0]
+    cols = XSecArray.shape[1]
+
+    extension = 10
+
+    extendArray = np.zeros((rows+2*extension,cols+2*extension))
+    extendArray[extension:extension+rows,extension:extension+cols] = XSecArray
+    XSecArray = extendArray
+    zoomOut()
+
 
 def showMeForces(*arg):
     """
@@ -1313,6 +1329,8 @@ geometry_menu.add_command(label="Swap", command=showReplacer)
 geometry_menu.add_separator()
 geometry_menu.add_command(label="Subdivide(+)", command=subdivideArray)
 geometry_menu.add_command(label="Simplify(-)", command=simplifyArray)
+geometry_menu.add_separator()
+geometry_menu.add_command(label="Extend Canvas", command=extendArray)
 menu_bar.add_cascade(label="Geometry", menu=geometry_menu)
 
 view_menu = Menu(menu_bar)

@@ -978,6 +978,7 @@ class currentDensityWindowPro:
     def showResults(self):
         title_font = {"size": "11", "color": "black", "weight": "normal"}
         axis_font = {"size": "10"}
+        show_bars_no = False
 
         if np.sum(self.resultsArray) != 0:
             # Cecking the area in array that is used by geometry to limit the display
@@ -1026,13 +1027,14 @@ class currentDensityWindowPro:
             # Putting the detected bars numvers on plot to reffer the console data
             # And doing calculation for each bar
 
-            for i, bar in enumerate(self.bars):
-                x, y = csd.n_getCenter(bar)
-                x -= min_col * self.dXmm
-                y -= min_row * self.dYmm
+            if show_bars_no:
+                for i, bar in enumerate(self.bars):
+                    x, y = csd.n_getCenter(bar)
+                    x -= min_col * self.dXmm
+                    y -= min_row * self.dYmm
 
-                ax.text(x, y, "[{}]".format(i), horizontalalignment="center")
-                # self.console('bar {0:02d}: {1:.01f}[K]'.format(i, self.barsData[i][6]))
+                    ax.text(x, y, "[{}]".format(i), horizontalalignment="center")
+                    # self.console('bar {0:02d}: {1:.01f}[K]'.format(i, self.barsData[i][6]))
 
             # *** end of the per bar analysis ***
 

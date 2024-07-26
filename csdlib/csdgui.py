@@ -1519,6 +1519,9 @@ class zWindow3f:
         self.tx1.insert(tk.END, str(string))
         self.tx1.insert(tk.END, "\n")
         self.tx1.see(tk.END)
+        
+        
+
 
     def getMaterials(self):
             self.Materials = False

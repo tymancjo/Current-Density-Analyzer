@@ -330,8 +330,9 @@ def simplifyArray():
     myEntryDx.insert(END, str(dXmm))
     setParameters()
 
+
 def extendArray():
-    """This function modifies the original array of geometry 
+    """This function modifies the original array of geometry
     and extends it by adding a empty space around the existing range
     it is adding extension (10) rows/cols each side"""
     global XSecArray
@@ -341,8 +342,8 @@ def extendArray():
 
     extension = 10
 
-    extendArray = np.zeros((rows+2*extension,cols+2*extension))
-    extendArray[extension:extension+rows,extension:extension+cols] = XSecArray
+    extendArray = np.zeros((rows + 2 * extension, cols + 2 * extension))
+    extendArray[extension : extension + rows, extension : extension + cols] = XSecArray
     XSecArray = extendArray
     zoomOut()
 
@@ -462,7 +463,14 @@ def vectorizeTheArray(*arg):
 
     and for te moment do the all math for calculations.
     """
-    global elementsVector, resultsArray, resultsCurrentVector, frequency, powerLosses, resultsArrayPower, powerLossesVector
+    global \
+        elementsVector, \
+        resultsArray, \
+        resultsCurrentVector, \
+        frequency, \
+        powerLosses, \
+        resultsArrayPower, \
+        powerLossesVector
 
     # Read the setup params from GUI
     setParameters()
@@ -784,7 +792,23 @@ def mainSetup(startSize=3):
     """
     This function set up (or reset) all the main elements
     """
-    global temperature, canvas_width, canvas_height, elementsInX, elementsInY, dXmm, dYmm, dX, dY, XSecArray, frequency, resultsArray, curentRMS, globalX, globalY, globalZoom
+    global \
+        temperature, \
+        canvas_width, \
+        canvas_height, \
+        elementsInX, \
+        elementsInY, \
+        dXmm, \
+        dYmm, \
+        dX, \
+        dY, \
+        XSecArray, \
+        frequency, \
+        resultsArray, \
+        curentRMS, \
+        globalX, \
+        globalY, \
+        globalZoom
 
     globalX = 0
     globalY = 0
@@ -808,7 +832,15 @@ def mainSetup(startSize=3):
 
 
 def setParameters(*arg):
-    global temperature, frequency, AnalysisFreq, curentRMS, dXmm, dYmm, analysisDX, analysisDY
+    global \
+        temperature, \
+        frequency, \
+        AnalysisFreq, \
+        curentRMS, \
+        dXmm, \
+        dYmm, \
+        analysisDX, \
+        analysisDY
 
     dXmm = float(myEntryDx.get())
     dYmm = dXmm
@@ -979,6 +1011,10 @@ def setPoint(event):
         pasteSelectionAtPoint(
             event, zoomInArray(XSecArray, globalZoom, globalX, globalY), w
         )
+    # elif 20 < actualPhase < 24:
+    #     # we are in circle mode
+        
+    #     placeCircle(event,zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
 
     #  Plotting on CAD view if exist
     try:
@@ -1164,7 +1200,12 @@ def endSelection(event):
     """
     procedutr to end the selection process
     """
-    global inSelectMode, selectStartPoint, selectEndPoint, selectionMaskArray, selectionArray
+    global \
+        inSelectMode, \
+        selectStartPoint, \
+        selectEndPoint, \
+        selectionMaskArray, \
+        selectionArray
 
     if inSelectMode and selectEndPoint is not None and selectStartPoint is not None:
         inSelectMode = False
@@ -1267,8 +1308,141 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
             # if this is active we drop the clipboard data at paste.
             # selectionArray = None
 
+# def setupCircle():
+#     actualPhase = phase.get()
+#     if 0 < actualPhase < 4:
+#         phase.set(actualPhase+20)
+
+
+# def placeCircle(event,dataArray, canvas):
+#     """This procedure is to draw a circular shape on the canvas"""
+
+#     # global XSecArray
+
+#     elementsInY = dataArray.shape[0]
+#     elementsInX = dataArray.shape[1]
+
+#     canvasHeight = canvas.winfo_height()
+#     canvasWidth = canvas.winfo_width()
+
+#     dX = canvasWidth / elementsInX
+#     dY = canvasHeight / elementsInY
+
+#     dXY = min(dX, dY)
+
+#     startX = (canvasWidth - dXY * elementsInX) / 2
+#     startY = (canvasHeight - dXY * elementsInY) / 2
+
+#     if (
+#         event.x < canvasWidth - startX
+#         and event.y < canvasHeight - startY
+#         and event.x > startX
+#         and event.y > startY
+#     ):
+#         Col = int((event.x - startX) / dXY)
+#         Row = int((event.y - startY) / dXY)
+
+#         # middle position of the clicked cell
+#         Rmm = (globalY + Row)*dXmm+dXmm/2
+#         Cmm = (globalX + Col)*dXmm+dXmm/2
+
+#         print(f"Cirlce position: {Cmm} {Rmm}")
+
+#         phaseToSet = phase.get() - 20
+#         circleR = 50 #[mm] diameter of the circle. 
+
+#         addCircle((Cmm,Rmm),circleR,phaseToSet)
+
+#         redraw()
+
+
+### General geometry generators ###
+def addCircle(center,D1,Set, D2=0,Set2=0):
+    """Generalized formula to add circle at given position (x,y) [mm]
+    of a two diameters external D1 and internal D2 (if a donat is needed) [mm]"""
+
+    # this works on global canvas array
+    global XSecArray
+    
+    x0, y0 = center
+    r1sq = (D1/2)**2
+    r2sq = (D2/2)**2
+    
+
+    elementsInY = XSecArray.shape[0]
+    elementsInX = XSecArray.shape[1]
+        
+    for x in range(elementsInX):
+        for y in range(elementsInY):
+            xmm = x*dXmm+dXmm/2
+            ymm = y*dXmm+dXmm/2
+            distSq = (xmm - x0)**2 + (ymm-y0)**2 
+            if  distSq < r2sq :
+                XSecArray[y,x] = Set2
+            elif distSq <= r1sq:
+                XSecArray[y,x] = Set
+
+    
+def addRect(start,W,H,Set):
+    """Generalized formula to add rectangle at given position 
+    start - left top corner(x,y)[mm]
+    width, height[mm]"""
+
+    # this works on global canvas array
+    global XSecArray
+    
+    x0, y0 = start
+    xE = x0 + W
+    yE = y0 + H
+
+    elementsInY = XSecArray.shape[0]
+    elementsInX = XSecArray.shape[1]
+        
+    for x in range(elementsInX):
+        for y in range(elementsInY):
+            xmm = x*dXmm+dXmm/2
+            ymm = y*dXmm+dXmm/2
+
+            if (x0 <= xmm <= xE) and (y0 <= ymm <= yE) :
+                XSecArray[y,x] = Set
+
+
+def InterCode():
+    """This is internal sudo-code inerpreter for easier geometry creation
+    Available commands:
+    C(x,y,D1,Ph1) - circle at x,y with diameter D1, set as phase [mm]
+    C(x,y,D1,Ph1,D2,Ph2) - torus at x, y with up to D2 as Ph2 and above to D1 as ph1
+    R(x,y,W,H) - rectangle x,y left top, W width, H height - [mm]
+    """
+    setOfCommands = ['c','r']
+    setOfActions = [addCircle, addRect]
+
+    codeLines = text_input.get("1.0", END).split("\n")
+
+    for line in codeLines:
+        if len(line)>5:
+            command = line[0].lower()
+            if command in setOfCommands:
+                print(command)
+                ar = line[2:-1].split(',')
+                print(ar)
+                ar = [float(a) for a in ar]
+
+                if command in ["c"]:
+                    if len(ar) == 4:
+                        addCircle((ar[0],ar[1]),ar[2],ar[3])
+                    elif len(ar) == 6:
+                        addCircle((ar[0],ar[1]),ar[2],ar[3],ar[4],ar[5])
+                elif command in ["r"]:
+                    if len(ar) == 5:
+                        addRect((ar[0],ar[1]),ar[2],ar[3],ar[4])
+                else:
+                    print("Unrecognized set od data")
+    redraw()
+                
 
 ######## End of functions definition ############
+
 
 
 master = Tk()
@@ -1290,7 +1464,7 @@ master.bind("<Configure>", redraw)
 
 w = Canvas(master, width=canvas_width, height=canvas_height)
 w.configure(background="gray69")
-w.grid(row=1, column=1, columnspan=5, rowspan=12, sticky=W + E + N + S, padx=1, pady=1)
+w.grid(row=1, column=1, columnspan=5, rowspan=20, sticky=W + E + N + S, padx=1, pady=1)
 
 canvasElements = []
 shadowBox = None
@@ -1584,6 +1758,21 @@ myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
 
+# advanced geometry triggers
+# geom_frame = LabelFrame(master, text="Geometry")
+# geom_frame.grid(row=8, column=8, rowspan=5, columnspan=3, sticky="N",padx=5, pady=5)
+# btn = Button(geom_frame, text="Circle",  command=setupCircle)
+# btn.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
+
+code_frame = LabelFrame(master, text="iner-code")
+code_frame.grid(row=11, column=8, rowspan=5, columnspan=5, sticky="N",padx=5, pady=5)
+
+text_input = Text(code_frame, height=7, width=25)
+text_input.pack(padx=10, pady=10)
+btn = Button(code_frame, text="Run",command=InterCode)
+btn.pack()
+
+
 # Geometry navigation frame
 zoom_in_icon = PhotoImage(file="csdicons/zoomin.png")
 zoom_out_icon = PhotoImage(file="csdicons/zoomout.png")
@@ -1593,7 +1782,7 @@ left_icon = PhotoImage(file="csdicons/left.png")
 right_icon = PhotoImage(file="csdicons/right.png")
 
 navi_frame = LabelFrame(master, text="View navi")
-navi_frame.grid(row=9, column=8, rowspan=4, columnspan=3, sticky="S")
+navi_frame.grid(row=13, column=8, columnspan=3, sticky="S")
 
 print_button_zoom = Button(
     navi_frame, image=zoom_in_icon, width=32, height=32, relief=FLAT, command=zoomIn
@@ -1603,6 +1792,7 @@ print_button_zoom = Button(
     navi_frame, image=zoom_out_icon, width=32, height=32, relief=FLAT, command=zoomOut
 )
 print_button_zoom.grid(row=0, column=2, padx=5, pady=5, columnspan=1)
+
 
 # first cross navi
 print_button_zoom = Button(
@@ -1666,7 +1856,7 @@ w.bind("<Up>", zoomU)
 w.bind("<Down>", zoomD)
 
 message = Label(master, text="use: Left Mouse Button to Set conductor, Right to reset")
-message.grid(row=13, column=1, columnspan=3)
+message.grid(row=21, column=1, columnspan=3)
 
 # rescaling behaviour
 master.grid_rowconfigure(0, weight=0)

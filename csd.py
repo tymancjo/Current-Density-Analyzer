@@ -1357,54 +1357,69 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
 
 
 ### General geometry generators ###
-def addCircle(center,D1,Set, D2=0,Set2=0):
+def addCircle(x0,y0,D1,Set, D2=0,Set2=0,draw=True,shift=(0,0)):
     """Generalized formula to add circle at given position (x,y) [mm]
     of a two diameters external D1 and internal D2 (if a donat is needed) [mm]"""
 
-    # this works on global canvas array
-    global XSecArray
-    
-    x0, y0 = center
-    r1sq = (D1/2)**2
-    r2sq = (D2/2)**2
-    
+    if draw:
+        # this works on global canvas array
+        global XSecArray
 
-    elementsInY = XSecArray.shape[0]
-    elementsInX = XSecArray.shape[1]
+        x0 = x0 - shift[0]
+        y0 = y0 - shift[1]
         
-    for x in range(elementsInX):
-        for y in range(elementsInY):
-            xmm = x*dXmm+dXmm/2
-            ymm = y*dXmm+dXmm/2
-            distSq = (xmm - x0)**2 + (ymm-y0)**2 
-            if  distSq < r2sq :
-                XSecArray[y,x] = Set2
-            elif distSq <= r1sq:
-                XSecArray[y,x] = Set
+        r1sq = (D1/2)**2
+        r2sq = (D2/2)**2
+
+        elementsInY = XSecArray.shape[0]
+        elementsInX = XSecArray.shape[1]
+            
+        for x in range(elementsInX):
+            for y in range(elementsInY):
+                xmm = x*dXmm+dXmm/2
+                ymm = y*dXmm+dXmm/2
+                distSq = (xmm - x0)**2 + (ymm-y0)**2 
+                if  distSq < r2sq :
+                    XSecArray[y,x] = Set2
+                elif distSq <= r1sq:
+                    XSecArray[y,x] = Set
+
+    x0 = x0 - D1/2
+    y0 = y0 - D1/2
+    xE = x0 + D1
+    yE = y0 + D1
+    return [x0,y0,xE,yE]
 
     
-def addRect(start,W,H,Set):
+def addRect(x0,y0,W,H,Set,draw=True, shift=(0,0)):
     """Generalized formula to add rectangle at given position 
     start - left top corner(x,y)[mm]
     width, height[mm]"""
 
-    # this works on global canvas array
-    global XSecArray
-    
-    x0, y0 = start
     xE = x0 + W
     yE = y0 + H
 
-    elementsInY = XSecArray.shape[0]
-    elementsInX = XSecArray.shape[1]
+    if draw:
+        # this works on global canvas array
+        global XSecArray
+        x0 = x0 - shift[0]
+        y0 = y0 - shift[1]
+        xE = x0 + W
+        yE = y0 + H
         
-    for x in range(elementsInX):
-        for y in range(elementsInY):
-            xmm = x*dXmm+dXmm/2
-            ymm = y*dXmm+dXmm/2
 
-            if (x0 <= xmm <= xE) and (y0 <= ymm <= yE) :
-                XSecArray[y,x] = Set
+        elementsInY = XSecArray.shape[0]
+        elementsInX = XSecArray.shape[1]
+            
+        for x in range(elementsInX):
+            for y in range(elementsInY):
+                xmm = x*dXmm+dXmm/2
+                ymm = y*dXmm+dXmm/2
+
+                if (x0 <= xmm <= xE) and (y0 <= ymm <= yE) :
+                    XSecArray[y,x] = Set
+
+    return [x0,y0,xE,yE]
 
 
 def InterCode():
@@ -1414,32 +1429,92 @@ def InterCode():
     C(x,y,D1,Ph1,D2,Ph2) - torus at x, y with up to D2 as Ph2 and above to D1 as ph1
     R(x,y,W,H) - rectangle x,y left top, W width, H height - [mm]
     """
-    setOfCommands = ['c','r']
-    setOfActions = [addCircle, addRect]
 
     codeLines = text_input.get("1.0", END).split("\n")
+    codeSteps = textToCode(codeLines)
 
-    for line in codeLines:
+    if codeSteps:
+        for step in codeSteps:
+            step[0](*step[1])
+
+    redraw()
+
+def textToCode(input_text):
+    """This is the function that will return the list 
+    of geometry execution code stps.
+    Code commands are in the form of dictionary"""
+
+    commands = {
+        'c': [addCircle,[4,6]],
+        'r': [addRect,[5]]
+    }
+
+    innerCodeSteps = []
+
+    for line in input_text:
         if len(line)>5:
             command = line[0].lower()
-            if command in setOfCommands:
-                print(command)
+            if command in commands:
                 ar = line[2:-1].split(',')
-                print(ar)
-                ar = [float(a) for a in ar]
+                if len(ar) in commands[command][1]:
+                    ar = [float(a) for a in ar]
+                    innerCodeSteps.append([commands[command][0],ar,command])
 
-                if command in ["c"]:
-                    if len(ar) == 4:
-                        addCircle((ar[0],ar[1]),ar[2],ar[3])
-                    elif len(ar) == 6:
-                        addCircle((ar[0],ar[1]),ar[2],ar[3],ar[4],ar[5])
-                elif command in ["r"]:
-                    if len(ar) == 5:
-                        addRect((ar[0],ar[1]),ar[2],ar[3],ar[4])
-                else:
-                    print("Unrecognized set od data")
+    return innerCodeSteps
+
+
+
+def getCanvas():
+    """This functoion is to determine the best parameters for the canvas
+    based on the given geometry steps defined by the inner code."""
+
+    codeLines = text_input.get("1.0", END).split("\n")
+    codeSteps = textToCode(codeLines)
+
+    X = []
+    Y = []
+
+    if codeSteps:
+        for step in codeSteps:
+            tmp = step[0](*step[1],draw=False)
+            
+            X.append(tmp[0])
+            X.append(tmp[2])
+            Y.append(tmp[1])
+            Y.append(tmp[3])
+
+        print(X)
+        print(Y)
+        print(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
+        size = (max(X)-min(X), max(Y)-min(Y))
+        print(size)
+
+        # I have no good idea how to figure out the best cell size
+        # so for now it's just some stuff..
+        for xd in [10,5,2.5,1]:
+            if ( size[0]% xd == 0 ) and (size[1]% xd == 0):
+                break
+        print(f"The dx: {xd}mm")
+
+        elements = int(max(size[0] / xd, size[1]/xd))
+        print(f"Canvas elements neede: {elements}")
+
+        global dXmm, dYmm, XSecArray
+        dXmm = dYmm = xd
+        XSecArray = np.zeros([elements,elements])
+
+        for step in codeSteps:
+            step[0](*step[1],shift=(min(X),min(Y)))
+
+    myEntryDx.delete(0, END)
+    myEntryDx.insert(END, str(dXmm))
     redraw()
-                
+
+
+    pass
+
+
+               
 
 ######## End of functions definition ############
 
@@ -1464,7 +1539,7 @@ master.bind("<Configure>", redraw)
 
 w = Canvas(master, width=canvas_width, height=canvas_height)
 w.configure(background="gray69")
-w.grid(row=1, column=1, columnspan=5, rowspan=20, sticky=W + E + N + S, padx=1, pady=1)
+w.grid(row=1, column=1, columnspan=5, rowspan=25, sticky=W + E + N + S, padx=1, pady=1)
 
 canvasElements = []
 shadowBox = None
@@ -1765,12 +1840,14 @@ myEntryDx.bind("<FocusOut>", setParameters)
 # btn.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
 
 code_frame = LabelFrame(master, text="iner-code")
-code_frame.grid(row=11, column=8, rowspan=5, columnspan=5, sticky="N",padx=5, pady=5)
+code_frame.grid(row=11, column=8, rowspan=10, columnspan=5, sticky="N",padx=5, pady=5)
 
 text_input = Text(code_frame, height=7, width=25)
-text_input.pack(padx=10, pady=10)
-btn = Button(code_frame, text="Run",command=InterCode)
-btn.pack()
+text_input.grid(row=1,column=1,rowspan=7,columnspan=3,padx=10, pady=10)
+btn = Button(code_frame, text="Add",command=InterCode)
+btn.grid(row=8,column=1)
+btn = Button(code_frame, text="New",command=getCanvas)
+btn.grid(row=8,column=3)
 
 
 # Geometry navigation frame
@@ -1782,7 +1859,7 @@ left_icon = PhotoImage(file="csdicons/left.png")
 right_icon = PhotoImage(file="csdicons/right.png")
 
 navi_frame = LabelFrame(master, text="View navi")
-navi_frame.grid(row=13, column=8, columnspan=3, sticky="S")
+navi_frame.grid(row=21, column=8, columnspan=3, sticky="S")
 
 print_button_zoom = Button(
     navi_frame, image=zoom_in_icon, width=32, height=32, relief=FLAT, command=zoomIn
@@ -1856,7 +1933,7 @@ w.bind("<Up>", zoomU)
 w.bind("<Down>", zoomD)
 
 message = Label(master, text="use: Left Mouse Button to Set conductor, Right to reset")
-message.grid(row=21, column=1, columnspan=3)
+message.grid(row=26, column=1, columnspan=3)
 
 # rescaling behaviour
 master.grid_rowconfigure(0, weight=0)

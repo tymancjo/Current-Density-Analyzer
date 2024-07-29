@@ -1474,9 +1474,12 @@ def getCanvas():
     X = []
     Y = []
 
+    circles = False
     if codeSteps:
         for step in codeSteps:
             tmp = step[0](*step[1],draw=False)
+            if step[0] is addCircle:
+                circles = True
             
             X.append(tmp[0])
             X.append(tmp[2])
@@ -1491,10 +1494,15 @@ def getCanvas():
 
         # I have no good idea how to figure out the best cell size
         # so for now it's just some stuff..
-        for xd in [10,5,2.5,1]:
+        if circles:
+            sizes = [4,2.5,2,1]
+        else:
+            sizes = [15,10,5,4,2.5,2,1]
+        for xd in sizes :
             if ( size[0]% xd == 0 ) and (size[1]% xd == 0):
                 break
         print(f"The dx: {xd}mm")
+        
 
         elements = int(max(size[0] / xd, size[1]/xd))
         print(f"Canvas elements neede: {elements}")
@@ -1509,10 +1517,6 @@ def getCanvas():
     myEntryDx.delete(0, END)
     myEntryDx.insert(END, str(dXmm))
     redraw()
-
-
-    pass
-
 
                
 
@@ -1833,22 +1837,6 @@ myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
 
-# advanced geometry triggers
-# geom_frame = LabelFrame(master, text="Geometry")
-# geom_frame.grid(row=8, column=8, rowspan=5, columnspan=3, sticky="N",padx=5, pady=5)
-# btn = Button(geom_frame, text="Circle",  command=setupCircle)
-# btn.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
-
-code_frame = LabelFrame(master, text="iner-code")
-code_frame.grid(row=11, column=8, rowspan=10, columnspan=5, sticky="N",padx=5, pady=5)
-
-text_input = Text(code_frame, height=7, width=25)
-text_input.grid(row=1,column=1,rowspan=7,columnspan=3,padx=10, pady=10)
-btn = Button(code_frame, text="Add",command=InterCode)
-btn.grid(row=8,column=1)
-btn = Button(code_frame, text="New",command=getCanvas)
-btn.grid(row=8,column=3)
-
 
 # Geometry navigation frame
 zoom_in_icon = PhotoImage(file="csdicons/zoomin.png")
@@ -1916,6 +1904,17 @@ print_button_zoom = Button(
     repeatinterval=100,
 )
 print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
+
+# advanced geometry triggers
+code_frame = LabelFrame(master, text="inner-code window")
+code_frame.grid(row=1, column=11, rowspan=25, columnspan=3, sticky="N",padx=5, pady=0)
+
+text_input = Text(code_frame, height=20, width=25)
+text_input.grid(row=1,column=1,columnspan=3,padx=10, pady=10)
+btn = Button(code_frame, text="Add to exiting geometry",command=InterCode)
+btn.grid(row=19,column=1, columnspan=3)
+btn = Button(code_frame, text="Create new geometry",command=getCanvas)
+btn.grid(row=20,column=1, columnspan=3)
 
 
 w.bind("<Button 1>", setPoint)

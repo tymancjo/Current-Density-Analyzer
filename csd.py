@@ -1308,52 +1308,7 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
             # if this is active we drop the clipboard data at paste.
             # selectionArray = None
 
-# def setupCircle():
-#     actualPhase = phase.get()
-#     if 0 < actualPhase < 4:
-#         phase.set(actualPhase+20)
 
-
-# def placeCircle(event,dataArray, canvas):
-#     """This procedure is to draw a circular shape on the canvas"""
-
-#     # global XSecArray
-
-#     elementsInY = dataArray.shape[0]
-#     elementsInX = dataArray.shape[1]
-
-#     canvasHeight = canvas.winfo_height()
-#     canvasWidth = canvas.winfo_width()
-
-#     dX = canvasWidth / elementsInX
-#     dY = canvasHeight / elementsInY
-
-#     dXY = min(dX, dY)
-
-#     startX = (canvasWidth - dXY * elementsInX) / 2
-#     startY = (canvasHeight - dXY * elementsInY) / 2
-
-#     if (
-#         event.x < canvasWidth - startX
-#         and event.y < canvasHeight - startY
-#         and event.x > startX
-#         and event.y > startY
-#     ):
-#         Col = int((event.x - startX) / dXY)
-#         Row = int((event.y - startY) / dXY)
-
-#         # middle position of the clicked cell
-#         Rmm = (globalY + Row)*dXmm+dXmm/2
-#         Cmm = (globalX + Col)*dXmm+dXmm/2
-
-#         print(f"Cirlce position: {Cmm} {Rmm}")
-
-#         phaseToSet = phase.get() - 20
-#         circleR = 50 #[mm] diameter of the circle. 
-
-#         addCircle((Cmm,Rmm),circleR,phaseToSet)
-
-#         redraw()
 
 
 ### General geometry generators ###

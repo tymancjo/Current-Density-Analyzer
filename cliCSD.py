@@ -125,6 +125,12 @@ def getArgs():
             action="store_true",
             help="Draw the graphic window to show the geometry and results.",
         ),
+        parser.add_argument(
+            "-r",
+            "--results",
+            action="store_true",
+            help="Draw the graphic window with results summary.",
+        ),
     )
 
     parser.add_argument("geometry", help="Geometry description file in .csd format")
@@ -282,11 +288,13 @@ def getCanvas(textInput):
                 break
         print(f"The dx: {xd}mm")
 
-        elements = int(max(size[0] / xd, size[1] / xd))
-        print(f"Canvas elements neede: {elements}")
+        elements_x = int(size[1] / xd)
+        elements_y = int(size[0] / xd)
+
+        print(f"Canvas elements neede: {elements_x, elements_y}")
 
         dXmm = dYmm = xd
-        XSecArray = np.zeros([elements, elements])
+        XSecArray = np.zeros([elements_x, elements_y])
 
         for step in codeSteps:
             step[0](*step[1], shift=(min(X), min(Y)))
@@ -613,6 +621,10 @@ if __name__ == "__main__":
     myLog("Starting operations...")
     myLog()
 
+    if config["draw"] or config["results"]:
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import ListedColormap
+
     XSecArray = np.zeros((0, 0))
     dXmm = dYmm = 1
 
@@ -644,8 +656,6 @@ if __name__ == "__main__":
 
     if config["draw"]:
         # making the draw of the geometry in initial state.
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import ListedColormap
 
         colors = ["white", "red", "green", "blue"]
         cmap = ListedColormap(colors)
@@ -667,11 +677,15 @@ if __name__ == "__main__":
         ax.set_yticks(y_ticks)
 
         # Set the tick labels by multiplying the tick values by the scaling factor
-        ax.set_xticklabels((x_ticks * dXmm + 1).astype(int))
-        ax.set_yticklabels((y_ticks * dYmm + 1).astype(int))
+        ax.set_xticklabels((x_ticks * dXmm).astype(int))
+        ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
         plt.imshow(XSecArray, cmap=cmap, norm=norm)
         plt.show()
+
+        question = input("Do you want to run the analysis? [y]/[n]")
+        if question.lower() in ["n", "no", "break", "stop"]:
+            sys.exit(0)
 
     # 3 preparing the solution
     Irms = config["current"]
@@ -878,20 +892,22 @@ if __name__ == "__main__":
     else:
         print(f"{f},{powerLosses:.2f}")
 
-    if config["draw"]:
+    if config["results"]:
+        # getting the current density
+        resultsCurrentVector *= 1 / (dXmm * dYmm)
         currentsDraw = N_recreateresultsArray(
             elementsVector, resultsCurrentVector, XSecArray
         )
         minCurrent = resultsCurrentVector.min()
         maxCurrent = resultsCurrentVector.max()
 
-        colors = ["white", "red", "green", "blue"]
-        # cmap = ListedColormap(colors)
-        base_cmap = plt.cm.get_cmap('viridis', 256)
+        base_cmap = plt.cm.get_cmap("jet", 256)
         colors = base_cmap(np.arange(256))
-        colors[0] = [1,1,1,1]
+        colors[0] = [1, 1, 1, 1]
         cmap = ListedColormap(colors)
         norm = plt.Normalize(vmin=0, vmax=maxCurrent)
+
+        plt.imshow(currentsDraw, cmap=cmap, norm=norm)
 
         # Adjust the ticks
         ax = plt.gca()
@@ -909,8 +925,21 @@ if __name__ == "__main__":
         ax.set_yticks(y_ticks)
 
         # Set the tick labels by multiplying the tick values by the scaling factor
-        ax.set_xticklabels((x_ticks * dXmm + 1).astype(int))
-        ax.set_yticklabels((y_ticks * dYmm + 1).astype(int))
+        ax.set_xticklabels((x_ticks * dXmm).astype(int))
+        ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
-        plt.imshow(currentsDraw, cmap=cmap, norm=norm)
+        # Add a color bar
+        cbar = plt.colorbar()
+        cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
+
+        plt.title(
+            f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
+total dP = {powerLosses:.2f}[W]\n\
+dPa= {powPhA:.2f}[W] dPb= {powPhB:.2f}[W] dPc= {powPhC:.2f}[W]\n \n\
+Current Density distribution [A/mm2]",
+            fontsize=10,
+            ha="center",
+            pad=20,
+        )
+
         plt.show()

@@ -1,13 +1,13 @@
 """
-This file is intended to be the Command Line Interface 
+This file is intended to be the Command Line Interface
 fot the CSD tool aimed to the quick analysis
-for power losses in given geometry. 
+for power losses in given geometry.
 The idea is to be able to use the saved geometry file
 and deliver the required input as a command line
-parameters. 
+parameters.
 
-As an output the myLoged info of power losses 
-is generated on the standard output. 
+As an output the myLoged info of power losses
+is generated on the standard output.
 """
 
 # TODO:
@@ -17,7 +17,7 @@ is generated on the standard output.
 # 4. Solve - done
 # 5. Prepare results - done
 # 6. myLog results - done
-
+# 7. adding inner code working - done
 
 # General imports
 import numpy as np
@@ -62,8 +62,24 @@ def loadTheData(filename):
     """
 
     if os.path.isfile(filename):
-        myLog("reading from file :" + filename)
-        XSecArray, dXmm, dYmm = loadObj(filename).restore()
+        _, extension = os.path.splitext(filename)
+        myLog("File type: " + extension)
+
+        if extension.lower() in [".txt", ".inc", ".ic"]:
+            myLog("reading the inner-code geometry file: " + filename)
+            try:
+                with open(filename, "r") as f:
+                    file_content = f.read()
+
+                XSecArray, dXmm, dYmm = getCanvas(file_content)
+            except IOError:
+                print("Error reading the file " + filename)
+                sys.exit(1)
+
+        else:
+            myLog("reading from file :" + filename)
+            XSecArray, dXmm, dYmm = loadObj(filename).restore()
+
         return XSecArray, dXmm, dYmm
     else:
         myLog(f"The file {filename} can't be opened!")
@@ -72,7 +88,7 @@ def loadTheData(filename):
 
 def myLog(s: str = "", *args, **kwargs):
     if verbose:
-        print(s, args, kwargs)
+        print(s, *args, *kwargs)
 
 
 def getArgs():
@@ -82,23 +98,39 @@ def getArgs():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "-s", "--split", help="Split geometry steps", type=int, default=1
+        "-s", "--size", help="Max single cell size in [mm]", type=float, default=5
     )
     parser.add_argument("-f", "--frequency", type=float, default=50.0)
     parser.add_argument("-T", "--Temperature", type=float, default=140.0)
     parser.add_argument("-l", "--length", type=float, default=1000.0)
-    parser.add_argument(
-        "-sp", "--simple", action="store_true", help="Show only simple output"
-    ),
-
-    parser.add_argument(
-        "-csv", "--csv", action="store_true", help="Show only simple output as csv f,dP"
-    ),
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Display the detailed information along process.",
+    (
+        parser.add_argument(
+            "-sp", "--simple", action="store_true", help="Show only simple output"
+        ),
+        parser.add_argument(
+            "-csv",
+            "--csv",
+            action="store_true",
+            help="Show only simple output as csv f,dP",
+        ),
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            action="store_true",
+            help="Display the detailed information along process.",
+        ),
+        parser.add_argument(
+            "-d",
+            "--draw",
+            action="store_true",
+            help="Draw the graphic window to show the geometry and results.",
+        ),
+        parser.add_argument(
+            "-r",
+            "--results",
+            action="store_true",
+            help="Draw the graphic window with results summary.",
+        ),
     )
 
     parser.add_argument("geometry", help="Geometry description file in .csd format")
@@ -107,6 +139,7 @@ def getArgs():
         help="Current RMS value for the 3 phase symmetrical analysis in ampers [A]",
         type=float,
     )
+
     args = parser.parse_args()
     return vars(args)
 
@@ -126,6 +159,148 @@ def loadObj(filename):
     """
     with open(filename, "rb") as myInput:
         return pickle.load(myInput)
+
+
+### General geometry generators ###
+def addCircle(x0, y0, D1, Set, D2=0, Set2=0, draw=True, shift=(0, 0)):
+    """Generalized formula to add circle at given position (x,y) [mm]
+    of a two diameters external D1 and internal D2 (if a donat is needed) [mm]"""
+
+    if draw:
+        # this works on global canvas array
+        global XSecArray
+
+        x0 = x0 - shift[0]
+        y0 = y0 - shift[1]
+
+        r1sq = (D1 / 2) ** 2
+        r2sq = (D2 / 2) ** 2
+
+        elementsInY = XSecArray.shape[0]
+        elementsInX = XSecArray.shape[1]
+
+        for x in range(elementsInX):
+            for y in range(elementsInY):
+                xmm = x * dXmm + dXmm / 2
+                ymm = y * dXmm + dXmm / 2
+                distSq = (xmm - x0) ** 2 + (ymm - y0) ** 2
+                if distSq < r2sq:
+                    XSecArray[y, x] = Set2
+                elif distSq <= r1sq:
+                    XSecArray[y, x] = Set
+
+    x0 = x0 - D1 / 2
+    y0 = y0 - D1 / 2
+    xE = x0 + D1
+    yE = y0 + D1
+    return [x0, y0, xE, yE]
+
+
+def addRect(x0, y0, W, H, Set, draw=True, shift=(0, 0)):
+    """Generalized formula to add rectangle at given position
+    start - left top corner(x,y)[mm]
+    width, height[mm]"""
+
+    xE = x0 + W
+    yE = y0 + H
+
+    if draw:
+        # this works on global canvas array
+        global XSecArray
+        x0 = x0 - shift[0]
+        y0 = y0 - shift[1]
+        xE = x0 + W
+        yE = y0 + H
+
+        elementsInY = XSecArray.shape[0]
+        elementsInX = XSecArray.shape[1]
+
+        for x in range(elementsInX):
+            for y in range(elementsInY):
+                xmm = x * dXmm + dXmm / 2
+                ymm = y * dXmm + dXmm / 2
+
+                if (x0 <= xmm <= xE) and (y0 <= ymm <= yE):
+                    XSecArray[y, x] = Set
+
+    return [x0, y0, xE, yE]
+
+
+def textToCode(input_text):
+    """This is the function that will return the list
+    of geometry execution code stps.
+    Code commands are in the form of dictionary"""
+
+    commands = {"c": [addCircle, [4, 6]], "r": [addRect, [5]]}
+
+    innerCodeSteps = []
+
+    for line in input_text:
+        if len(line) > 5:
+            command = line[0].lower()
+            if command in commands:
+                ar = line[2:-1].split(",")
+                if len(ar) in commands[command][1]:
+                    ar = [float(a) for a in ar]
+                    innerCodeSteps.append([commands[command][0], ar, command])
+
+    return innerCodeSteps
+
+
+def getCanvas(textInput):
+    """This functoion is to determine the best parameters for the canvas
+    based on the given geometry steps defined by the inner code."""
+
+    global XSecArray, dXmm, dYmm
+
+    codeLines = textInput.splitlines()
+    codeSteps = textToCode(codeLines)
+
+    X = []
+    Y = []
+
+    circles = False
+    if codeSteps:
+        for step in codeSteps:
+            tmp = step[0](*step[1], draw=False)
+            if step[0] is addCircle:
+                circles = True
+
+            X.append(tmp[0])
+            X.append(tmp[2])
+            Y.append(tmp[1])
+            Y.append(tmp[3])
+
+        print(X)
+        print(Y)
+        print(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
+        size = (max(X) - min(X), max(Y) - min(Y))
+        print(size)
+
+        # I have no good idea how to figure out the best cell size
+        # so for now it's just some stuff..
+        if circles:
+            sizes = [4, 2.5, 2, 1]
+        else:
+            sizes = [15, 10, 5, 4, 2.5, 2, 1]
+        for xd in sizes:
+            if (size[0] % xd == 0) and (size[1] % xd == 0):
+                break
+        print(f"The dx: {xd}mm")
+
+        elements_x = int(size[1] / xd)
+        elements_y = int(size[0] / xd)
+
+        print(f"Canvas elements neede: {elements_x, elements_y}")
+
+        dXmm = dYmm = xd
+        XSecArray = np.zeros([elements_x, elements_y])
+
+        for step in codeSteps:
+            step[0](*step[1], shift=(min(X), min(Y)))
+        return XSecArray, dXmm, dYmm
+
+    return False
 
 
 def solveTheEquation(admitanceMatrix, voltageVector):
@@ -416,6 +591,25 @@ def N_getComplexModule(x):
         return x
 
 
+# Function that put back together the solution vectr back to represent the crss section shape array
+def N_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
+    """
+    Functions returns recreate cross section array with mapperd solution results
+    Inputs:
+    elementsVector - vector of crossection elements as created by the n_arrayVectorize
+    resultsVector - vectr with results values calculated base on the elementsVector
+    initialGeometryArray - the array that contains the cross section geometry model
+    """
+    localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
+
+    for vectorIndex, result in enumerate(resultsVector):
+        localResultsArray[
+            int(elementsVector[vectorIndex][0]), int(elementsVector[vectorIndex][1])
+        ] = result
+
+    return localResultsArray
+
+
 # Doing the main work here.
 if __name__ == "__main__":
     config = getArgs()
@@ -427,31 +621,64 @@ if __name__ == "__main__":
     myLog("Starting operations...")
     myLog()
 
+    if config["draw"] or config["results"]:
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import ListedColormap
+
+    XSecArray = np.zeros((0, 0))
+    dXmm = dYmm = 1
+
     # 2 loading the geometry data:
     XSecArray, dXmm, dYmm = loadTheData(config["geometry"])
-    myLog()
+    myLog("Initial geometry array parameters:")
     myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
     myLog(f"Data table size: {XSecArray.shape}")
 
-    if config["split"] > 1:
-        myLog()
+    
+    while dXmm > config["size"]:
         myLog("Splitting the geometry cells...", end="")
-        splits = 1
-        for _ in range(config["split"] - 1):
-            if dXmm > 1 and dYmm > 1:
-                myLog(f"{splits}... ", end="")
-                splits += 1
-                XSecArray = N_arraySlicer(inputArray=XSecArray, subDivisions=2)
-                dXmm = dXmm / 2
-                dYmm = dYmm / 2
-            else:
-                myLog()
-                myLog("No further subdivisions make sense")
-                break
+        XSecArray = N_arraySlicer(inputArray=XSecArray, subDivisions=2)
+        dXmm = dXmm / 2
+        dYmm = dYmm / 2
+    
+    myLog()
+    myLog("Adjusted geometry array parameters:")
+    myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+    myLog(f"Data table size: {XSecArray.shape}")
 
-        myLog()
-        myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
-        myLog(f"Data table size: {XSecArray.shape}")
+
+    if config["draw"]:
+        # making the draw of the geometry in initial state.
+
+        colors = ["white", "red", "green", "blue"]
+        cmap = ListedColormap(colors)
+        norm = plt.Normalize(vmin=0, vmax=4)
+
+        # Adjust the ticks
+        ax = plt.gca()
+        num_ticks_x = len(XSecArray[0])
+        num_ticks_y = len(XSecArray)
+
+        # Set the ticks and corresponding labels
+        step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
+
+        x_ticks = np.arange(0, num_ticks_x, step)
+        y_ticks = np.arange(0, num_ticks_y, step)
+
+        # Set the ticks based on the array dimensions
+        ax.set_xticks(x_ticks)
+        ax.set_yticks(y_ticks)
+
+        # Set the tick labels by multiplying the tick values by the scaling factor
+        ax.set_xticklabels((x_ticks * dXmm).astype(int))
+        ax.set_yticklabels((y_ticks * dYmm).astype(int))
+
+        plt.imshow(XSecArray, cmap=cmap, norm=norm)
+        plt.show()
+
+        question = input("Do you want to run the analysis? [y]/[n]")
+        if question.lower() in ["n", "no", "break", "stop"]:
+            sys.exit(0)
 
     # 3 preparing the solution
     Irms = config["current"]
@@ -657,3 +884,55 @@ if __name__ == "__main__":
         print(f"{f}[Hz] \t {powerLosses:.2f} [W]")
     else:
         print(f"{f},{powerLosses:.2f}")
+
+    if config["results"]:
+        # getting the current density
+        resultsCurrentVector *= 1 / (dXmm * dYmm)
+        currentsDraw = N_recreateresultsArray(
+            elementsVector, resultsCurrentVector, XSecArray
+        )
+        minCurrent = resultsCurrentVector.min()
+        maxCurrent = resultsCurrentVector.max()
+
+        base_cmap = plt.cm.get_cmap("jet", 256)
+        colors = base_cmap(np.arange(256))
+        colors[0] = [1, 1, 1, 1]
+        cmap = ListedColormap(colors)
+        norm = plt.Normalize(vmin=0, vmax=maxCurrent)
+
+        plt.imshow(currentsDraw, cmap=cmap, norm=norm)
+
+        # Adjust the ticks
+        ax = plt.gca()
+        num_ticks_x = len(currentsDraw[0])
+        num_ticks_y = len(currentsDraw)
+
+        # Set the ticks and corresponding labels
+        step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
+
+        x_ticks = np.arange(0, num_ticks_x, step)
+        y_ticks = np.arange(0, num_ticks_y, step)
+
+        # Set the ticks based on the array dimensions
+        ax.set_xticks(x_ticks)
+        ax.set_yticks(y_ticks)
+
+        # Set the tick labels by multiplying the tick values by the scaling factor
+        ax.set_xticklabels((x_ticks * dXmm).astype(int))
+        ax.set_yticklabels((y_ticks * dYmm).astype(int))
+
+        # Add a color bar
+        cbar = plt.colorbar()
+        cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
+
+        plt.title(
+            f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
+total dP = {powerLosses:.2f}[W]\n\
+dPa= {powPhA:.2f}[W] dPb= {powPhB:.2f}[W] dPc= {powPhC:.2f}[W]\n \n\
+Current Density distribution [A/mm2]",
+            fontsize=10,
+            ha="center",
+            pad=20,
+        )
+
+        plt.show()

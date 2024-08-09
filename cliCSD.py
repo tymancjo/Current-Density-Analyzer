@@ -51,6 +51,7 @@ try:
     use_njit = True
 except ImportError:
     use_njit = False
+    njit = None
 
 # use_njit = not True
 

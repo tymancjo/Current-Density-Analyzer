@@ -17,7 +17,7 @@ is generated on the standard output.
 # 4. Solve - done
 # 5. Prepare results - done
 # 6. myLog results - done
-# 7. adding inner code working
+# 7. adding inner code working - done
 
 # General imports
 import numpy as np
@@ -88,7 +88,7 @@ def loadTheData(filename):
 
 def myLog(s: str = "", *args, **kwargs):
     if verbose:
-        print(s, args, kwargs)
+        print(s, *args, *kwargs)
 
 
 def getArgs():
@@ -98,7 +98,7 @@ def getArgs():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "-s", "--split", help="Split geometry steps", type=int, default=1
+        "-s", "--size", help="Max single cell size in [mm]", type=float, default=5
     )
     parser.add_argument("-f", "--frequency", type=float, default=50.0)
     parser.add_argument("-T", "--Temperature", type=float, default=140.0)
@@ -630,29 +630,22 @@ if __name__ == "__main__":
 
     # 2 loading the geometry data:
     XSecArray, dXmm, dYmm = loadTheData(config["geometry"])
-    myLog()
+    myLog("Initial geometry array parameters:")
     myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
     myLog(f"Data table size: {XSecArray.shape}")
 
-    if config["split"] > 1:
-        myLog()
+    
+    while dXmm > config["size"]:
         myLog("Splitting the geometry cells...", end="")
-        splits = 1
-        for _ in range(config["split"] - 1):
-            if dXmm > 1 and dYmm > 1:
-                myLog(f"{splits}... ", end="")
-                splits += 1
-                XSecArray = N_arraySlicer(inputArray=XSecArray, subDivisions=2)
-                dXmm = dXmm / 2
-                dYmm = dYmm / 2
-            else:
-                myLog()
-                myLog("No further subdivisions make sense")
-                break
+        XSecArray = N_arraySlicer(inputArray=XSecArray, subDivisions=2)
+        dXmm = dXmm / 2
+        dYmm = dYmm / 2
+    
+    myLog()
+    myLog("Adjusted geometry array parameters:")
+    myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+    myLog(f"Data table size: {XSecArray.shape}")
 
-        myLog()
-        myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
-        myLog(f"Data table size: {XSecArray.shape}")
 
     if config["draw"]:
         # making the draw of the geometry in initial state.

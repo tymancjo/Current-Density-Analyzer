@@ -13,6 +13,8 @@ from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
 from csdlib import csdgui as gui
 from csdlib import csdcli as cli
+from csdlib import innercode as ic 
+
 
 
 def showXsecArray(event):
@@ -1311,71 +1313,6 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
 
 
 
-### General geometry generators ###
-def addCircle(x0,y0,D1,Set, D2=0,Set2=0,draw=True,shift=(0,0)):
-    """Generalized formula to add circle at given position (x,y) [mm]
-    of a two diameters external D1 and internal D2 (if a donat is needed) [mm]"""
-
-    if draw:
-        # this works on global canvas array
-        global XSecArray
-
-        x0 = x0 - shift[0]
-        y0 = y0 - shift[1]
-        
-        r1sq = (D1/2)**2
-        r2sq = (D2/2)**2
-
-        elementsInY = XSecArray.shape[0]
-        elementsInX = XSecArray.shape[1]
-            
-        for x in range(elementsInX):
-            for y in range(elementsInY):
-                xmm = x*dXmm+dXmm/2
-                ymm = y*dXmm+dXmm/2
-                distSq = (xmm - x0)**2 + (ymm-y0)**2 
-                if  distSq < r2sq :
-                    XSecArray[y,x] = Set2
-                elif distSq <= r1sq:
-                    XSecArray[y,x] = Set
-
-    x0 = x0 - D1/2
-    y0 = y0 - D1/2
-    xE = x0 + D1
-    yE = y0 + D1
-    return [x0,y0,xE,yE]
-
-    
-def addRect(x0,y0,W,H,Set,draw=True, shift=(0,0)):
-    """Generalized formula to add rectangle at given position 
-    start - left top corner(x,y)[mm]
-    width, height[mm]"""
-
-    xE = x0 + W
-    yE = y0 + H
-
-    if draw:
-        # this works on global canvas array
-        global XSecArray
-        x0 = x0 - shift[0]
-        y0 = y0 - shift[1]
-        xE = x0 + W
-        yE = y0 + H
-        
-
-        elementsInY = XSecArray.shape[0]
-        elementsInX = XSecArray.shape[1]
-            
-        for x in range(elementsInX):
-            for y in range(elementsInY):
-                xmm = x*dXmm+dXmm/2
-                ymm = y*dXmm+dXmm/2
-
-                if (x0 <= xmm <= xE) and (y0 <= ymm <= yE) :
-                    XSecArray[y,x] = Set
-
-    return [x0,y0,xE,yE]
-
 
 def InterCode():
     """This is internal sudo-code inerpreter for easier geometry creation
@@ -1386,65 +1323,21 @@ def InterCode():
     """
 
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps = textToCode(codeLines)
+    codeSteps = ic.textToCode(codeLines)
 
     if codeSteps:
         for step in codeSteps:
-            step[0](*step[1])
+            step[0](*step[1],XSecArray=XSecArray,dXmm=dXmm)
 
     redraw()
-
-def textToCode(input_text):
-    """This is the function that will return the list 
-    of geometry execution code stps.
-    Code commands are in the form of dictionary"""
-
-    commands = {
-        'c': [addCircle,[4,6]],
-        'r': [addRect,[5]],
-        'v': [None,[2]]
-    }
-
-    innerCodeSteps = []
-    innerVariables = {}
-    
-
-    for line in input_text:
-        if len(line)>5:
-            command = line[0].lower()
-            if command in commands:
-                if command == 'v':
-                    # taking care if the command sets the variable
-                    ar = line[2:-1].split(',')
-                    if len(ar) in commands[command][1]:
-                        variable_name = str(ar[0])
-                        variable_value = float(ar[1])
-                        innerVariables[variable_name] = variable_value
-
-                else:
-                    # ar as argumnents 
-                    ar = line[2:-1].split(',')
-                    # insert inner variables if any
-                    if len(innerVariables):
-                        # let's replace the variables with values
-                        for i,argument in enumerate(ar):
-                            if argument in innerVariables:
-                                ar[i] = innerVariables[argument]
-
-                    if len(ar) in commands[command][1]:
-                        ar = [float(a) for a in ar]
-                        innerCodeSteps.append([commands[command][0],ar,command])
-
-    return innerCodeSteps
-
-
 
 def getCanvas():
     """This functoion is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
 
+
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps = textToCode(codeLines)
+    codeSteps = ic.textToCode(codeLines)
 
     X = []
     Y = []
@@ -1453,7 +1346,7 @@ def getCanvas():
     if codeSteps:
         for step in codeSteps:
             tmp = step[0](*step[1],draw=False)
-            if step[0] is addCircle:
+            if step[0] is ic.addCircle:
                 circles = True
             
             X.append(tmp[0])
@@ -1487,14 +1380,11 @@ def getCanvas():
         XSecArray = np.zeros([elements,elements])
 
         for step in codeSteps:
-            step[0](*step[1],shift=(min(X),min(Y)))
+            step[0](*step[1],shift=(min(X),min(Y)),XSecArray=XSecArray,dXmm=dXmm)
 
     myEntryDx.delete(0, END)
     myEntryDx.insert(END, str(dXmm))
     redraw()
-
-               
-
 ######## End of functions definition ############
 
 

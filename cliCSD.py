@@ -228,28 +228,52 @@ def addRect(x0, y0, W, H, Set, draw=True, shift=(0, 0)):
 
 
 def textToCode(input_text):
-    """This is the function that will return the list
+    """This is the function that will return the list 
     of geometry execution code stps.
     Code commands are in the form of dictionary"""
 
-    commands = {"c": [addCircle, [4, 6]], "r": [addRect, [5]]}
+    commands = {
+        'c': [addCircle,[4,6]],
+        'r': [addRect,[5]],
+        'v': [None,[2]]
+    }
 
     innerCodeSteps = []
+    innerVariables = {}
+    
 
     for line in input_text:
-        if len(line) > 5:
+        if len(line)>5:
             command = line[0].lower()
             if command in commands:
-                ar = line[2:-1].split(",")
-                if len(ar) in commands[command][1]:
-                    ar = [float(a) for a in ar]
-                    innerCodeSteps.append([commands[command][0], ar, command])
+                if command == 'v':
+                    # taking care if the command sets the variable
+                    ar = line[2:-1].split(',')
+                    if len(ar) in commands[command][1]:
+                        variable_name = str(ar[0])
+                        variable_value = float(ar[1])
+                        innerVariables[variable_name] = variable_value
+
+                else:
+                    # ar as argumnents 
+                    ar = line[2:-1].split(',')
+                    # insert inner variables if any
+                    if len(innerVariables):
+                        # let's replace the variables with values
+                        for i,argument in enumerate(ar):
+                            if argument in innerVariables:
+                                ar[i] = innerVariables[argument]
+
+                    if len(ar) in commands[command][1]:
+                        ar = [float(a) for a in ar]
+                        innerCodeSteps.append([commands[command][0],ar,command])
 
     return innerCodeSteps
 
 
+
 def getCanvas(textInput):
-    """This functoion is to determine the best parameters for the canvas
+    """This function is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
 
     global XSecArray, dXmm, dYmm
@@ -272,11 +296,11 @@ def getCanvas(textInput):
             Y.append(tmp[1])
             Y.append(tmp[3])
 
-        print(X)
-        print(Y)
-        print(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
+        myLog(X)
+        myLog(Y)
+        myLog(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
         size = (max(X) - min(X), max(Y) - min(Y))
-        print(size)
+        myLog(size)
 
         # I have no good idea how to figure out the best cell size
         # so for now it's just some stuff..
@@ -287,12 +311,12 @@ def getCanvas(textInput):
         for xd in sizes:
             if (size[0] % xd == 0) and (size[1] % xd == 0):
                 break
-        print(f"The dx: {xd}mm")
+        myLog(f"The dx: {xd}mm")
 
         elements_x = int(size[1] / xd)
         elements_y = int(size[0] / xd)
 
-        print(f"Canvas elements neede: {elements_x, elements_y}")
+        myLog(f"Canvas elements need: {elements_x, elements_y}")
 
         dXmm = dYmm = xd
         XSecArray = np.zeros([elements_x, elements_y])

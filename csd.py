@@ -1401,19 +1401,39 @@ def textToCode(input_text):
 
     commands = {
         'c': [addCircle,[4,6]],
-        'r': [addRect,[5]]
+        'r': [addRect,[5]],
+        'v': [None,[2]]
     }
 
     innerCodeSteps = []
+    innerVariables = {}
+    
 
     for line in input_text:
         if len(line)>5:
             command = line[0].lower()
             if command in commands:
-                ar = line[2:-1].split(',')
-                if len(ar) in commands[command][1]:
-                    ar = [float(a) for a in ar]
-                    innerCodeSteps.append([commands[command][0],ar,command])
+                if command == 'v':
+                    # taking care if the command sets the variable
+                    ar = line[2:-1].split(',')
+                    if len(ar) in commands[command][1]:
+                        variable_name = str(ar[0])
+                        variable_value = float(ar[1])
+                        innerVariables[variable_name] = variable_value
+
+                else:
+                    # ar as argumnents 
+                    ar = line[2:-1].split(',')
+                    # insert inner variables if any
+                    if len(innerVariables):
+                        # let's replace the variables with values
+                        for i,argument in enumerate(ar):
+                            if argument in innerVariables:
+                                ar[i] = innerVariables[argument]
+
+                    if len(ar) in commands[command][1]:
+                        ar = [float(a) for a in ar]
+                        innerCodeSteps.append([commands[command][0],ar,command])
 
     return innerCodeSteps
 

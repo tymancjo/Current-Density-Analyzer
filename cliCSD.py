@@ -32,6 +32,7 @@ import argparse
 
 # # Importing local library
 # from csdlib import csdlib as csd
+from csdlib import innercode as ic 
 
 
 # making the NUMBA decorators optional
@@ -162,100 +163,146 @@ def loadObj(filename):
         return pickle.load(myInput)
 
 
-### General geometry generators ###
-def addCircle(x0, y0, D1, Set, D2=0, Set2=0, draw=True, shift=(0, 0)):
-    """Generalized formula to add circle at given position (x,y) [mm]
-    of a two diameters external D1 and internal D2 (if a donat is needed) [mm]"""
+# ### General geometry generators ###
+# def addCircle(x0, y0, D1, Set, D2=0, Set2=0, draw=True, shift=(0, 0)):
+#     """Generalized formula to add circle at given position (x,y) [mm]
+#     of a two diameters external D1 and internal D2 (if a donat is needed) [mm]"""
 
-    if draw:
-        # this works on global canvas array
-        global XSecArray
+#     if draw:
+#         # this works on global canvas array
+#         global XSecArray
 
-        x0 = x0 - shift[0]
-        y0 = y0 - shift[1]
+#         x0 = x0 - shift[0]
+#         y0 = y0 - shift[1]
 
-        r1sq = (D1 / 2) ** 2
-        r2sq = (D2 / 2) ** 2
+#         r1sq = (D1 / 2) ** 2
+#         r2sq = (D2 / 2) ** 2
 
-        elementsInY = XSecArray.shape[0]
-        elementsInX = XSecArray.shape[1]
+#         elementsInY = XSecArray.shape[0]
+#         elementsInX = XSecArray.shape[1]
 
-        for x in range(elementsInX):
-            for y in range(elementsInY):
-                xmm = x * dXmm + dXmm / 2
-                ymm = y * dXmm + dXmm / 2
-                distSq = (xmm - x0) ** 2 + (ymm - y0) ** 2
-                if distSq < r2sq:
-                    XSecArray[y, x] = Set2
-                elif distSq <= r1sq:
-                    XSecArray[y, x] = Set
+#         for x in range(elementsInX):
+#             for y in range(elementsInY):
+#                 xmm = x * dXmm + dXmm / 2
+#                 ymm = y * dXmm + dXmm / 2
+#                 distSq = (xmm - x0) ** 2 + (ymm - y0) ** 2
+#                 if distSq < r2sq:
+#                     XSecArray[y, x] = Set2
+#                 elif distSq <= r1sq:
+#                     XSecArray[y, x] = Set
 
-    x0 = x0 - D1 / 2
-    y0 = y0 - D1 / 2
-    xE = x0 + D1
-    yE = y0 + D1
-    return [x0, y0, xE, yE]
-
-
-def addRect(x0, y0, W, H, Set, draw=True, shift=(0, 0)):
-    """Generalized formula to add rectangle at given position
-    start - left top corner(x,y)[mm]
-    width, height[mm]"""
-
-    xE = x0 + W
-    yE = y0 + H
-
-    if draw:
-        # this works on global canvas array
-        global XSecArray
-        x0 = x0 - shift[0]
-        y0 = y0 - shift[1]
-        xE = x0 + W
-        yE = y0 + H
-
-        elementsInY = XSecArray.shape[0]
-        elementsInX = XSecArray.shape[1]
-
-        for x in range(elementsInX):
-            for y in range(elementsInY):
-                xmm = x * dXmm + dXmm / 2
-                ymm = y * dXmm + dXmm / 2
-
-                if (x0 <= xmm <= xE) and (y0 <= ymm <= yE):
-                    XSecArray[y, x] = Set
-
-    return [x0, y0, xE, yE]
+#     x0 = x0 - D1 / 2
+#     y0 = y0 - D1 / 2
+#     xE = x0 + D1
+#     yE = y0 + D1
+#     return [x0, y0, xE, yE]
 
 
-def textToCode(input_text):
-    """This is the function that will return the list
-    of geometry execution code stps.
-    Code commands are in the form of dictionary"""
+# def addRect(x0, y0, W, H, Set, draw=True, shift=(0, 0)):
+#     """Generalized formula to add rectangle at given position
+#     start - left top corner(x,y)[mm]
+#     width, height[mm]"""
 
-    commands = {"c": [addCircle, [4, 6]], "r": [addRect, [5]]}
+#     xE = x0 + W
+#     yE = y0 + H
 
-    innerCodeSteps = []
+#     if draw:
+#         # this works on global canvas array
+#         global XSecArray
+#         x0 = x0 - shift[0]
+#         y0 = y0 - shift[1]
+#         xE = x0 + W
+#         yE = y0 + H
 
-    for line in input_text:
-        if len(line) > 5:
-            command = line[0].lower()
-            if command in commands:
-                ar = line[2:-1].split(",")
-                if len(ar) in commands[command][1]:
-                    ar = [float(a) for a in ar]
-                    innerCodeSteps.append([commands[command][0], ar, command])
+#         elementsInY = XSecArray.shape[0]
+#         elementsInX = XSecArray.shape[1]
 
-    return innerCodeSteps
+#         for x in range(elementsInX):
+#             for y in range(elementsInY):
+#                 xmm = x * dXmm + dXmm / 2
+#                 ymm = y * dXmm + dXmm / 2
+
+#                 if (x0 <= xmm <= xE) and (y0 <= ymm <= yE):
+#                     XSecArray[y, x] = Set
+
+#     return [x0, y0, xE, yE]
+
+
+# def textToCode(input_text):
+#     """This is the function that will return the list 
+#     of geometry execution code stps.
+#     Code commands are in the form of dictionary"""
+
+#     commands = {
+#         'c': [addCircle,[4,6]],
+#         'r': [addRect,[5]],
+#         'v': [None,[2]],
+#         'a': [None, [2]],
+#         'l': [None,[1]]
+#     }
+
+#     innerCodeSteps = []
+#     innerVariables = {}
+    
+
+#     for line_nr,line in enumerate(input_text):
+#         if len(line)>3:
+#             command = line[0].lower()
+#             if command in commands:
+#                 if command == 'l':
+#                     # taking care of looping the stuff
+#                     ar = line[2:-1].split(',')
+#                     if len(ar) in commands[command][1]:
+#                         loops = int(ar[0])
+#                         loop_code = input_text[line_nr+1:]
+#                         for _ in range(loops):
+#                             input_text.extend(loop_code)
+
+#     for line_nr,line in enumerate(input_text):
+#         if len(line)>5:
+#             command = line[0].lower()
+#             if command in commands:
+#                 if command == 'v':
+#                     # taking care if the command sets the variable
+#                     ar = line[2:-1].split(',')
+#                     if len(ar) in commands[command][1]:
+#                         variable_name = str(ar[0])
+#                         variable_value = float(ar[1])
+#                         innerVariables[variable_name] = variable_value
+#                 elif command == 'a':
+#                     if len(innerVariables):
+#                         # taking care if the command sets the variable
+#                         ar = line[2:-1].split(',')
+#                         if len(ar) in commands[command][1]:
+#                             variable_name = str(ar[0])
+#                             variable_value = innerVariables[variable_name]+float(ar[1])
+#                             innerVariables[variable_name] = variable_value
+
+#                 else:
+#                     # ar as argumnents 
+#                     ar = line[2:-1].split(',')
+#                     # insert inner variables if any
+#                     if len(innerVariables):
+#                         # let's replace the variables with values
+#                         for i,argument in enumerate(ar):
+#                             if argument in innerVariables:
+#                                 ar[i] = innerVariables[argument]
+
+#                     if len(ar) in commands[command][1]:
+#                         ar = [float(a) for a in ar]
+#                         innerCodeSteps.append([commands[command][0],ar,command])
+
+#     return innerCodeSteps
 
 
 def getCanvas(textInput):
-    """This functoion is to determine the best parameters for the canvas
+    """This function is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
 
     global XSecArray, dXmm, dYmm
 
     codeLines = textInput.splitlines()
-    codeSteps = textToCode(codeLines)
+    codeSteps = ic.textToCode(codeLines)
 
     X = []
     Y = []
@@ -264,7 +311,7 @@ def getCanvas(textInput):
     if codeSteps:
         for step in codeSteps:
             tmp = step[0](*step[1], draw=False)
-            if step[0] is addCircle:
+            if step[0] is ic.addCircle:
                 circles = True
 
             X.append(tmp[0])
@@ -272,11 +319,11 @@ def getCanvas(textInput):
             Y.append(tmp[1])
             Y.append(tmp[3])
 
-        print(X)
-        print(Y)
-        print(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
+        myLog(X)
+        myLog(Y)
+        myLog(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
         size = (max(X) - min(X), max(Y) - min(Y))
-        print(size)
+        myLog(size)
 
         # I have no good idea how to figure out the best cell size
         # so for now it's just some stuff..
@@ -287,18 +334,18 @@ def getCanvas(textInput):
         for xd in sizes:
             if (size[0] % xd == 0) and (size[1] % xd == 0):
                 break
-        print(f"The dx: {xd}mm")
+        myLog(f"The dx: {xd}mm")
 
         elements_x = int(size[1] / xd)
         elements_y = int(size[0] / xd)
 
-        print(f"Canvas elements neede: {elements_x, elements_y}")
+        myLog(f"Canvas elements need: {elements_x, elements_y}")
 
         dXmm = dYmm = xd
         XSecArray = np.zeros([elements_x, elements_y])
 
         for step in codeSteps:
-            step[0](*step[1], shift=(min(X), min(Y)))
+            step[0](*step[1], shift=(min(X), min(Y)),XSecArray=XSecArray,dXmm=dXmm)
         return XSecArray, dXmm, dYmm
 
     return False

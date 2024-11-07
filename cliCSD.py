@@ -30,6 +30,11 @@ import pickle
 import argparse
 
 
+# global constant to speed up loops
+mi0 = 4 * np.pi * 1e-7
+C1 =  -np.log(2) / 3 + 13 / 12 - np.pi / 2
+C2 =  mi0 / (2*np.pi)
+
 # # Importing local library
 # from csdlib import csdlib as csd
 from csdlib import innercode as ic 
@@ -304,13 +309,16 @@ def N_getSelfInductance(sizeX, sizeY, lenght):
     srednica = (sizeX + sizeY) / 2
     a = srednica * 1e-3
     l = lenght * 1e-3
-    mi0 = 4 * np.pi * 1e-7
+
 
     # This calculation is based on the:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
-    L = (mi0 * l / (2 * np.pi)) * (
-        np.log(2 * l / a) - np.log(2) / 3 + 13 / 12 - np.pi / 2
-    )
+    # L = (mi0 * l / (2 * np.pi)) * (
+    #     np.log(2 * l / a) - np.log(2) / 3 + 13 / 12 - np.pi / 2
+    # )
+
+    # this is the above formula just with pre calculated constant 
+    L = (C2 * l) * ( np.log(2 * l / a) + C1 )
 
     # this was the previous formula
     # return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
@@ -355,11 +363,15 @@ def N_getMutualInductance(sizeX, sizeY, lenght, distance):
     a = srednica * 1e-3
     l = lenght * 1e-3
     d = distance * 1e-3
-    mi0 = 4 * np.pi * 1e-7
+    # mi0 = 4 * np.pi * 1e-7
 
-    # fromula by:
+    # formula by:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
-    M = (mi0 * l / (2 * np.pi)) * (
+    # M = (mi0 * l / (2 * np.pi)) * (
+    #     np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
+    # )
+    # the same as above with the pre-calculated C2
+    M = C2 * l * (
         np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
     )
 

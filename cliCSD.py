@@ -255,7 +255,7 @@ def N_getImpedanceArray(
     """
     omega = 2 * np.pi * freq
 
-    impedanceArray = np.zeros((distanceArray.shape), dtype=np.complex_)
+    impedanceArray = np.zeros((distanceArray.shape), dtype=np.complex128)
 
     for X in range(distanceArray.shape[0]):
         for Y in range(distanceArray.shape[0]):

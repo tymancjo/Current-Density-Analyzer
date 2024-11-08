@@ -340,7 +340,7 @@ def N_getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
     return (lenght / (sizeX * sizeY * sigma20C)) * 1e3 * (1 + temCoRe * (temp - 20))
 
 
-# Calculations of mututal inductance between conductors
+# Calculations of mutual inductance between conductors
 # @njit
 @conditional_decorator(njit, use_njit)
 def N_getMutualInductance(sizeX, sizeY, lenght, distance):
@@ -521,7 +521,8 @@ def N_getComplexModule(x):
         return x
 
 
-# Function that put back together the solution vectr back to represent the crss section shape array
+# Function that put back together the solution vectr back to represent the cross
+# section shape array
 def N_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
     """
     Functions returns recreate cross section array with mapperd solution results
@@ -539,6 +540,32 @@ def N_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
 
     return localResultsArray
 
+def combineVectors(vPhA, vPhB, vPhC):
+    """Function is joining the 3 phase vectors together"""
+
+    # Lets put the all phases together
+    elementsPhaseA = len(vPhA)
+    elementsPhaseB = len(vPhB)
+    elementsPhaseC = len(vPhC)
+
+    if elementsPhaseA != 0 and elementsPhaseB != 0 and elementsPhaseC != 0:
+        elementsVector = np.concatenate((vPhA, vPhB, vPhC), axis=0)
+    elif elementsPhaseA == 0:
+        if elementsPhaseB == 0:
+            elementsVector = vPhC
+        elif elementsPhaseC == 0:
+            elementsVector = vPhB
+        else:
+            elementsVector = np.concatenate((vPhB, vPhC), axis=0)
+    else:
+        if elementsPhaseB == 0 and elementsPhaseC == 0:
+            elementsVector = vPhA
+        elif elementsPhaseC == 0:
+            elementsVector = np.concatenate((vPhA, vPhB), axis=0)
+        else:
+            elementsVector = np.concatenate((vPhA, vPhC), axis=0)
+    
+    return elementsVector, elementsPhaseA,elementsPhaseB, elementsPhaseC
 
 # Doing the main work here.
 if __name__ == "__main__":
@@ -554,6 +581,7 @@ if __name__ == "__main__":
     if config["draw"] or config["results"]:
         import matplotlib.pyplot as plt
         from matplotlib.colors import ListedColormap
+
 
     XSecArray = np.zeros((0, 0))
     dXmm = dYmm = 1
@@ -640,27 +668,8 @@ if __name__ == "__main__":
     vPhB = N_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
     vPhC = N_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
 
-    # Lets put the all phases together
-    elementsPhaseA = len(vPhA)
-    elementsPhaseB = len(vPhB)
-    elementsPhaseC = len(vPhC)
 
-    if elementsPhaseA != 0 and elementsPhaseB != 0 and elementsPhaseC != 0:
-        elementsVector = np.concatenate((vPhA, vPhB, vPhC), axis=0)
-    elif elementsPhaseA == 0:
-        if elementsPhaseB == 0:
-            elementsVector = vPhC
-        elif elementsPhaseC == 0:
-            elementsVector = vPhB
-        else:
-            elementsVector = np.concatenate((vPhB, vPhC), axis=0)
-    else:
-        if elementsPhaseB == 0 and elementsPhaseC == 0:
-            elementsVector = vPhA
-        elif elementsPhaseC == 0:
-            elementsVector = np.concatenate((vPhA, vPhB), axis=0)
-        else:
-            elementsVector = np.concatenate((vPhA, vPhC), axis=0)
+    elementsVector,elementsPhaseA,elementsPhaseB,elementsPhaseC = combineVectors(vPhA,vPhB,vPhC)
 
     if len(elementsVector) > 1200:
         myLog()
@@ -695,7 +704,8 @@ if __name__ == "__main__":
     vB = np.ones(elementsPhaseB) * Ub
     vC = np.ones(elementsPhaseC) * Uc
 
-    voltageVector = np.concatenate((vA, vB, vC), axis=0)
+    # voltageVector = np.concatenate((vA, vB, vC), axis=0)
+    voltageVector,_,_,_ = combineVectors(vA,vB,vC)
 
     # Initial solve
     # Main equation solve
@@ -706,7 +716,7 @@ if __name__ == "__main__":
     currentPhB = currentVector[elementsPhaseA : elementsPhaseA + elementsPhaseB]
     currentPhC = currentVector[elementsPhaseA + elementsPhaseB :]
 
-    # Bringin each phase current to the assumer Irms level
+    # Bringing each phase current to the assumed Irms level
     Ia = np.sum(currentPhA)
     Ib = np.sum(currentPhB)
     Ic = np.sum(currentPhC)
@@ -802,14 +812,14 @@ if __name__ == "__main__":
     # Results of power losses
     if not simple and not csv:
         print()
-        print("------------------------------------------------------")
+        print("----------------------------------------------------------------")
         print("Results of power losses")
         print(f"\tgeometry: {config['geometry']}")
-        print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm]")
-        print("------------------------------------------------------")
+        print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm], T={t}[degC]")
+        print("----------------------------------------------------------------")
         print(f"Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
         print(f"{powerLosses:.2f}\t| {powPhA:.2f} \t| {powPhB:.2f} \t| {powPhC:.2f}")
-        print("------------------------------------------------------")
+        print("----------------------------------------------------------------")
     elif not csv:
         print(f"{f}[Hz] \t {powerLosses:.2f} [W]")
     else:
@@ -824,7 +834,7 @@ if __name__ == "__main__":
         minCurrent = resultsCurrentVector.min()
         maxCurrent = resultsCurrentVector.max()
 
-        base_cmap = plt.cm.get_cmap("jet", 256)
+        base_cmap = plt.get_cmap("jet", 256)
         colors = base_cmap(np.arange(256))
         colors[0] = [1, 1, 1, 1]
         cmap = ListedColormap(colors)

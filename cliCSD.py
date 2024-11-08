@@ -38,6 +38,7 @@ C2 = mi0 / (2 * np.pi)
 # # Importing local library
 # from csdlib import csdlib as csd
 from csdlib import innercode as ic
+from csdlib import csdfunctions as csdf
 
 
 # making the NUMBA decorators optional
@@ -451,7 +452,7 @@ def N_getDistancesArray(inputVector):
 
 # Master Array Vectorization FUNCTION
 # @njit
-@conditional_decorator(njit, use_njit)
+# @conditional_decorator(njit, use_njit) # there is an issue with numba here if the output array is empty one. ``
 def N_arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
     """
     Desription:
@@ -540,32 +541,6 @@ def N_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
     return localResultsArray
 
 
-def combineVectors(vPhA, vPhB, vPhC):
-    """Function is joining the 3 phase vectors together"""
-
-    # Lets put the all phases together
-    elementsPhaseA = len(vPhA)
-    elementsPhaseB = len(vPhB)
-    elementsPhaseC = len(vPhC)
-
-    if elementsPhaseA != 0 and elementsPhaseB != 0 and elementsPhaseC != 0:
-        elementsVector = np.concatenate((vPhA, vPhB, vPhC), axis=0)
-    elif elementsPhaseA == 0:
-        if elementsPhaseB == 0:
-            elementsVector = vPhC
-        elif elementsPhaseC == 0:
-            elementsVector = vPhB
-        else:
-            elementsVector = np.concatenate((vPhB, vPhC), axis=0)
-    else:
-        if elementsPhaseB == 0 and elementsPhaseC == 0:
-            elementsVector = vPhA
-        elif elementsPhaseC == 0:
-            elementsVector = np.concatenate((vPhA, vPhB), axis=0)
-        else:
-            elementsVector = np.concatenate((vPhA, vPhC), axis=0)
-
-    return elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC
 
 
 # Doing the main work here.
@@ -666,7 +641,7 @@ if __name__ == "__main__":
     vPhB = N_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
     vPhC = N_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
 
-    elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC = combineVectors(
+    elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC = csdf.combineVectors(
         vPhA, vPhB, vPhC
     )
 
@@ -704,7 +679,7 @@ if __name__ == "__main__":
     vC = np.ones(elementsPhaseC) * Uc
 
     # voltageVector = np.concatenate((vA, vB, vC), axis=0)
-    voltageVector, _, _, _ = combineVectors(vA, vB, vC)
+    voltageVector, _, _, _ = csdf.combineVectors(vA, vB, vC)
 
     # Initial solve
     # Main equation solve
@@ -722,9 +697,13 @@ if __name__ == "__main__":
 
     # expected Ia Ib Ic as symmetrical ones
     # ratios of currents will give us new voltages for phases
-    Ua = Ua * (in_Ia / Ia)
-    Ub = Ub * (in_Ib / Ib)
-    Uc = Uc * (in_Ic / Ic)
+
+    if Ia :
+        Ua = Ua * (in_Ia / Ia)
+    if Ib:
+        Ub = Ub * (in_Ib / Ib)
+    if Ic:
+        Uc = Uc * (in_Ic / Ic)
 
     myLog()
     myLog("Calculated require Source Voltages")
@@ -769,9 +748,12 @@ if __name__ == "__main__":
     modIb = np.abs(Ib)
     modIc = np.abs(Ic)
 
-    currentPhA *= in_Ia / modIa
-    currentPhB *= in_Ib / modIb
-    currentPhC *= in_Ic / modIc
+    if modIa:
+        currentPhA *= in_Ia / modIa
+    if modIb:
+        currentPhB *= in_Ib / modIb
+    if modIc:
+        currentPhC *= in_Ic / modIc
 
     Ia = np.sum(currentPhA)
     Ib = np.sum(currentPhB)

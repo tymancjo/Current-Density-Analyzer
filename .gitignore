@@ -92,3 +92,4 @@ ENV/
 *.csd
 *.csd_temp
 .vscode/
+.DS_Store

@@ -32,12 +32,12 @@ import argparse
 
 # global constant to speed up loops
 mi0 = 4 * np.pi * 1e-7
-C1 =  -np.log(2) / 3 + 13 / 12 - np.pi / 2
-C2 =  mi0 / (2*np.pi)
+C1 = -np.log(2) / 3 + 13 / 12 - np.pi / 2
+C2 = mi0 / (2 * np.pi)
 
 # # Importing local library
 # from csdlib import csdlib as csd
-from csdlib import innercode as ic 
+from csdlib import innercode as ic
 
 
 # making the NUMBA decorators optional
@@ -168,8 +168,6 @@ def loadObj(filename):
         return pickle.load(myInput)
 
 
-
-
 def getCanvas(textInput):
     """This function is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
@@ -220,7 +218,7 @@ def getCanvas(textInput):
         XSecArray = np.zeros([elements_x, elements_y])
 
         for step in codeSteps:
-            step[0](*step[1], shift=(min(X), min(Y)),XSecArray=XSecArray,dXmm=dXmm)
+            step[0](*step[1], shift=(min(X), min(Y)), XSecArray=XSecArray, dXmm=dXmm)
         return XSecArray, dXmm, dYmm
 
     return False
@@ -310,15 +308,14 @@ def N_getSelfInductance(sizeX, sizeY, lenght):
     a = srednica * 1e-3
     l = lenght * 1e-3
 
-
     # This calculation is based on the:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
     # L = (mi0 * l / (2 * np.pi)) * (
     #     np.log(2 * l / a) - np.log(2) / 3 + 13 / 12 - np.pi / 2
     # )
 
-    # this is the above formula just with pre calculated constant 
-    L = (C2 * l) * ( np.log(2 * l / a) + C1 )
+    # this is the above formula just with pre calculated constant
+    L = (C2 * l) * (np.log(2 * l / a) + C1)
 
     # this was the previous formula
     # return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
@@ -371,8 +368,10 @@ def N_getMutualInductance(sizeX, sizeY, lenght, distance):
     #     np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
     # )
     # the same as above with the pre-calculated C2
-    M = C2 * l * (
-        np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
+    M = (
+        C2
+        * l
+        * (np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l)
     )
 
     # previous formula
@@ -540,6 +539,7 @@ def N_recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
 
     return localResultsArray
 
+
 def combineVectors(vPhA, vPhB, vPhC):
     """Function is joining the 3 phase vectors together"""
 
@@ -564,8 +564,9 @@ def combineVectors(vPhA, vPhB, vPhC):
             elementsVector = np.concatenate((vPhA, vPhB), axis=0)
         else:
             elementsVector = np.concatenate((vPhA, vPhC), axis=0)
-    
-    return elementsVector, elementsPhaseA,elementsPhaseB, elementsPhaseC
+
+    return elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC
+
 
 # Doing the main work here.
 if __name__ == "__main__":
@@ -582,7 +583,6 @@ if __name__ == "__main__":
         import matplotlib.pyplot as plt
         from matplotlib.colors import ListedColormap
 
-
     XSecArray = np.zeros((0, 0))
     dXmm = dYmm = 1
 
@@ -592,18 +592,16 @@ if __name__ == "__main__":
     myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
     myLog(f"Data table size: {XSecArray.shape}")
 
-    
     while dXmm > config["size"]:
         myLog("Splitting the geometry cells...", end="")
         XSecArray = N_arraySlicer(inputArray=XSecArray, subDivisions=2)
         dXmm = dXmm / 2
         dYmm = dYmm / 2
-    
+
     myLog()
     myLog("Adjusted geometry array parameters:")
     myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
     myLog(f"Data table size: {XSecArray.shape}")
-
 
     if config["draw"]:
         # making the draw of the geometry in initial state.
@@ -668,8 +666,9 @@ if __name__ == "__main__":
     vPhB = N_arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
     vPhC = N_arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
 
-
-    elementsVector,elementsPhaseA,elementsPhaseB,elementsPhaseC = combineVectors(vPhA,vPhB,vPhC)
+    elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC = combineVectors(
+        vPhA, vPhB, vPhC
+    )
 
     if len(elementsVector) > 1200:
         myLog()
@@ -705,7 +704,7 @@ if __name__ == "__main__":
     vC = np.ones(elementsPhaseC) * Uc
 
     # voltageVector = np.concatenate((vA, vB, vC), axis=0)
-    voltageVector,_,_,_ = combineVectors(vA,vB,vC)
+    voltageVector, _, _, _ = combineVectors(vA, vB, vC)
 
     # Initial solve
     # Main equation solve

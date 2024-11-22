@@ -7,11 +7,13 @@ import numpy as np
 
 try:
     from numba import njit
+
     use_njit = True
 
 except ImportError:
     use_njit = False
     njit = None
+
 
 # making the NUMBA decorators optional
 def conditional_decorator(dec, condition):
@@ -24,11 +26,11 @@ def conditional_decorator(dec, condition):
     return decorator
 
 
-
 # global constant to speed up loops
 mi0 = 4 * np.pi * 1e-7
 C1 = -np.log(2) / 3 + 13 / 12 - np.pi / 2
 C2 = mi0 / (2 * np.pi)
+
 
 # the functions
 def solveTheEquation(admitanceMatrix, voltageVector):
@@ -93,7 +95,6 @@ def getImpedanceArray(
     return impedanceArray
 
 
-
 @conditional_decorator(njit, use_njit)
 def getSelfInductance(sizeX, sizeY, lenght):
     """
@@ -128,7 +129,6 @@ def getSelfInductance(sizeX, sizeY, lenght):
     return L
 
 
-
 @conditional_decorator(njit, use_njit)
 def getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
     """
@@ -140,7 +140,6 @@ def getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
     Resistance in Ohm
     """
     return (lenght / (sizeX * sizeY * sigma20C)) * 1e3 * (1 + temCoRe * (temp - 20))
-
 
 
 @conditional_decorator(njit, use_njit)
@@ -175,13 +174,16 @@ def getMutualInductance(sizeX, sizeY, lenght, distance):
     M = (
         C2
         * l
-        * (np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l)
+        * (
+            np.log((l + np.sqrt(l**2 + d**2)) / d)
+            - np.sqrt(1 + (d / l) ** 2)
+            + d / l
+        )
     )
 
     # previous formula
     # return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
     return M
-
 
 
 @conditional_decorator(njit, use_njit)
@@ -249,7 +251,6 @@ def getDistancesArray(inputVector):
             else:
                 distanceArray[y, x] = 0
     return distanceArray
-
 
 
 def arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):

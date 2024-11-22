@@ -34,7 +34,7 @@ from csdlib import csdmath as csdm
 
 def getArgs():
     """
-    Handling the cli line parameters. 
+    Handling the cli line parameters.
     """
     parser = argparse.ArgumentParser(
         description="CSD cli executor",
@@ -189,13 +189,22 @@ def main():
     in_Ic = I[4] * np.cos(I[5] * np.pi / 180) + I[4] * np.sin(I[5] * np.pi / 180) * 1j
     csdf.myLog(f"Ic: {in_Ic}")
 
-    vPhA = csdm.arrayVectorize(inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm)
-    vPhB = csdm.arrayVectorize(inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm)
-    vPhC = csdm.arrayVectorize(inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm)
-
-    elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC = csdf.combineVectors(
-        vPhA, vPhB, vPhC
+    vPhA = csdm.arrayVectorize(
+        inputArray=XSecArray, phaseNumber=1, dXmm=dXmm, dYmm=dYmm
     )
+    vPhB = csdm.arrayVectorize(
+        inputArray=XSecArray, phaseNumber=2, dXmm=dXmm, dYmm=dYmm
+    )
+    vPhC = csdm.arrayVectorize(
+        inputArray=XSecArray, phaseNumber=3, dXmm=dXmm, dYmm=dYmm
+    )
+
+    (
+        elementsVector,
+        elementsPhaseA,
+        elementsPhaseB,
+        elementsPhaseC,
+    ) = csdf.combineVectors(vPhA, vPhB, vPhC)
 
     if len(elementsVector) > 1200:
         csdf.myLog()
@@ -250,7 +259,7 @@ def main():
     # expected Ia Ib Ic as symmetrical ones
     # ratios of currents will give us new voltages for phases
 
-    if Ia :
+    if Ia:
         Ua = Ua * (in_Ia / Ia)
     if Ib:
         Ub = Ub * (in_Ib / Ib)
@@ -409,6 +418,7 @@ Current Density distribution [A/mm2]",
         )
 
         plt.show()
+
 
 # Doing the main work here.
 if __name__ == "__main__":

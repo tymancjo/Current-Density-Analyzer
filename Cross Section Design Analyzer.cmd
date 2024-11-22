@@ -1,1 +1,1 @@
-python csd.py
+python app/csd.py

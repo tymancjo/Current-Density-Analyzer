@@ -11,26 +11,6 @@ import os.path
 from csdlib import csdlib as csd
 
 
-# # making the NUMBA decorators optional
-# def conditional_decorator(dec, condition):
-#     def decorator(func):
-#         if not condition:
-#             # Return the function unchanged, not decorated.
-#             return func
-#         return dec(func)
-
-#     return decorator
-
-
-# try:
-#     from numba import njit
-
-#     use_njit = True
-# except ImportError:
-#     use_njit = False
-
-
-# @conditional_decorator(njit, use_njit)
 def getCSD(array_img):
     pixels_x = array_img.shape[0]
     pixels_y = array_img.shape[1]
@@ -57,16 +37,11 @@ def getCSD(array_img):
             elif b > 1.5 * r and b > 1.5 * g and b > av_color:
                 result = 3
 
-            # if 25 < rgb.sum() < 3 * 255:
-
-            # result = 1 + np.where(rgb == np.amax(rgb))[0][0]
             XSecArray[x, y] = result
 
     return XSecArray
 
 
-# @njit
-# @conditional_decorator(njit, use_njit)
 def trimEmpty(XSecArray):
     size_y, size_x = XSecArray.shape
     crop_top = crop_btm = 0
@@ -156,8 +131,6 @@ def loadImageFromFile(config):
     return np.array(array_img)
 
 
-# @njit
-# @conditional_decorator(njit, use_njit)
 def simplify(XSecArray, dXmm, dYmm, maxsize):
     splits = 1
     for _ in range(10):

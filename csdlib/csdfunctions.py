@@ -12,9 +12,51 @@ import numpy as np
 from csdlib import innercode as ic
 
 
+class cointainer:
+    """
+    This class is to make an object to operate with the loading and saving the
+    .csd files - that have the geometry data
+    """
+
+    def __init__(self, xArray, dX, dY, ic=""):
+        self.xArray = xArray
+        self.dX = dX
+        self.dY = dY
+        self.ic = ic
+        print("The container is created")
+
+    def save(self, filename):
+        if filename[-4:] == ".csd":  # the name already have extension
+            pass
+        else:
+            filename = str(filename) + ".csd"
+        try:
+            print("trying to save to: {}".format(filename))
+            tempfile = filename + "_temp"
+            with open(tempfile, "wb") as output:
+                pickle.dump(self, output, pickle.DEFAULT_PROTOCOL)
+        except:
+            print("There is issue with pickle. Save aborted to protect file.")
+        else:
+            with open(filename, "wb") as output:
+                pickle.dump(self, output, pickle.DEFAULT_PROTOCOL)
+            ## If file exists, delete it ##
+            if os.path.isfile(tempfile):
+                os.remove(tempfile)
+            else:  ## Show an error ##
+                print("Error: %s file not found" % tempfile)
+
+    def restore(self):
+        return self.xArray, self.dX, self.dY
+
+    def getIC(self):
+        return self.ic
+
+
 def myLog(s: str = "", *args, **kwargs):
     if verbose:
         print(s, *args, *kwargs)
+
 
 def getCanvas(textInput):
     """This function is to determine the best parameters for the canvas
@@ -121,7 +163,6 @@ def loadObj(filename):
         return pickle.load(myInput)
 
 
-
 def combineVectors(vPhA, vPhB, vPhC):
     """Function is joining the 3 phase vectors together"""
 
@@ -146,7 +187,5 @@ def combineVectors(vPhA, vPhB, vPhC):
             elementsVector = np.concatenate((vPhA, vPhB), axis=0)
         else:
             elementsVector = np.concatenate((vPhA, vPhC), axis=0)
-    
-    return elementsVector, elementsPhaseA,elementsPhaseB, elementsPhaseC
 
-
+    return elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC

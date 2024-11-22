@@ -4,16 +4,9 @@ import sys
 import argparse
 import os.path
 
-from csdlib import csdlib as csd
-from csdlib.csdcli import *
-
-
-verbose = not True
-
-
-def myLog(s: str = "", *args, **kwargs):
-    if verbose:
-        print(s, args, kwargs)
+# from csdlib import csdlib as csd
+from csdlib import csdcli as csdcli
+from csdlib import csdfunctions as csdf
 
 
 def getArgs():
@@ -86,8 +79,6 @@ def getArgs():
 
 
 def main():
-    global verbose
-
     config = getArgs()
 
     verbose = config["verbose"]
@@ -96,45 +87,48 @@ def main():
     h = config["height"]
     optimize = config["optimize"]
 
-    myLog(config)
+    csdf.verbose = verbose
+    csdf.myLog(config)
 
-    array_img = loadImageFromFile(config)
-    myLog(array_img.shape)
+    array_img = csdcli.loadImageFromFile(config)
+
+    csdf.myLog(array_img.shape)
+
     pixels_x = array_img.shape[0]
     pixels_y = array_img.shape[1]
 
     dXmm = dYmm = min(w / pixels_x, h / pixels_y)
 
-    XSecArray = getCSD(array_img)
-    myLog(XSecArray)
-    myLog(XSecArray.shape)
+    XSecArray = csdcli.getCSD(array_img)
+    csdf.myLog(XSecArray)
+    csdf.myLog(XSecArray.shape)
 
     if np.sum(XSecArray) == 0:
-        myLog("No cross section data found. No output generated.")
+        csdf.myLog("No cross section data found. No output generated.")
         sys.exit(1)
 
-    XSecArray = trimEmpty(XSecArray)
-    myLog("Trimming the empty space...")
-    myLog(XSecArray.shape)
-    myLog(f"dX: {dXmm} mm,\t dY: {dYmm} mm")
+    XSecArray = csdcli.trimEmpty(XSecArray)
+    csdf.myLog("Trimming the empty space...")
+    csdf.myLog(XSecArray.shape)
+    csdf.myLog(f"dX: {dXmm} mm,\t dY: {dYmm} mm")
 
     if optimize:
-        myLog()
-        myLog("Simplifying the geometry...", end="")
-        XSecArray, dXmm, dYmm, splits = simplify(
+        csdf.myLog()
+        csdf.myLog("Simplifying the geometry...", end="")
+        XSecArray, dXmm, dYmm, splits = csdcli.simplify(
             XSecArray, dXmm, dYmm, config["maxsize"]
         )
 
-        myLog(f"done {splits}", end="")
-        myLog()
-        myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
-        myLog(f"Data table size: {XSecArray.shape}")
+        csdf.myLog(f"done {splits}", end="")
+        csdf.myLog()
+        csdf.myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
+        csdf.myLog(f"Data table size: {XSecArray.shape}")
 
     output_csd_file = source_img[:-4] + ".csd"
     dXmm = round(dXmm, 2)
     dYmm = round(dYmm, 2)
 
-    S = csd.cointainer(XSecArray, dXmm, dYmm)
+    S = csdf.cointainer(XSecArray, dXmm, dYmm)
     S.save(output_csd_file)
 
 

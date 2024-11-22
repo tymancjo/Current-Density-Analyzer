@@ -80,6 +80,7 @@ celerybeat-schedule
 
 # virtualenv
 venv/
+.venv/
 ENV/
 .venv.nosync/
 
@@ -90,3 +91,5 @@ ENV/
 .ropeproject
 *.csd
 *.csd_temp
+.vscode/
+.DS_Store

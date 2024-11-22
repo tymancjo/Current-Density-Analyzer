@@ -436,7 +436,7 @@ class currentDensityWindowPro:
 
     def getMaterials(self):
         self.Materials = False
-        list = csdos.read_file_to_list("materials.txt")[1:]
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
         print(list)
         if list:
             self.Materials = csdos.get_material_from_list(list)
@@ -1282,7 +1282,7 @@ class zWindow:
 
     def getMaterials(self):
             self.Materials = False
-            list = csdos.read_file_to_list("materials.txt")[1:]
+            list = csdos.read_file_to_list("setup/materials.txt")[1:]
             print(list)
             if list:
                 self.Materials = csdos.get_material_from_list(list)
@@ -1527,7 +1527,7 @@ class zWindow3f:
 
     def getMaterials(self):
             self.Materials = False
-            list = csdos.read_file_to_list("materials.txt")[1:]
+            list = csdos.read_file_to_list("setup/materials.txt")[1:]
             print(list)
             if list:
                 self.Materials = csdos.get_material_from_list(list)

@@ -7,6 +7,7 @@ Author: Tomasz Tomanek | 2024
 """
 
 import os
+import sys
 import pickle
 import numpy as np
 from csdlib import innercode as ic

@@ -5,13 +5,19 @@ from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib
 import math
+import numpy as np
 import tkinter as tk
+
+# Importing local library
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
 from csdlib import csdos
-import numpy as np
 
-# matplotlib.use('TKAgg')
+from csdlib import csdfunctions as csdf
+from csdlib import csdmath as csdm
+from csdlib import csdsolve as csds
+
+csdf.verbose = False
 
 
 class MyPtrn:
@@ -128,7 +134,6 @@ class currentDensityWindowPro:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.getMaterials()
         print(self.Materials)
 
@@ -305,17 +310,18 @@ class currentDensityWindowPro:
         self.isSolved = False
 
         if self.Materials:
-            self.material_buttons =[]
+            self.material_buttons = []
             for M in self.Materials:
-                self.material_buttons.append(tk.Button(self.cframe, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons.append(
+                    tk.Button(
+                        self.cframe, text=M.name, command=partial(self.setMaterial, M)
+                    )
+                )
                 self.material_buttons[-1].pack()
-                
-
 
         self.readSettings()
 
-    def setMaterial(self,M):
-
+    def setMaterial(self, M):
         self.Sigma_txt.delete(0, tk.END)
         self.Sigma_txt.insert(0, M.sigma)
 
@@ -323,16 +329,17 @@ class currentDensityWindowPro:
         self.temCoRe_txt.insert(0, M.alpha)
 
         self.ro_txt.delete(0, tk.END)
-        self.ro_txt.insert(0,M.ro)
-        
+        self.ro_txt.insert(0, M.ro)
+
         self.cp_txt.delete(0, tk.END)
-        self.cp_txt.insert(0,M.cp)
+        self.cp_txt.insert(0, M.cp)
 
         self.readSettings()
 
-
     def readSettings(self):
         self.I = self.Irms_txt.get().split(";")  # reading I as array
+        self.I = [float(I) for I in self.I]
+
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
         self.HTC = float(self.HTC_txt.get())
@@ -444,145 +451,25 @@ class currentDensityWindowPro:
     def powerAnalysis(self):
         self.readSettings()
 
-        admitanceMatrix = np.linalg.inv(
-            csd.n_getImpedanceArray(
-                csd.n_getDistancesArray(self.elementsVector),
-                freq=self.f,
-                dXmm=self.dXmm,
-                dYmm=self.dYmm,
-                temperature=self.t,
-                lenght=self.lenght,
-                sigma20C=self.sigma20C,
-                temCoRe=self.temCoRe,
-            )
-        )
-
-        # Let's put here some voltage vector
-        Ua = complex(1, 0)
-        Ub = complex(-0.5, np.sqrt(3) / 2)
-        Uc = complex(-0.5, -np.sqrt(3) / 2)
-
-        vA = np.ones(self.elementsPhaseA) * Ua
-        vB = np.ones(self.elementsPhaseB) * Ub
-        vC = np.ones(self.elementsPhaseC) * Uc
-
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
-
-        # Initial solve
-        # Main equation solve
-        currentVector = np.matmul(admitanceMatrix, voltageVector)
-
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0 : self.elementsPhaseA]
-        currentPhB = currentVector[
-            self.elementsPhaseA : self.elementsPhaseA + self.elementsPhaseB
-        ]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB :]
-
-        # Bringin each phase current to the assumer Irms level
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        # expected Ia Ib Ic as symmetrical ones
-        exIa = self.in_Ia
-        exIb = self.in_Ib
-        exIc = self.in_Ic
-
-        # print('***VOLTAGES****')
-        # print(Ua, Ub, Uc)
-
-        # ratios of currents will give us new voltages for phases
-        Ua = Ua * (exIa / Ia)
-        Ub = Ub * (exIb / Ib)
-        Uc = Uc * (exIc / Ic)
-
-        # for debug:
-        print("***recalculated votages****")
-        print(Ua, Ub, Uc)
-        print("***XXXXX****")
-
-        # So we have now new volatges, lets solve again with them
-        vA = np.ones(self.elementsPhaseA) * Ua
-        vB = np.ones(self.elementsPhaseB) * Ub
-        vC = np.ones(self.elementsPhaseC) * Uc
-
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
-
-        # Initial solve
-        # Main equation solve
-        currentVector = np.matmul(admitanceMatrix, voltageVector)
-
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0 : self.elementsPhaseA]
-        currentPhB = currentVector[
-            self.elementsPhaseA : self.elementsPhaseA + self.elementsPhaseB
-        ]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB :]
-
-        # Bringin each phase current to the assumer Irms level
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        # end of second solve!
-
-        # for debug:
-        print("***pre calibration current results****")
-        print(Ia, Ib, Ic)
-        print(Ia + Ib + Ic)
-        print("***XXXXX****")
-
-        # Now we normalize up to the expecter self.I - just a polish
-        # as we are almost there with the previous second solve for new VOLTAGES
-
-        modIa = np.abs(Ia)
-        modIb = np.abs(Ib)
-        modIc = np.abs(Ic)
-
-        # for debug:
-        # print(modIa, modIb, modIc)
-
-        currentPhA *= self.in_Ia / modIa
-        currentPhB *= self.in_Ib / modIb
-        currentPhC *= self.in_Ic / modIc
-
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        getMod = np.vectorize(csd.n_getComplexModule)
-
-        resultsCurrentVector = np.concatenate(
-            (currentPhA, currentPhB, currentPhC), axis=0
-        )
-        # for debug
-        # print(resultsCurrentVector)
-        #
-        resultsCurrentVector = getMod(resultsCurrentVector)
-        resistanceVector = csd.n_getResistanceArray(
-            self.elementsVector,
-            dXmm=self.dXmm,
-            dYmm=self.dYmm,
-            temperature=self.t,
-            lenght=self.lenght,
+        # moving the calculations to use the function from the module.
+        (
+            self.resultsCurrentVector,
+            powerResults,
+            elementsVector,
+            powerLossesVector,
+        ) = csds.solve_system(
+            self.XsecArr,
+            self.dXmm,
+            self.dYmm,
+            self.I,
+            self.f,
+            self.lenght,
+            self.t,
             sigma20C=self.sigma20C,
             temCoRe=self.temCoRe,
         )
 
-        # This is the total power losses vector
-        powerLossesVector = resistanceVector * resultsCurrentVector**2
-        # This are the total power losses
-        powerLosses = np.sum(powerLossesVector)
-
-        # Power losses per phase
-        powPhA = np.sum(powerLossesVector[0 : self.elementsPhaseA])
-        powPhB = np.sum(
-            powerLossesVector[
-                self.elementsPhaseA : self.elementsPhaseA + self.elementsPhaseB : 1
-            ]
-        )
-        powPhC = np.sum(powerLossesVector[self.elementsPhaseA + self.elementsPhaseB :])
+        powerLosses, powPhA, powPhB, powPhC = powerResults
 
         self.console(
             "power losses: {:.2f} [W] \n phA: {:.2f}[W]\n phB: {:.2f}[W]\n phC: {:.2f}[W]".format(
@@ -590,7 +477,8 @@ class currentDensityWindowPro:
             )
         )
 
-        self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
+        # self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
+        self.powerLosses = powerResults
 
         # Doing analysis per bar
         # Checking for the pabrs - separate conductor detecton
@@ -611,7 +499,7 @@ class currentDensityWindowPro:
             self.bars.append(temp)
 
         # Converting resutls to current density
-        self.resultsCurrentVector = resultsCurrentVector / (self.dXmm * self.dYmm)
+        self.resultsCurrentVector /= self.dXmm * self.dYmm
 
         # Recreating the solution to form of cross section array
         self.resultsArray = csd.n_recreateresultsArray(
@@ -1180,13 +1068,13 @@ class zWindow:
 
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0,column=0)
+        self.frame.grid(row=0, column=0)
 
         self.bframe = tk.Frame(self.master)
         self.bframe.grid(row=0, column=1)
 
         self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=1,column=1)
+        self.cframe.grid(row=1, column=1)
 
         self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
         self.lab_Freq.pack()
@@ -1205,7 +1093,6 @@ class zWindow:
         )
         self.rButton.pack()
 
-
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
 
@@ -1218,7 +1105,6 @@ class zWindow:
         )
         self.desc_t.pack()
 
-
         self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
 
@@ -1228,13 +1114,16 @@ class zWindow:
         self.openButton.pack()
 
         if self.Materials:
-            self.material_buttons =[]
+            self.material_buttons = []
             for M in self.Materials:
-                self.material_buttons.append(tk.Button(self.frame, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons.append(
+                    tk.Button(
+                        self.frame, text=M.name, command=partial(self.setMaterial, M)
+                    )
+                )
                 self.material_buttons[-1].pack()
 
             self.M = self.Materials[0]
-
 
     def readSettings(self):
         self.f = float(self.Freq_txt.get())
@@ -1281,13 +1170,13 @@ class zWindow:
                 self.elementsVector = np.concatenate((self.vPhA, self.vPhC), axis=0)
 
     def getMaterials(self):
-            self.Materials = False
-            list = csdos.read_file_to_list("setup/materials.txt")[1:]
-            print(list)
-            if list:
-                self.Materials = csdos.get_material_from_list(list)
+        self.Materials = False
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
+        print(list)
+        if list:
+            self.Materials = csdos.get_material_from_list(list)
 
-    def setMaterial(self,M):
+    def setMaterial(self, M):
         self.M = M
         self.console(f"Set to use: {M.name} as material")
 
@@ -1315,7 +1204,6 @@ class zWindow:
                 # lenght=self.lenght,
                 sigma20C=self.M.sigma,
                 temCoRe=self.M.alpha,
-
             )
         )
 
@@ -1408,7 +1296,6 @@ class zWindow3f:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.getMaterials()
         print(self.Materials)
 
@@ -1418,13 +1305,13 @@ class zWindow3f:
 
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0,column=0)
+        self.frame.grid(row=0, column=0)
 
         self.bframe = tk.Frame(self.master)
         self.bframe.grid(row=0, column=1)
 
         self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=1,column=1)
+        self.cframe.grid(row=1, column=1)
 
         self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
         self.lab_Freq.pack()
@@ -1443,7 +1330,6 @@ class zWindow3f:
         )
         self.rButton.pack()
 
-
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
 
@@ -1456,7 +1342,6 @@ class zWindow3f:
         )
         self.desc_t.pack()
 
-
         self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
 
@@ -1466,9 +1351,13 @@ class zWindow3f:
         self.openButton.pack()
 
         if self.Materials:
-            self.material_buttons =[]
+            self.material_buttons = []
             for M in self.Materials:
-                self.material_buttons.append(tk.Button(self.frame, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons.append(
+                    tk.Button(
+                        self.frame, text=M.name, command=partial(self.setMaterial, M)
+                    )
+                )
                 self.material_buttons[-1].pack()
 
             self.M = self.Materials[0]
@@ -1521,18 +1410,15 @@ class zWindow3f:
         self.tx1.insert(tk.END, str(string))
         self.tx1.insert(tk.END, "\n")
         self.tx1.see(tk.END)
-        
-        
-
 
     def getMaterials(self):
-            self.Materials = False
-            list = csdos.read_file_to_list("setup/materials.txt")[1:]
-            print(list)
-            if list:
-                self.Materials = csdos.get_material_from_list(list)
+        self.Materials = False
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
+        print(list)
+        if list:
+            self.Materials = csdos.get_material_from_list(list)
 
-    def setMaterial(self,M):
+    def setMaterial(self, M):
         self.M = M
         self.console(f"Set to use: {M.name} as material")
 

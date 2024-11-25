@@ -19,6 +19,7 @@ is generated on the standard output.
 # 6. csdf.myLog results - done
 # 7. adding inner code working - done
 # 8. cleanu and make use of modules - done
+# 9. adding support of the materials - by the same file as in gui
 
 
 # General imports
@@ -181,11 +182,9 @@ def main():
     csdf.myLog()
     csdf.myLog("Complex form:")
 
-    (
-        resultsCurrentVector,
-        powerResults,
-        elementsVector,
-    ) = csds.solve_system(XSecArray, dXmm, dYmm, I, f, length, t, verbose)
+    (resultsCurrentVector, powerResults, elementsVector, _) = csds.solve_system(
+        XSecArray, dXmm, dYmm, I, f, length, t, verbose
+    )
 
     powerLosses, powPhA, powPhB, powPhC = powerResults
 

@@ -19,14 +19,15 @@ is generated on the standard output.
 # 6. csdf.myLog results - done
 # 7. adding inner code working - done
 # 8. cleanu and make use of modules - done
-# 9. adding support of the materials - by the same file as in gui
-
+# 9. adding support of the materials - by the line parameters.
 
 # General imports
 import numpy as np
-import os.path
+
+# import os.path
 import sys
-import pickle
+
+# import pickle
 import argparse
 
 # Importing local library
@@ -46,9 +47,33 @@ def getArgs():
     parser.add_argument(
         "-s", "--size", help="Max single cell size in [mm]", type=float, default=5
     )
-    parser.add_argument("-f", "--frequency", type=float, default=50.0)
-    parser.add_argument("-T", "--Temperature", type=float, default=140.0)
-    parser.add_argument("-l", "--length", type=float, default=1000.0)
+    parser.add_argument(
+        "-f", "--frequency", type=float, default=50.0, help="Currents frequency in Hz"
+    )
+    parser.add_argument(
+        "-T",
+        "--temperature",
+        type=float,
+        default=140.0,
+        help="Conductors temperature in deg C",
+    )
+    parser.add_argument(
+        "-l", "--length", type=float, default=1000.0, help="Analyzed length"
+    )
+    parser.add_argument(
+        "-sig",
+        "--conductivity",
+        type=float,
+        default=56.0e6,
+        help="Conductors conductivity at 20 degC in [S]",
+    )
+    parser.add_argument(
+        "-rco",
+        "--temRcoeff",
+        type=float,
+        default=3.9e-3,
+        help="temperature coeff. of resistnace [1/K]",
+    )
     (
         parser.add_argument(
             "-sp", "--simple", action="store_true", help="Show only simple output"
@@ -82,7 +107,8 @@ def getArgs():
     parser.add_argument("geometry", help="Geometry description file in .csd format")
     parser.add_argument(
         "current",
-        help="Current RMS value for the 3 phase symmetrical analysis in ampers [A]",
+        help="Current RMS value for the 3 phase \
+                symmetrical analysis in ampers [A]",
         type=float,
     )
 
@@ -154,7 +180,8 @@ def main():
         ax.set_xticks(x_ticks)
         ax.set_yticks(y_ticks)
 
-        # Set the tick labels by multiplying the tick values by the scaling factor
+        # Set the tick labels by multiplying
+        # the tick values by the scaling factor
         ax.set_xticklabels((x_ticks * dXmm).astype(int))
         ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
@@ -168,22 +195,33 @@ def main():
     # 3 preparing the solution
     Irms = config["current"]
     # Current vector
-    I = [Irms, 120, Irms, 0, Irms, 240]
+    Icurrent = [Irms, 120, Irms, 0, Irms, 240]
     f = config["frequency"]
     length = config["length"]
-    t = config["Temperature"]
+    t = config["temperature"]
+    sigma = config["conductivity"]
+    r20 = config["temRcoeff"]
 
     csdf.myLog()
     csdf.myLog("Starting solver for")
 
     for k, n in zip([0, 2, 4], ["a", "b", "c"]):
-        csdf.myLog(f"I{n} = {I[k]}[A] \t {I[k+1]}[deg] \t {f}[Hz]")
+        csdf.myLog(f"I{n} = {Icurrent[k]}[A] \t {Icurrent[k+1]}[deg] \t {f}[Hz]")
 
     csdf.myLog()
     csdf.myLog("Complex form:")
 
     (resultsCurrentVector, powerResults, elementsVector, _) = csds.solve_system(
-        XSecArray, dXmm, dYmm, I, f, length, t, verbose
+        XSecArray,
+        dXmm,
+        dYmm,
+        Icurrent,
+        f,
+        length,
+        t,
+        verbose,
+        sigma20C=sigma,
+        temCoRe=r20,
     )
 
     powerLosses, powPhA, powPhB, powPhC = powerResults
@@ -196,7 +234,7 @@ def main():
         print(f"\tgeometry: {config['geometry']}")
         print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm], T={t}[degC]")
         print("----------------------------------------------------------------")
-        print(f"Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
+        print("Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
         print(f"{powerLosses:.2f}\t| {powPhA:.2f} \t| {powPhB:.2f} \t| {powPhC:.2f}")
         print("----------------------------------------------------------------")
     elif not csv:
@@ -210,7 +248,7 @@ def main():
         currentsDraw = csdm.recreateresultsArray(
             elementsVector, resultsCurrentVector, XSecArray
         )
-        minCurrent = resultsCurrentVector.min()
+        # minCurrent = resultsCurrentVector.min()
         maxCurrent = resultsCurrentVector.max()
 
         base_cmap = plt.get_cmap("jet", 256)
@@ -236,7 +274,8 @@ def main():
         ax.set_xticks(x_ticks)
         ax.set_yticks(y_ticks)
 
-        # Set the tick labels by multiplying the tick values by the scaling factor
+        # Set the tick labels by multiplying the
+        # tick values by the scaling factor
         ax.set_xticklabels((x_ticks * dXmm).astype(int))
         ax.set_yticklabels((y_ticks * dYmm).astype(int))
 

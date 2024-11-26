@@ -1,6 +1,7 @@
 """
 This is a tkinter gui lib for CSD library and app
 """
+
 from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib
@@ -1026,8 +1027,7 @@ class currentDensityWindowPro:
                 + str(self.t)
                 + "[$^o$C] /"
                 + str(self.lenght)
-                + "[mm] \n"
-                "Ia:{:.1f}A {:.0f}$^o$ ".format(
+                + "[mm] \n" "Ia:{:.1f}A {:.0f}$^o$ ".format(
                     float(self.I[0]), np.floor(float(self.I[1]))
                 )
                 + "Ib:{:.1f}A {:.0f}$^o$ ".format(

@@ -6,7 +6,18 @@ from csdlib import csdfunctions as csdf
 from csdlib import csdmath as csdm
 
 
-def solve_system(XsecArray, dXmm, dYmm, I, freq, length, temperature, verbose=False):
+def solve_system(
+    XsecArray,
+    dXmm,
+    dYmm,
+    I,
+    freq,
+    length,
+    temperature,
+    verbose=False,
+    sigma20C=56e6,
+    temCoRe=3.9e-3,
+):
     # lets workout the  current in phases as is defined
     in_Ia = I[0] * np.cos(I[1] * np.pi / 180) + I[0] * np.sin(I[1] * np.pi / 180) * 1j
     csdf.myLog(f"Ia: {in_Ia}")
@@ -55,6 +66,8 @@ def solve_system(XsecArray, dXmm, dYmm, I, freq, length, temperature, verbose=Fa
             dYmm=dYmm,
             temperature=temperature,
             lenght=length,
+            sigma20C=sigma20C,
+            temCoRe=temCoRe,
         )
     )
 
@@ -162,7 +175,13 @@ def solve_system(XsecArray, dXmm, dYmm, I, freq, length, temperature, verbose=Fa
     resultsCurrentVector = getMod(resultsCurrentVector)
 
     resistanceVector = csdm.getResistanceArray(
-        elementsVector, dXmm=dXmm, dYmm=dYmm, temperature=temperature, lenght=length
+        elementsVector,
+        dXmm=dXmm,
+        dYmm=dYmm,
+        temperature=temperature,
+        lenght=length,
+        sigma20C=sigma20C,
+        temCoRe=temCoRe,
     )
 
     # This is the total power losses vector
@@ -181,4 +200,5 @@ def solve_system(XsecArray, dXmm, dYmm, I, freq, length, temperature, verbose=Fa
         resultsCurrentVector,
         (powerLosses, powPhA, powPhB, powPhC),
         elementsVector,
+        powerLossesVector,
     )

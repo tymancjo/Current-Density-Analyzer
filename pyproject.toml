@@ -3,7 +3,7 @@ name = "current-density-analyzer"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.13"
 dependencies = [
     "matplotlib>=3.9.2",
     "numba>=0.60.0",

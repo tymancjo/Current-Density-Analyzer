@@ -471,6 +471,7 @@ class currentDensityWindowPro:
         )
 
         powerLosses, powPhA, powPhB, powPhC = powerResults
+        self.solver_length = self.lenght
 
         self.console(
             "power losses: {:.2f} [W] \n phA: {:.2f}[W]\n phB: {:.2f}[W]\n phC: {:.2f}[W]".format(
@@ -574,6 +575,280 @@ class currentDensityWindowPro:
         # # Display the results:
         # self.showResults()
 
+    def calcTempRise_new(self):
+        """
+        this procedure solve the thermal equation with given data fromula
+        power losses analysis
+        """
+
+        # Lets work with barsData for themral model calculations
+        if self.isSolved:
+            # Doing the power losses sums per each bar
+            # Vector to keep all power losses per bar data and perymeter
+            # size and temp rise by given HTC
+
+            self.barsData = []
+
+            for i, bar in enumerate(self.bars):
+                BarPowerLoss = 0
+                BarCurrent = 0
+
+                for element in bar:
+                    BarPowerLoss += self.powerResultsArray[
+                        int(element[0]), int(element[1])
+                    ]
+
+                    BarCurrent += (self.dXmm * self.dYmm) * self.resultsArray[
+                        int(element[0]), int(element[1])
+                    ]
+
+                # Calculating bar perymiter of the current bar
+                perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
+                center = csd.n_getCenter(bar)
+                print(f"Bar {i} perymiter {perymiter / self.dXmm} \t {perymiter:.2f}mm | Bar center: {center}")
+
+                # Calculating this bar cross section
+                XS = len(bar) * self.dXmm * self.dYmm
+
+                # calculationg the bar Ghtc
+                p = perymiter * 1e-3
+                A = XS * 1e-6
+                lng = self.lenght * 1e-3
+
+                Ghtc = p * lng * self.HTC  # thermal conductance to air
+                Gt = A * self.CuGamma / lng  # thermal conductance to com
+                Q = BarPowerLoss * lng  # Power losses value at lenght
+
+                # Calculating this bar mass
+                # for the moment hard coded as copper roCu=8920 [kg/m3]
+                roCu = self.ro
+                # the heat capacity of copper cpcu=385 [J/kgK]
+                cpcu = self.cp
+
+                # its needed for the Icw temp rise calculation
+                Vol = A * lng  # [m3]
+                Mass = Vol * roCu
+
+                # Calculating the temp rise for 1s
+                dT1s = (Q * 1) / (Mass * cpcu)
+
+                # Calculating the temp rise for 3s
+                dT3s = (Q * 3) / (Mass * cpcu)
+
+                #  need now to figure out the current phase Number
+                if i >= self.phCon[0] + self.phCon[1]:
+                    phase = 3
+                elif i >= self.phCon[0]:
+                    phase = 2
+                else:
+                    phase = 1
+
+                #  plugin in the data to the list
+                self.barsData.append(
+                    [center, perymiter, BarCurrent, XS, Q, Ghtc, Gt, phase, dT1s, dT3s]
+                )
+                # now self.barsData have all the needed info :)
+
+                # barsData structure
+                # 0 bar center
+                # 1 perymeter
+                # 2 bar Current
+                # 3 cross section
+                # 4 Q power losses value
+                # 5 Ghtc to air thermal conductance
+                # 6 Gt 1/2lenght thermal conductance
+                # 7 phase number
+
+                # 8 New Thermal model DT - this one will calculated later below :)
+
+                # printing data for each bar
+                print(
+                    "Bar {0:02d} ({5:01d}){1}; Power; {2:06.2f}; [W]; perymeter; {3} [mm]; Current; {4:.1f}; [A]".format(
+                        i, center, Q, perymiter, BarCurrent, phase
+                    )
+                )
+                print(
+                    "Bar {0:02d} DT(Icu 1s); {1:06.2f}; [K]; DT(Icu 3s); {2:06.2f} [K]".format(
+                        i, dT1s, dT3s
+                    )
+                )
+
+            #  lets figure out the needed size of Gthermal matrix
+            #  it will be (bars# +3phases joints)x(the same)
+            vectorSize = len(self.barsData) + 3
+            thG = np.zeros((vectorSize, vectorSize), dtype=float)
+
+            # TEMP: Hardcoded Gth between matrix
+
+            if self.Gmx.shape != (3, 3):
+                GthermalMatrix = np.asarray(([0, 0, 0], [0, 0, 0], [0, 0, 0]))
+            else:
+                GthermalMatrix = self.Gmx
+            # DEBUG
+            print("--- Solving for temperatures ---")
+            print("The Thermal Cond Coeff Matrix")
+            print(GthermalMatrix)
+
+            print("Thermal Conductivity")
+            print(self.Gcon)
+
+            print("HTC")
+            print(self.HTC)
+
+            print("Results as bars temperatures")
+
+            # now we will loop twice over the bars
+            for i, fromBar in enumerate(self.barsData):
+                fromPhase = fromBar[7] - 1  # -1 due to the count from 0
+
+                for j, toBar in enumerate(self.barsData):
+                    tempG = 0  # just to make sure we dont have something in it
+
+                    if fromBar is toBar:
+                        # the main digonal with
+                        # GHtc and Gc and sum for all
+                        tempG += fromBar[5] + 2 * fromBar[6]
+                        #  now we need to loop again all
+                        # others to get the sum of G
+                        for otherToBar in self.barsData:
+                            if otherToBar is not fromBar:
+                                #  the distance between to get thermal Conductance
+                                distance = (
+                                    csd.n_getDistance(fromBar[0], otherToBar[0]) * 1e-3
+                                )
+                                # the area of the fom Bar as xsection for therm cond
+                                thisXs = fromBar[1] * self.lenght * 1e-6
+
+                                otherPhase = otherToBar[7] - 1
+                                tempG += (
+                                    self.Gcon
+                                    * (thisXs / distance)
+                                    * GthermalMatrix[fromPhase, otherPhase]
+                                )
+
+                    else:
+                        #  DEBUG
+                        otherPhase = toBar[7] - 1
+                        #  the distance between to get thermal Conductance
+                        distance = csd.n_getDistance(fromBar[0], toBar[0]) * 1e-3
+                        # the area of the fom Bar as xsection for therm cond
+                        thisXs = fromBar[1] * self.lenght * 1e-6
+                        tempG += (
+                            -GthermalMatrix[otherPhase, fromPhase]
+                            * self.Gcon
+                            * (thisXs / distance)
+                        )
+
+                    # putting the calculated vaule in the thG matrix
+                    thG[i, j] = tempG
+
+            #  now we need to go for the last 3 rows and columns that
+            #  are for the Tx (joints temperatures)
+            #  the bar phase will determine which Tx we tackle
+            #  Phase = 1 means position -3 in the cols >> col = Phase - 4
+            #  so lets go once more thru the bars to fill last columns
+            for i, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                col = phase - 4
+                thG[i, col] = -2 * fromBar[6]
+
+            #  and one more to fill the last rows
+            for j, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                row = phase - 4
+                thG[row, j] = 2 * fromBar[6]
+
+            # and last thing is the bottom rioght 3x3 area to fill for Tx'es
+            # in each phase as sum by bars -2*Gcondution_to_joint
+            #  this could be incorporated to the loops above
+            #  but is separated for clearer code
+            for fromBar in self.barsData:
+                phase = fromBar[7]
+                col_row = phase - 4
+                thG[col_row, col_row] += -2 * fromBar[6]
+
+            #  and one for the Q vector
+            thQ = np.zeros((vectorSize), dtype=float)
+            for i, fromBar in enumerate(self.barsData):
+                thQ[i] = fromBar[4]
+
+            # Solving for the T vector solutions
+            thGinv = np.linalg.inv(thG)
+            thT = np.matmul(thGinv, thQ)
+
+            # cuts out the Tx joints
+            self.Tout = thT[: len(self.barsData)]  # putting result to vector
+
+            # Preparing the output array of the temperatures
+            # First we need to rereate vector of temperture for each element
+            # in each of bar - as in general solutions vector
+            tmpVector = []
+            barElemVect = []
+
+            # going thrue each element in each bar
+            # creating the long vetor of temp risies
+            # and properly ordered elements vector
+            # that render where in oryginal xsec array was the element
+
+            for i, bar in enumerate(self.bars):
+                for element in bar:
+                    tmpVector.append(self.Tout[i])
+                    barElemVect.append(element)
+
+            # Now we prepare the array to display
+            self.tempriseResultsArray = csd.n_recreateresultsArray(
+                elementsVector=barElemVect,
+                resultsVector=tmpVector,
+                initialGeometryArray=self.XsecArr,
+            )
+
+            for i, temp in enumerate(self.Tout):
+                self.barsData[i].append(temp)
+                print("Bar {}: {:.2f}[K]".format(i, temp))
+
+            print("Phase A joint: {:.2f}[K]".format(thT[-3]))
+            print("Phase B joint: {:.2f}[K]".format(thT[-2]))
+            print("Phase C joint: {:.2f}[K]".format(thT[-1]))
+
+            # and now remembering all thermal results
+            self.Tout = thT
+
+            # Added 05.11.2019 - Adiabatic temperature rise (Icw) analysis for each Bar
+            # Listng results for the Icw DT calculations
+            avT = 0
+            print("****** 1s Icw Adiabatic Temp Rise *******")
+            for i, barDT in enumerate(self.barsData):
+                print(
+                    "Bar {}: {:.2f}[K]  ({:.2f} degC@35)".format(
+                        i, barDT[8], barDT[8] + 35
+                    )
+                )
+                avT += barDT[8] + 35
+
+            avT = avT / len(self.barsData)
+            print("Average 1s: {:.2f} degC@35".format(avT))
+            avT = 0
+            print("****** 3s Icw Adiabatic Temp Rise *******")
+            for i, barDT in enumerate(self.barsData):
+                print(
+                    "Bar {}: {:.2f}[K]  ({:.2f} degC@35)".format(
+                        i, barDT[9], barDT[9] + 35
+                    )
+                )
+                avT += barDT[9] + 35
+
+            avT = avT / len(self.barsData)
+            print("Average 3s: {:.2f} degC@35".format(avT))
+
+            print("******* END Icw Adiabatic Temp Rise *****")
+
+            print("####### FOR PCG #######")
+            for i, bar in enumerate(self.barsData):
+                print(f"{i+1:02d} dP: \t {bar[4]:7.2f} W")
+
+            # Display the results:
+            self.showResults()
+
     def calcTempRise(self):
         """
         this procedure solve the thermal equation with given data fromula
@@ -616,7 +891,7 @@ class currentDensityWindowPro:
 
                 Ghtc = p * lng * self.HTC  # thermal conductance to air
                 Gt = A * self.CuGamma / lng  # thermal conductance to com
-                Q = BarPowerLoss * lng  # Power losses value at lenght
+                Q = BarPowerLoss * self.lenght / self.solver_length   # Power losses value at lenght that was analysed brought to the temp analysis length 
 
                 # Calculating this bar mass
                 # for the moment hard coded as copper roCu=8920 [kg/m3]

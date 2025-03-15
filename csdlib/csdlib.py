@@ -731,7 +731,7 @@ def n_getCenter(v):
     return center
 
 
-def n_getConductors(XsecArr, vPhA, vPhB, vPhC):
+def n_getConductors_old(XsecArr, vPhA, vPhB, vPhC):
     """
     [Row,Col,X,Y]
     """
@@ -772,5 +772,69 @@ def n_getConductors(XsecArr, vPhA, vPhB, vPhC):
                     phaseConductors += 1
                     conductorsArr[R, C] = conductor
         phaseCond.append(phaseConductors)
+
+    return conductorsArr, conductor, phaseCond
+
+def n_getConductors(XsecArr, vPhA, vPhB, vPhC):
+    """
+    [Row,Col,X,Y]
+    """
+    # Setting up new conductors array
+    conductorsArr = np.zeros((XsecArr.shape), dtype=int)
+
+    conductor = 0
+    phases = [vPhA, vPhB, vPhC]
+    phaseCond = []
+
+    # let's map the elements back to the 2D shape array.
+    # I can use the recreate array here - but for sake of the clarity
+    phase_numbers = []
+    for phase_number, phase in enumerate(phases):
+
+        phase_numbers.append(-1-phase_number)
+
+        for element in phase:
+            R = int(element[0])
+            C = int(element[1])
+
+            conductorsArr[R, C] = phase_numbers[-1]
+    
+    Rows, Cols = conductorsArr.shape
+
+    # look around coordinates vector
+    dRC = [(-1,-1), (-1,0),(-1,1),
+            (0,-1),  (0,1),
+            (1,-1), (1,0),(1,1)] 
+
+    for phase_number in phase_numbers:
+        phaseConductors = 0
+        this_phase_cond_numbers = []
+        for R in range(Rows):
+            for C in range(Cols):
+                if conductorsArr[R,C] == phase_number:
+                    # looking around
+                    for step in range(5):
+                        altered_C = min(C+step, Cols-1)
+                        # to look around more if we follow a conductor of phases
+                        if conductorsArr[R,altered_C] == phase_number or conductorsArr[R,altered_C] in this_phase_cond_numbers :
+                            for dR,dC in dRC:
+                                # just to be able not fall of the size of array
+                                try:
+                                    N =  conductorsArr[R+dR,altered_C+dC]
+                                except:
+                                    N = 0
+                                if N > 0:
+                                    conductorsArr[R,C] = N
+                                    break
+                    if conductorsArr[R,C] < 1:
+                        # if we didn't find any neighbor already marked. 
+                        conductor += 1
+                        phaseConductors += 1
+                        this_phase_cond_numbers.append(conductor)
+                        conductorsArr[R, C] = conductor
+
+
+        phaseCond.append(phaseConductors)
+
 
     return conductorsArr, conductor, phaseCond

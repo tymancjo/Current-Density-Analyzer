@@ -2,7 +2,6 @@ import numpy as np
 
 import sys
 import argparse
-import os.path
 
 # from csdlib import csdlib as csd
 from csdlib import csdcli as csdcli
@@ -18,7 +17,7 @@ def getArgs():
             Returns the .cds file with the same name and location as input image.
 
             Info:
-            Use on the picture colors to determine phases: 
+            Use on the picture colors to determine phases:
             Red Color as phase A
             Green as phase B
             Blue as phase C

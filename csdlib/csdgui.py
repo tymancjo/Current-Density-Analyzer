@@ -1,17 +1,24 @@
 """
 This is a tkinter gui lib for CSD library and app
 """
+
 from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib
 import math
+import numpy as np
 import tkinter as tk
+
+# Importing local library
 from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
 from csdlib import csdos
-import numpy as np
 
-# matplotlib.use('TKAgg')
+from csdlib import csdfunctions as csdf
+from csdlib import csdmath as csdm
+from csdlib import csdsolve as csds
+
+csdf.verbose = False
 
 
 class MyPtrn:
@@ -128,7 +135,6 @@ class currentDensityWindowPro:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.getMaterials()
         print(self.Materials)
 
@@ -305,17 +311,18 @@ class currentDensityWindowPro:
         self.isSolved = False
 
         if self.Materials:
-            self.material_buttons =[]
+            self.material_buttons = []
             for M in self.Materials:
-                self.material_buttons.append(tk.Button(self.cframe, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons.append(
+                    tk.Button(
+                        self.cframe, text=M.name, command=partial(self.setMaterial, M)
+                    )
+                )
                 self.material_buttons[-1].pack()
-                
-
 
         self.readSettings()
 
-    def setMaterial(self,M):
-
+    def setMaterial(self, M):
         self.Sigma_txt.delete(0, tk.END)
         self.Sigma_txt.insert(0, M.sigma)
 
@@ -323,16 +330,17 @@ class currentDensityWindowPro:
         self.temCoRe_txt.insert(0, M.alpha)
 
         self.ro_txt.delete(0, tk.END)
-        self.ro_txt.insert(0,M.ro)
-        
+        self.ro_txt.insert(0, M.ro)
+
         self.cp_txt.delete(0, tk.END)
-        self.cp_txt.insert(0,M.cp)
+        self.cp_txt.insert(0, M.cp)
 
         self.readSettings()
 
-
     def readSettings(self):
         self.I = self.Irms_txt.get().split(";")  # reading I as array
+        self.I = [float(I) for I in self.I]
+
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
         self.HTC = float(self.HTC_txt.get())
@@ -436,7 +444,7 @@ class currentDensityWindowPro:
 
     def getMaterials(self):
         self.Materials = False
-        list = csdos.read_file_to_list("materials.txt")[1:]
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
         print(list)
         if list:
             self.Materials = csdos.get_material_from_list(list)
@@ -444,145 +452,26 @@ class currentDensityWindowPro:
     def powerAnalysis(self):
         self.readSettings()
 
-        admitanceMatrix = np.linalg.inv(
-            csd.n_getImpedanceArray(
-                csd.n_getDistancesArray(self.elementsVector),
-                freq=self.f,
-                dXmm=self.dXmm,
-                dYmm=self.dYmm,
-                temperature=self.t,
-                lenght=self.lenght,
-                sigma20C=self.sigma20C,
-                temCoRe=self.temCoRe,
-            )
-        )
-
-        # Let's put here some voltage vector
-        Ua = complex(1, 0)
-        Ub = complex(-0.5, np.sqrt(3) / 2)
-        Uc = complex(-0.5, -np.sqrt(3) / 2)
-
-        vA = np.ones(self.elementsPhaseA) * Ua
-        vB = np.ones(self.elementsPhaseB) * Ub
-        vC = np.ones(self.elementsPhaseC) * Uc
-
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
-
-        # Initial solve
-        # Main equation solve
-        currentVector = np.matmul(admitanceMatrix, voltageVector)
-
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0 : self.elementsPhaseA]
-        currentPhB = currentVector[
-            self.elementsPhaseA : self.elementsPhaseA + self.elementsPhaseB
-        ]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB :]
-
-        # Bringin each phase current to the assumer Irms level
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        # expected Ia Ib Ic as symmetrical ones
-        exIa = self.in_Ia
-        exIb = self.in_Ib
-        exIc = self.in_Ic
-
-        # print('***VOLTAGES****')
-        # print(Ua, Ub, Uc)
-
-        # ratios of currents will give us new voltages for phases
-        Ua = Ua * (exIa / Ia)
-        Ub = Ub * (exIb / Ib)
-        Uc = Uc * (exIc / Ic)
-
-        # for debug:
-        print("***recalculated votages****")
-        print(Ua, Ub, Uc)
-        print("***XXXXX****")
-
-        # So we have now new volatges, lets solve again with them
-        vA = np.ones(self.elementsPhaseA) * Ua
-        vB = np.ones(self.elementsPhaseB) * Ub
-        vC = np.ones(self.elementsPhaseC) * Uc
-
-        voltageVector = np.concatenate((vA, vB, vC), axis=0)
-
-        # Initial solve
-        # Main equation solve
-        currentVector = np.matmul(admitanceMatrix, voltageVector)
-
-        # And now we need to get solution for each phase to normalize it
-        currentPhA = currentVector[0 : self.elementsPhaseA]
-        currentPhB = currentVector[
-            self.elementsPhaseA : self.elementsPhaseA + self.elementsPhaseB
-        ]
-        currentPhC = currentVector[self.elementsPhaseA + self.elementsPhaseB :]
-
-        # Bringin each phase current to the assumer Irms level
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        # end of second solve!
-
-        # for debug:
-        print("***pre calibration current results****")
-        print(Ia, Ib, Ic)
-        print(Ia + Ib + Ic)
-        print("***XXXXX****")
-
-        # Now we normalize up to the expecter self.I - just a polish
-        # as we are almost there with the previous second solve for new VOLTAGES
-
-        modIa = np.abs(Ia)
-        modIb = np.abs(Ib)
-        modIc = np.abs(Ic)
-
-        # for debug:
-        # print(modIa, modIb, modIc)
-
-        currentPhA *= self.in_Ia / modIa
-        currentPhB *= self.in_Ib / modIb
-        currentPhC *= self.in_Ic / modIc
-
-        Ia = np.sum(currentPhA)
-        Ib = np.sum(currentPhB)
-        Ic = np.sum(currentPhC)
-
-        getMod = np.vectorize(csd.n_getComplexModule)
-
-        resultsCurrentVector = np.concatenate(
-            (currentPhA, currentPhB, currentPhC), axis=0
-        )
-        # for debug
-        # print(resultsCurrentVector)
-        #
-        resultsCurrentVector = getMod(resultsCurrentVector)
-        resistanceVector = csd.n_getResistanceArray(
-            self.elementsVector,
-            dXmm=self.dXmm,
-            dYmm=self.dYmm,
-            temperature=self.t,
-            lenght=self.lenght,
+        # moving the calculations to use the function from the module.
+        (
+            self.resultsCurrentVector,
+            powerResults,
+            elementsVector,
+            powerLossesVector,
+        ) = csds.solve_system(
+            self.XsecArr,
+            self.dXmm,
+            self.dYmm,
+            self.I,
+            self.f,
+            self.lenght,
+            self.t,
             sigma20C=self.sigma20C,
             temCoRe=self.temCoRe,
         )
 
-        # This is the total power losses vector
-        powerLossesVector = resistanceVector * resultsCurrentVector**2
-        # This are the total power losses
-        powerLosses = np.sum(powerLossesVector)
-
-        # Power losses per phase
-        powPhA = np.sum(powerLossesVector[0 : self.elementsPhaseA])
-        powPhB = np.sum(
-            powerLossesVector[
-                self.elementsPhaseA : self.elementsPhaseA + self.elementsPhaseB : 1
-            ]
-        )
-        powPhC = np.sum(powerLossesVector[self.elementsPhaseA + self.elementsPhaseB :])
+        powerLosses, powPhA, powPhB, powPhC = powerResults
+        self.solver_length = self.lenght
 
         self.console(
             "power losses: {:.2f} [W] \n phA: {:.2f}[W]\n phB: {:.2f}[W]\n phC: {:.2f}[W]".format(
@@ -590,7 +479,8 @@ class currentDensityWindowPro:
             )
         )
 
-        self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
+        # self.powerLosses = [powerLosses, powPhA, powPhB, powPhC]
+        self.powerLosses = powerResults
 
         # Doing analysis per bar
         # Checking for the pabrs - separate conductor detecton
@@ -611,7 +501,7 @@ class currentDensityWindowPro:
             self.bars.append(temp)
 
         # Converting resutls to current density
-        self.resultsCurrentVector = resultsCurrentVector / (self.dXmm * self.dYmm)
+        self.resultsCurrentVector /= self.dXmm * self.dYmm
 
         # Recreating the solution to form of cross section array
         self.resultsArray = csd.n_recreateresultsArray(
@@ -685,6 +575,280 @@ class currentDensityWindowPro:
         # # Display the results:
         # self.showResults()
 
+    def calcTempRise_new(self):
+        """
+        this procedure solve the thermal equation with given data fromula
+        power losses analysis
+        """
+
+        # Lets work with barsData for themral model calculations
+        if self.isSolved:
+            # Doing the power losses sums per each bar
+            # Vector to keep all power losses per bar data and perymeter
+            # size and temp rise by given HTC
+
+            self.barsData = []
+
+            for i, bar in enumerate(self.bars):
+                BarPowerLoss = 0
+                BarCurrent = 0
+
+                for element in bar:
+                    BarPowerLoss += self.powerResultsArray[
+                        int(element[0]), int(element[1])
+                    ]
+
+                    BarCurrent += (self.dXmm * self.dYmm) * self.resultsArray[
+                        int(element[0]), int(element[1])
+                    ]
+
+                # Calculating bar perymiter of the current bar
+                perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
+                center = csd.n_getCenter(bar)
+                # print(f"Bar {i} perymiter {perymiter / self.dXmm} \t {perymiter:.2f}mm | Bar center: {center}")
+
+                # Calculating this bar cross section
+                XS = len(bar) * self.dXmm * self.dYmm
+
+                # calculationg the bar Ghtc
+                p = perymiter * 1e-3
+                A = XS * 1e-6
+                lng = self.lenght * 1e-3
+
+                Ghtc = p * lng * self.HTC  # thermal conductance to air
+                Gt = A * self.CuGamma / lng  # thermal conductance to com
+                Q = BarPowerLoss * lng  # Power losses value at lenght
+
+                # Calculating this bar mass
+                # for the moment hard coded as copper roCu=8920 [kg/m3]
+                roCu = self.ro
+                # the heat capacity of copper cpcu=385 [J/kgK]
+                cpcu = self.cp
+
+                # its needed for the Icw temp rise calculation
+                Vol = A * lng  # [m3]
+                Mass = Vol * roCu
+
+                # Calculating the temp rise for 1s
+                dT1s = (Q * 1) / (Mass * cpcu)
+
+                # Calculating the temp rise for 3s
+                dT3s = (Q * 3) / (Mass * cpcu)
+
+                #  need now to figure out the current phase Number
+                if i >= self.phCon[0] + self.phCon[1]:
+                    phase = 3
+                elif i >= self.phCon[0]:
+                    phase = 2
+                else:
+                    phase = 1
+
+                #  plugin in the data to the list
+                self.barsData.append(
+                    [center, perymiter, BarCurrent, XS, Q, Ghtc, Gt, phase, dT1s, dT3s]
+                )
+                # now self.barsData have all the needed info :)
+
+                # barsData structure
+                # 0 bar center
+                # 1 perymeter
+                # 2 bar Current
+                # 3 cross section
+                # 4 Q power losses value
+                # 5 Ghtc to air thermal conductance
+                # 6 Gt 1/2lenght thermal conductance
+                # 7 phase number
+
+                # 8 New Thermal model DT - this one will calculated later below :)
+
+                # printing data for each bar
+                print(
+                    "Bar {0:02d} ({5:01d}){1}; Power; {2:06.2f}; [W]; perymeter; {3} [mm]; Current; {4:.1f}; [A]".format(
+                        i, center, Q, perymiter, BarCurrent, phase
+                    )
+                )
+                print(
+                    "Bar {0:02d} DT(Icu 1s); {1:06.2f}; [K]; DT(Icu 3s); {2:06.2f} [K]".format(
+                        i, dT1s, dT3s
+                    )
+                )
+
+            #  lets figure out the needed size of Gthermal matrix
+            #  it will be (bars# +3phases joints)x(the same)
+            vectorSize = len(self.barsData) + 3
+            thG = np.zeros((vectorSize, vectorSize), dtype=float)
+
+            # TEMP: Hardcoded Gth between matrix
+
+            if self.Gmx.shape != (3, 3):
+                GthermalMatrix = np.asarray(([0, 0, 0], [0, 0, 0], [0, 0, 0]))
+            else:
+                GthermalMatrix = self.Gmx
+            # DEBUG
+            print("--- Solving for temperatures ---")
+            print("The Thermal Cond Coeff Matrix")
+            print(GthermalMatrix)
+
+            print("Thermal Conductivity")
+            print(self.Gcon)
+
+            print("HTC")
+            print(self.HTC)
+
+            print("Results as bars temperatures")
+
+            # now we will loop twice over the bars
+            for i, fromBar in enumerate(self.barsData):
+                fromPhase = fromBar[7] - 1  # -1 due to the count from 0
+
+                for j, toBar in enumerate(self.barsData):
+                    tempG = 0  # just to make sure we dont have something in it
+
+                    if fromBar is toBar:
+                        # the main digonal with
+                        # GHtc and Gc and sum for all
+                        tempG += fromBar[5] + 2 * fromBar[6]
+                        #  now we need to loop again all
+                        # others to get the sum of G
+                        for otherToBar in self.barsData:
+                            if otherToBar is not fromBar:
+                                #  the distance between to get thermal Conductance
+                                distance = (
+                                    csd.n_getDistance(fromBar[0], otherToBar[0]) * 1e-3
+                                )
+                                # the area of the fom Bar as xsection for therm cond
+                                thisXs = fromBar[1] * self.lenght * 1e-6
+
+                                otherPhase = otherToBar[7] - 1
+                                tempG += (
+                                    self.Gcon
+                                    * (thisXs / distance)
+                                    * GthermalMatrix[fromPhase, otherPhase]
+                                )
+
+                    else:
+                        #  DEBUG
+                        otherPhase = toBar[7] - 1
+                        #  the distance between to get thermal Conductance
+                        distance = csd.n_getDistance(fromBar[0], toBar[0]) * 1e-3
+                        # the area of the fom Bar as xsection for therm cond
+                        thisXs = fromBar[1] * self.lenght * 1e-6
+                        tempG += (
+                            -GthermalMatrix[otherPhase, fromPhase]
+                            * self.Gcon
+                            * (thisXs / distance)
+                        )
+
+                    # putting the calculated vaule in the thG matrix
+                    thG[i, j] = tempG
+
+            #  now we need to go for the last 3 rows and columns that
+            #  are for the Tx (joints temperatures)
+            #  the bar phase will determine which Tx we tackle
+            #  Phase = 1 means position -3 in the cols >> col = Phase - 4
+            #  so lets go once more thru the bars to fill last columns
+            for i, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                col = phase - 4
+                thG[i, col] = -2 * fromBar[6]
+
+            #  and one more to fill the last rows
+            for j, fromBar in enumerate(self.barsData):
+                phase = fromBar[7]
+                row = phase - 4
+                thG[row, j] = 2 * fromBar[6]
+
+            # and last thing is the bottom rioght 3x3 area to fill for Tx'es
+            # in each phase as sum by bars -2*Gcondution_to_joint
+            #  this could be incorporated to the loops above
+            #  but is separated for clearer code
+            for fromBar in self.barsData:
+                phase = fromBar[7]
+                col_row = phase - 4
+                thG[col_row, col_row] += -2 * fromBar[6]
+
+            #  and one for the Q vector
+            thQ = np.zeros((vectorSize), dtype=float)
+            for i, fromBar in enumerate(self.barsData):
+                thQ[i] = fromBar[4]
+
+            # Solving for the T vector solutions
+            thGinv = np.linalg.inv(thG)
+            thT = np.matmul(thGinv, thQ)
+
+            # cuts out the Tx joints
+            self.Tout = thT[: len(self.barsData)]  # putting result to vector
+
+            # Preparing the output array of the temperatures
+            # First we need to rereate vector of temperture for each element
+            # in each of bar - as in general solutions vector
+            tmpVector = []
+            barElemVect = []
+
+            # going thrue each element in each bar
+            # creating the long vetor of temp risies
+            # and properly ordered elements vector
+            # that render where in oryginal xsec array was the element
+
+            for i, bar in enumerate(self.bars):
+                for element in bar:
+                    tmpVector.append(self.Tout[i])
+                    barElemVect.append(element)
+
+            # Now we prepare the array to display
+            self.tempriseResultsArray = csd.n_recreateresultsArray(
+                elementsVector=barElemVect,
+                resultsVector=tmpVector,
+                initialGeometryArray=self.XsecArr,
+            )
+
+            for i, temp in enumerate(self.Tout):
+                self.barsData[i].append(temp)
+                print("Bar {}: {:.2f}[K]".format(i, temp))
+
+            print("Phase A joint: {:.2f}[K]".format(thT[-3]))
+            print("Phase B joint: {:.2f}[K]".format(thT[-2]))
+            print("Phase C joint: {:.2f}[K]".format(thT[-1]))
+
+            # and now remembering all thermal results
+            self.Tout = thT
+
+            # Added 05.11.2019 - Adiabatic temperature rise (Icw) analysis for each Bar
+            # Listng results for the Icw DT calculations
+            avT = 0
+            print("****** 1s Icw Adiabatic Temp Rise *******")
+            for i, barDT in enumerate(self.barsData):
+                print(
+                    "Bar {}: {:.2f}[K]  ({:.2f} degC@35)".format(
+                        i, barDT[8], barDT[8] + 35
+                    )
+                )
+                avT += barDT[8] + 35
+
+            avT = avT / len(self.barsData)
+            print("Average 1s: {:.2f} degC@35".format(avT))
+            avT = 0
+            print("****** 3s Icw Adiabatic Temp Rise *******")
+            for i, barDT in enumerate(self.barsData):
+                print(
+                    "Bar {}: {:.2f}[K]  ({:.2f} degC@35)".format(
+                        i, barDT[9], barDT[9] + 35
+                    )
+                )
+                avT += barDT[9] + 35
+
+            avT = avT / len(self.barsData)
+            print("Average 3s: {:.2f} degC@35".format(avT))
+
+            print("******* END Icw Adiabatic Temp Rise *****")
+
+            print("####### FOR PCG #######")
+            for i, bar in enumerate(self.barsData):
+                print(f"{i+1:02d} dP: \t {bar[4]:7.2f} W")
+
+            # Display the results:
+            self.showResults()
+
     def calcTempRise(self):
         """
         this procedure solve the thermal equation with given data fromula
@@ -727,7 +891,7 @@ class currentDensityWindowPro:
 
                 Ghtc = p * lng * self.HTC  # thermal conductance to air
                 Gt = A * self.CuGamma / lng  # thermal conductance to com
-                Q = BarPowerLoss * lng  # Power losses value at lenght
+                Q = BarPowerLoss * self.lenght / self.solver_length   # Power losses value at lenght that was analysed brought to the temp analysis length 
 
                 # Calculating this bar mass
                 # for the moment hard coded as copper roCu=8920 [kg/m3]
@@ -1117,9 +1281,10 @@ class currentDensityWindowPro:
                 x -= min_col * self.dXmm
                 y -= min_row * self.dYmm
 
-                DT = "[{}]\n1s: {:.2f}\n 3s: {:.2f}".format(
-                    i, self.barsData[i][8] + 35, self.barsData[i][9] + 35
-                )
+                # DT = "[{}]\n1s: {:.2f}\n 3s: {:.2f}".format(
+                #     i, self.barsData[i][8] + 35, self.barsData[i][9] + 35
+                # )
+                DT = f"[{self.barsData[i][2]:.0f} A]"
 
                 ax.text(
                     x,
@@ -1138,8 +1303,7 @@ class currentDensityWindowPro:
                 + str(self.t)
                 + "[$^o$C] /"
                 + str(self.lenght)
-                + "[mm] \n"
-                "Ia:{:.1f}A {:.0f}$^o$ ".format(
+                + "[mm] \n" "Ia:{:.1f}A {:.0f}$^o$ ".format(
                     float(self.I[0]), np.floor(float(self.I[1]))
                 )
                 + "Ib:{:.1f}A {:.0f}$^o$ ".format(
@@ -1180,13 +1344,13 @@ class zWindow:
 
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0,column=0)
+        self.frame.grid(row=0, column=0)
 
         self.bframe = tk.Frame(self.master)
         self.bframe.grid(row=0, column=1)
 
         self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=1,column=1)
+        self.cframe.grid(row=1, column=1)
 
         self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
         self.lab_Freq.pack()
@@ -1205,7 +1369,6 @@ class zWindow:
         )
         self.rButton.pack()
 
-
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
 
@@ -1218,7 +1381,6 @@ class zWindow:
         )
         self.desc_t.pack()
 
-
         self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
 
@@ -1228,13 +1390,16 @@ class zWindow:
         self.openButton.pack()
 
         if self.Materials:
-            self.material_buttons =[]
+            self.material_buttons = []
             for M in self.Materials:
-                self.material_buttons.append(tk.Button(self.frame, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons.append(
+                    tk.Button(
+                        self.frame, text=M.name, command=partial(self.setMaterial, M)
+                    )
+                )
                 self.material_buttons[-1].pack()
 
             self.M = self.Materials[0]
-
 
     def readSettings(self):
         self.f = float(self.Freq_txt.get())
@@ -1281,13 +1446,13 @@ class zWindow:
                 self.elementsVector = np.concatenate((self.vPhA, self.vPhC), axis=0)
 
     def getMaterials(self):
-            self.Materials = False
-            list = csdos.read_file_to_list("materials.txt")[1:]
-            print(list)
-            if list:
-                self.Materials = csdos.get_material_from_list(list)
+        self.Materials = False
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
+        print(list)
+        if list:
+            self.Materials = csdos.get_material_from_list(list)
 
-    def setMaterial(self,M):
+    def setMaterial(self, M):
         self.M = M
         self.console(f"Set to use: {M.name} as material")
 
@@ -1315,7 +1480,6 @@ class zWindow:
                 # lenght=self.lenght,
                 sigma20C=self.M.sigma,
                 temCoRe=self.M.alpha,
-
             )
         )
 
@@ -1408,7 +1572,6 @@ class zWindow3f:
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
-
         self.getMaterials()
         print(self.Materials)
 
@@ -1418,13 +1581,13 @@ class zWindow3f:
 
         self.master = master
         self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0,column=0)
+        self.frame.grid(row=0, column=0)
 
         self.bframe = tk.Frame(self.master)
         self.bframe.grid(row=0, column=1)
 
         self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=1,column=1)
+        self.cframe.grid(row=1, column=1)
 
         self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
         self.lab_Freq.pack()
@@ -1443,7 +1606,6 @@ class zWindow3f:
         )
         self.rButton.pack()
 
-
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
 
@@ -1456,7 +1618,6 @@ class zWindow3f:
         )
         self.desc_t.pack()
 
-
         self.tx1 = tk.Text(self.cframe, height=10, width=45)
         self.tx1.pack()
 
@@ -1466,9 +1627,13 @@ class zWindow3f:
         self.openButton.pack()
 
         if self.Materials:
-            self.material_buttons =[]
+            self.material_buttons = []
             for M in self.Materials:
-                self.material_buttons.append(tk.Button(self.frame, text=M.name, command=partial(self.setMaterial, M)))
+                self.material_buttons.append(
+                    tk.Button(
+                        self.frame, text=M.name, command=partial(self.setMaterial, M)
+                    )
+                )
                 self.material_buttons[-1].pack()
 
             self.M = self.Materials[0]
@@ -1521,18 +1686,15 @@ class zWindow3f:
         self.tx1.insert(tk.END, str(string))
         self.tx1.insert(tk.END, "\n")
         self.tx1.see(tk.END)
-        
-        
-
 
     def getMaterials(self):
-            self.Materials = False
-            list = csdos.read_file_to_list("materials.txt")[1:]
-            print(list)
-            if list:
-                self.Materials = csdos.get_material_from_list(list)
+        self.Materials = False
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
+        print(list)
+        if list:
+            self.Materials = csdos.get_material_from_list(list)
 
-    def setMaterial(self,M):
+    def setMaterial(self, M):
         self.M = M
         self.console(f"Set to use: {M.name} as material")
 

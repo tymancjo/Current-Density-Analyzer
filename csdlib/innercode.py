@@ -69,27 +69,37 @@ def addRect(x0,y0,W,H,Set,draw=True, shift=(0,0),XSecArray=None,dXmm=1):
 
 
 def codeLoops(input_text):
+    """This function analyze the inner code fot the loops
+    it unwind this to plain innercode text. 
+
+    the loops are analyzed from the end, as it's assumed
+    that the loop is always form the l(n) command till the end code.
+
+    """
 
     commands = {
-        'l': [None,[1]]
+        'l': [None,[1]] # l(n) l - command takes 1 argument
     }
 
     for line_nr,line in enumerate(reversed(input_text)):
-        index_non_rev = len(input_text) - 1 - line_nr
+
+        index_non_rev = len(input_text) - line_nr
+
         if len(line)>3:
             command = line[0].lower()
-            if command in commands:
-                if command == 'l':
-                    # taking care of looping the stuff
-                    ar = line[2:-1].split(',')
-                    if len(ar) in commands[command][1]:
-                        loops = int(ar[0]) - 1 # the -1 is due to the text is aready there once. 
-                        loop_code = input_text[index_non_rev+1:]
-                        # cleaning this loop code line
-                        input_text[index_non_rev] = "\n"
-                        for _ in range(loops):
-                            input_text.extend(loop_code)
-                        codeLoops(input_text)
+            if command in commands and command == 'l':
+                # taking care of looping the stuff
+                arguments = line[2:-1].split(',')
+
+                if len(arguments) in commands[command][1]:
+
+                    loops = int(arguments[0]) - 1 # the -1 is due to the text is aready there once. 
+                    loop_code = input_text[index_non_rev:]
+                    # cleaning this loop code line
+                    input_text[index_non_rev-1] = "\n"
+                    for _ in range(loops):
+                        input_text.extend(loop_code)
+                    codeLoops(input_text)
 
     return input_text
 
@@ -133,7 +143,7 @@ def textToCode(input_text):
                             innerVariables[variable_name] = variable_value
 
                 else:
-                    # ar as argumnents 
+                    # ar as arguments 
                     ar = line[2:-1].strip().split(',')
                     # insert inner variables if any
                     if len(innerVariables):

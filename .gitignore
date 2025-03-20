@@ -80,6 +80,7 @@ celerybeat-schedule
 
 # virtualenv
 venv/
+.venv/
 ENV/
 .venv.nosync/
 
@@ -90,4 +91,9 @@ ENV/
 .ropeproject
 *.csd
 *.csd_temp
+<<<<<<< HEAD
 .venv/Scripts/python.exe
+=======
+.vscode/
+.DS_Store
+>>>>>>> 16f1b2e69232121c43a4601e10f024a32afeccb3

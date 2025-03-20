@@ -58,7 +58,7 @@ class cointainer:
 # ################# FUNCTIONS & PROCEDURES##############################
 
 
-def n_shiftPhase(phaseId, dX, dY, XSecArray):
+def n_shiftPhase(phaseId, dX, dY, XSecArray,remain=0):
     """
     This procedure is shifting the particucal geometry of the phase in arrays
     to the specific x and y direction.
@@ -74,7 +74,7 @@ def n_shiftPhase(phaseId, dX, dY, XSecArray):
     # deleting the other phases geometry from the array
     tempGeometry[tempGeometry != phaseId] = 0
     # deleting the selected phase in original geometry array
-    XSecArray[XSecArray == phaseId] = 0
+    XSecArray[XSecArray == phaseId] = remain
 
     oR = XSecArray.shape[0]
     oC = XSecArray.shape[1]

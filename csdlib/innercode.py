@@ -1,5 +1,6 @@
 """This is the library set for the inner code operations"""
 
+from csdlib import csdlib as csd
 ### General geometry generators ###
 
 def addCircle(x0,y0,D1,Set, D2=0,Set2=0,draw=True,shift=(0,0),XSecArray=None,dXmm=1):
@@ -66,6 +67,19 @@ def addRect(x0,y0,W,H,Set,draw=True, shift=(0,0),XSecArray=None,dXmm=1):
 
     return [x0,y0,xE,yE]
 
+def moveCells(phase,shift_X,shift_Y,XSecArray=None,dXmm=1):
+
+    dX = int(shift_X / dXmm)
+    dY = int(shift_Y / dXmm)
+
+    csd.n_shiftPhase(phase,dX,dY,XSecArray)
+
+def copyCells(phase,shift_X,shift_Y,XSecArray=None,dXmm=1):
+
+    dX = int(shift_X / dXmm)
+    dY = int(shift_Y / dXmm)
+
+    csd.n_shiftPhase(phase,dX,dY,XSecArray,remain=phase)
 
 
 def codeLoops(input_text):
@@ -113,7 +127,9 @@ def textToCode(input_text):
         'r': [addRect,[5]],
         'v': [None,[2]],
         'a': [None, [2]],
-        'l': [None,[1]]
+        'l': [None,[1]],
+        'mv': [moveCells,[3]],
+        'cp': [copyCells,[3]]
     }
 
     innerCodeSteps = []
@@ -124,11 +140,13 @@ def textToCode(input_text):
 
     for line_nr,line in enumerate(input_text):
         if len(line)>5:
-            command = line[0].lower()
+            # command = line[0].lower()
+            command = line.split('(')[0].lower()
             if command in commands:
                 if command == 'v':
                     # taking care if the command sets the variable
-                    ar = line[2:-1].strip().split(',')
+                    # ar = line[2:-1].strip().split(',')
+                    ar = line.split('(')[1].replace(')','').strip().split(',')
                     if len(ar) in commands[command][1]:
                         variable_name = str(ar[0])
                         variable_value = float(ar[1])
@@ -136,7 +154,8 @@ def textToCode(input_text):
                 elif command == 'a':
                     if len(innerVariables):
                         # taking care if the command sets the variable
-                        ar = line[2:-1].strip().split(',')
+                        # ar = line[2:-1].strip().split(',')
+                        ar = line.split('(')[1].replace(')','').strip().split(',')
                         if len(ar) in commands[command][1]:
                             variable_name = str(ar[0])
                             variable_value = innerVariables[variable_name]+float(ar[1])
@@ -144,7 +163,8 @@ def textToCode(input_text):
 
                 else:
                     # ar as arguments 
-                    ar = line[2:-1].strip().split(',')
+                    # ar = line[2:-1].strip().split(',')
+                    ar = line.split('(')[1].replace(')','').strip().split(',')
                     # insert inner variables if any
                     if len(innerVariables):
                         # let's replace the variables with values

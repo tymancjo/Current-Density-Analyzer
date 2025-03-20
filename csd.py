@@ -1776,7 +1776,7 @@ code_frame.grid(row=1, column=11, rowspan=25, columnspan=3, sticky="N",padx=5, p
 
 text_input = Text(code_frame, height=20, width=25)
 text_input.grid(row=1,column=1,columnspan=3,padx=10, pady=10)
-btn = Button(code_frame, text="Add to exiting geometry",command=InterCode)
+btn = Button(code_frame, text="Execute InnerCode as is",command=InterCode)
 btn.grid(row=19,column=1, columnspan=3)
 btn = Button(code_frame, text="Create new geometry",command=getCanvas)
 btn.grid(row=20,column=1, columnspan=3)

@@ -605,7 +605,7 @@ class currentDensityWindowPro:
                 # Calculating bar perymiter of the current bar
                 perymiter = csd.n_perymiter(bar, self.XsecArr, self.dXmm, self.dYmm)
                 center = csd.n_getCenter(bar)
-                print(f"Bar {i} perymiter {perymiter / self.dXmm} \t {perymiter:.2f}mm | Bar center: {center}")
+                # print(f"Bar {i} perymiter {perymiter / self.dXmm} \t {perymiter:.2f}mm | Bar center: {center}")
 
                 # Calculating this bar cross section
                 XS = len(bar) * self.dXmm * self.dYmm
@@ -1281,9 +1281,10 @@ class currentDensityWindowPro:
                 x -= min_col * self.dXmm
                 y -= min_row * self.dYmm
 
-                DT = "[{}]\n1s: {:.2f}\n 3s: {:.2f}".format(
-                    i, self.barsData[i][8] + 35, self.barsData[i][9] + 35
-                )
+                # DT = "[{}]\n1s: {:.2f}\n 3s: {:.2f}".format(
+                #     i, self.barsData[i][8] + 35, self.barsData[i][9] + 35
+                # )
+                DT = f"[{self.barsData[i][2]:.0f} A]"
 
                 ax.text(
                     x,

@@ -90,3 +90,4 @@ ENV/
 .ropeproject
 *.csd
 *.csd_temp
+.venv/Scripts/python.exe

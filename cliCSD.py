@@ -88,6 +88,9 @@ def getArgs():
             "-sp", "--simple", action="store_true", help="Show only simple output"
         ),
         parser.add_argument(
+            "-md", "--markdown", action="store_true", help="Results for bars as markdown table"
+        ),
+        parser.add_argument(
             "-csv",
             "--csv",
             action="store_true",
@@ -347,9 +350,15 @@ def main():
                     phase_curr += bar.current
     else:
         if config['bars']:
-            print(f"phase;bar;Bar Current [A];Bar dP[W];Bar Perymetr[mm];Bar Center X[mm];Bar Center Y[mm]")
-            for bar in bars_data:
-                print(f"{bar.phase};{bar.number:>2};{csdm.getComplexModule(bar.current):>8.2f};{bar.power:>7.2f};{bar.perymiter:>7.2f};{bar.center[0]};{bar.center[1]}")
+            if config['markdown']:
+                print(f"phase | bar | Bar Current [A] | Bar dP[W] | Bar Perymetr[mm] | Bar Center X[mm] | Bar Center Y[mm]")
+                print(f"---|---|---|---|---|---|---")
+                for bar in bars_data:
+                    print(f"{bar.phase}|{bar.number:>2}|{csdm.getComplexModule(bar.current):>8.2f}|{bar.power:>7.2f}|{bar.perymiter:>7.2f}|{bar.center[0]}|{bar.center[1]}")
+            else:
+                print(f"phase ; bar ; Bar Current [A] ; Bar dP[W] ; Bar Perymetr[mm] ; Bar Center X[mm] ; Bar Center Y[mm]")
+                for bar in bars_data:
+                    print(f"{bar.phase};{bar.number:>2};{csdm.getComplexModule(bar.current):>8.2f};{bar.power:>7.2f};{bar.perymiter:>7.2f};{bar.center[0]};{bar.center[1]}")
         else:
             print(f"{f},{powerLosses:.2f}")
 

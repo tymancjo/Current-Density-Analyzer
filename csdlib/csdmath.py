@@ -321,7 +321,7 @@ def getComplexModule(x):
 
 # Function that put back together the solution vectr back to represent the cross
 # section shape array
-def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
+def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray, dtype=float):
     """
     Functions returns recreate cross section array with mapperd solution results
     Inputs:
@@ -329,7 +329,7 @@ def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray):
     resultsVector - vectr with results values calculated base on the elementsVector
     initialGeometryArray - the array that contains the cross section geometry model
     """
-    localResultsArray = np.zeros((initialGeometryArray.shape), dtype=float)
+    localResultsArray = np.zeros((initialGeometryArray.shape), dtype=dtype)
 
     for vectorIndex, result in enumerate(resultsVector):
         localResultsArray[

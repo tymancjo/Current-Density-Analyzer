@@ -164,29 +164,160 @@ def loadObj(filename):
         return pickle.load(myInput)
 
 
-def combineVectors(vPhA, vPhB, vPhC):
-    """Function is joining the 3 phase vectors together"""
+# def combineVectors(vPhA, vPhB, vPhC):
+#     """Function is joining the 3 phase vectors together"""
 
-    # Lets put the all phases together
-    elementsPhaseA = len(vPhA)
-    elementsPhaseB = len(vPhB)
-    elementsPhaseC = len(vPhC)
+#     # Lets put the all phases together
+#     elementsPhaseA = len(vPhA)
+#     elementsPhaseB = len(vPhB)
+#     elementsPhaseC = len(vPhC)
 
-    if elementsPhaseA != 0 and elementsPhaseB != 0 and elementsPhaseC != 0:
-        elementsVector = np.concatenate((vPhA, vPhB, vPhC), axis=0)
-    elif elementsPhaseA == 0:
-        if elementsPhaseB == 0:
-            elementsVector = vPhC
-        elif elementsPhaseC == 0:
-            elementsVector = vPhB
+#     if elementsPhaseA != 0 and elementsPhaseB != 0 and elementsPhaseC != 0:
+#         elementsVector = np.concatenate((vPhA, vPhB, vPhC), axis=0)
+#     elif elementsPhaseA == 0:
+#         if elementsPhaseB == 0:
+#             elementsVector = vPhC
+#         elif elementsPhaseC == 0:
+#             elementsVector = vPhB
+#         else:
+#             elementsVector = np.concatenate((vPhB, vPhC), axis=0)
+#     else:
+#         if elementsPhaseB == 0 and elementsPhaseC == 0:
+#             elementsVector = vPhA
+#         elif elementsPhaseC == 0:
+#             elementsVector = np.concatenate((vPhA, vPhB), axis=0)
+#         else:
+#             elementsVector = np.concatenate((vPhA, vPhC), axis=0)
+
+#     return elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC
+
+def combineVectors(*list_of_vectors):
+    # previous version was unnecessary over-complicated 
+    # It stays as a function for the compatibility with the code reasons.
+
+    lengths = [len(v) for v in list_of_vectors]
+    output = np.concatenate(list_of_vectors)
+
+    return output, *lengths,
+
+def getConductors(XsecArr, phases):
+    """
+    [Row,Col,X,Y]
+    """
+    # Setting up new conductors array
+    conductorsArr = np.zeros((XsecArr.shape), dtype=int)
+
+    conductors_number = 0
+    phaseCond = []
+
+    # let's map the elements back to the 2D shape array.
+    # I can use the recreate array here - but for sake of the clarity
+    phase_numbers = []
+    for phase_number, phase in enumerate(phases):
+
+        phase_numbers.append(-1-phase_number)
+
+        for element in phase:
+            R = int(element[0])
+            C = int(element[1])
+
+            conductorsArr[R, C] = phase_numbers[-1]
+    
+    Rows, Cols = conductorsArr.shape
+
+    # look around coordinates vector
+    dRC = [(-1,-1), (-1,0),(-1,1),
+            (0,-1),  (0,1),
+            (1,-1), (1,0),(1,1)] 
+
+    for phase_number in phase_numbers:
+        phaseConductors = 0
+        this_phase_cond_numbers = []
+        for R in range(Rows):
+            for C in range(Cols):
+                if conductorsArr[R,C] == phase_number:
+                    # looking around
+                    for step in range(5):
+                        altered_C = min(C+step, Cols-1)
+                        # to look around more if we follow a conductor of phases
+                        if conductorsArr[R,altered_C] == phase_number or conductorsArr[R,altered_C] in this_phase_cond_numbers :
+                            for dR,dC in dRC:
+                                # just to be able not fall of the size of array
+                                try:
+                                    N =  conductorsArr[R+dR,altered_C+dC]
+                                except:
+                                    N = 0
+                                if N > 0:
+                                    conductorsArr[R,C] = N
+                                    break
+                    if conductorsArr[R,C] < 1:
+                        # if we didn't find any neighbor already marked. 
+                        conductors_number += 1
+                        phaseConductors += 1
+                        this_phase_cond_numbers.append(conductors_number)
+                        conductorsArr[R, C] = conductors_number
+
+
+        phaseCond.append(this_phase_cond_numbers)
+
+
+    return conductorsArr, conductors_number, phaseCond
+
+
+
+def getPerymiter(vec, arr, dXmm, dYmm):
+    """
+    This function returns the area perynmiter lenght for given
+    vector of conducting elements in the array
+    Inputs:
+    vec - vector of elements to calculate the perymiter
+        lenght for (as delivered by n_vectorizeTheArray)
+
+    arr - array that describe the geometry shape
+
+    dXmm - element size in x diretion
+
+    dYmm - element size in y diretion
+
+    Output:
+    perymiter lenght in the same units as dXmm and dYmm
+    """
+    # TODO: adding check if we dont exeed dimensions of array
+    # its done
+    perymiter = 0
+    for box in vec:
+        # checking the size of the arr array
+        x, y = arr.shape
+
+        # checking in x directions lef and right
+        A, B = int(box[0] + 1), int(box[1])
+
+        if A < x:
+            if arr[A][B] == 0:
+                perymiter += dYmm
         else:
-            elementsVector = np.concatenate((vPhB, vPhC), axis=0)
-    else:
-        if elementsPhaseB == 0 and elementsPhaseC == 0:
-            elementsVector = vPhA
-        elif elementsPhaseC == 0:
-            elementsVector = np.concatenate((vPhA, vPhB), axis=0)
-        else:
-            elementsVector = np.concatenate((vPhA, vPhC), axis=0)
+            perymiter += dYmm
 
-    return elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC
+        A, B = int(box[0] - 1), int(box[1])
+        if A >= 0:
+            if arr[A][B] == 0:
+                perymiter += dYmm
+        else:
+            perymiter += dYmm
+
+        A, B = int(box[0]), int(box[1] + 1)
+        if B < y:
+            if arr[A][B] == 0:
+                perymiter += dXmm
+        else:
+            perymiter += dXmm
+
+        A, B = int(box[0]), int(box[1] - 1)
+
+        if B >= 0:
+            if arr[A][B] == 0:
+                perymiter += dXmm
+        else:
+            perymiter += dXmm
+
+    return perymiter

@@ -35,15 +35,6 @@ from csdlib import csdfunctions as csdf
 from csdlib import csdmath as csdm
 from csdlib import csdsolve as csds
 
-class the_bar:
-    def __init__(self):
-        self.elements = []
-        self.center = []
-        self.power = 0
-        self.current = 0
-        self.number = 0
-        self.phase = 0
-        self.perymiter = 0
 
 def getArgs():
     """
@@ -110,12 +101,6 @@ def getArgs():
             "--results",
             action="store_true",
             help="Draw the graphic window with results summary.",
-        ),
-        parser.add_argument(
-            "-b",
-            "--bars",
-            action="store_true",
-            help="Execute the detections of particular conductors.",
         ),
     )
 
@@ -219,19 +204,7 @@ def main():
     # 3 preparing the solution
     Irms = config["current"]
     # Current vector
-    Icurrent = []
-
-    phi = [120,0,240,120,0,240]
-    direction = [0,0,0,180,180,180]
-
-    x = 0
-    for n in range(len(number_of_phases)-1):
-        Icurrent.append((Irms,phi[x]+direction[x]))
-        x+=1
-        if x > len(phi):
-            x = 0
-
-    # Icurrent = [(Irms, 120), (Irms, 0), (Irms, 240), (-Irms, 120)]
+    Icurrent = [Irms, 120, Irms, 0, Irms, 240]
     f = config["frequency"]
     length = config["length"]
     t = config["temperature"]
@@ -241,10 +214,13 @@ def main():
     csdf.myLog()
     csdf.myLog("Starting solver for")
 
+    for k, n in zip([0, 2, 4], ["a", "b", "c"]):
+        csdf.myLog(f"I{n} = {Icurrent[k]}[A] \t {Icurrent[k+1]}[deg] \t {f}[Hz]")
+
     csdf.myLog()
     csdf.myLog("Complex form:")
 
-    (resultsCurrentVector, powerResults, elementsVector, powerLossesSolution,complexCurrent,vPh) = csds.solve_multi_system(
+    (resultsCurrentVector, powerResults, elementsVector, _) = csds.solve_system(
         XSecArray,
         dXmm,
         dYmm,
@@ -257,102 +233,23 @@ def main():
         temCoRe=r20,
     )
 
-    powerLosses, powPh = powerResults
+    powerLosses, powPhA, powPhB, powPhC = powerResults
 
-    if config['bars']:
-        currentsDraw = csdm.recreateresultsArray(
-            elementsVector, complexCurrent, XSecArray, dtype=complex
-        )
-        powerDraw = csdm.recreateresultsArray(
-            elementsVector, powerLossesSolution, XSecArray
-        )
-
-        conductorsXsecArr,total_conductors, phases_conductors = csdf.getConductors(XSecArray,vPh)
-
-
-
-        bars_data = []
-        for b in range(1,total_conductors+1):
-            temp_bar_obj = the_bar()
-            temp_bar_obj.elements = csdm.arrayVectorize(conductorsXsecArr,phaseNumber=b,dXmm=dXmm,dYmm=dYmm)
-            bars_data.append(temp_bar_obj)
-
-        for i,bar in enumerate(bars_data):
-
-            bar.number = i
-
-            bar.perymiter = csdf.getPerymiter(bar.elements,XSecArray,dXmm,dYmm)
-
-            x = y = 0
-            for element in bar.elements:
-                R = int(element[0])
-                C = int(element[1])
-
-                bar.current += currentsDraw[R,C]
-                bar.power += powerDraw[R,C]
-
-                x += element[2]
-                y += element[3]
-            bar.center = [x/len(bar.elements),y/len(bar.elements)]
-
-        for i,phase in enumerate(phases_conductors):
-            for b in phase:
-                bars_data[b-1].phase = i
-
-        
-
-        
     # Results of power losses
     if not simple and not csv:
         print()
-        print("--------------------------------------------------------------------------------------")
+        print("----------------------------------------------------------------")
         print("Results of power losses")
         print(f"\tgeometry: {config['geometry']}")
         print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm], T={t}[degC]")
-        print("--------------------------------------------------------------------------------------")
-
-        text_line ="Sum [W]\t| "
-        for i,dP in enumerate(powPh):
-            text_line +=f"dP{i} [W]\t| "  
-        print(text_line)
-
-        text_line =f"{powerLosses:>6.2f}\t| "
-        for i,dP in enumerate(powPh):
-            text_line +=f"{dP:>6.2f}\t| "  
-        print(text_line)
-        print("--------------------------------------------------------------------------------------")
-
-        if config['bars']:
-            for i,bars in enumerate(phases_conductors):
-                print(f"Phase {i}:")
-                phase_curr = 0
-
-                for b in bars:
-                    bar = bars_data[b-1]
-                    print(f"\t{bar.current=:.2f} {bar.power=:.2f} {bar.perymiter=:.1f} {bar.center=}")
-                    phase_curr += bar.current
-                print(f"\tPhase {i} current sum {phase_curr} / {csdm.getComplexModule(phase_curr)}")
-
+        print("----------------------------------------------------------------")
+        print("Sum [W]\t| dPa [W]\t| dPb [W]\t| dPc [W]")
+        print(f"{powerLosses:.2f}\t| {powPhA:.2f} \t| {powPhB:.2f} \t| {powPhC:.2f}")
+        print("----------------------------------------------------------------")
     elif not csv:
         print(f"{f}[Hz] \t {powerLosses:.2f} [W]")
-
-        if config['bars']:
-            for i,bars in enumerate(phases_conductors):
-                print(f"Phase {i}: ")
-                phase_curr = 0
-
-                for b in bars:
-                    bar = bars_data[b-1]
-                    print(f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]")
-                    phase_curr += bar.current
     else:
-        if config['bars']:
-            print(f"phase;bar;Bar Current [A];Bar dP[W];Bar Perymetr[mm];Bar Center X[mm];Bar Center Y[mm]")
-            for bar in bars_data:
-                print(f"{bar.phase};{bar.number:>2};{csdm.getComplexModule(bar.current):>8.2f};{bar.power:>7.2f};{bar.perymiter:>7.2f};{bar.center[0]};{bar.center[1]}")
-        else:
-            print(f"{f},{powerLosses:.2f}")
-
+        print(f"{f},{powerLosses:.2f}")
 
     if config["results"]:
         # getting the current density
@@ -360,6 +257,7 @@ def main():
         currentsDraw = csdm.recreateresultsArray(
             elementsVector, resultsCurrentVector, XSecArray
         )
+        # minCurrent = resultsCurrentVector.min()
         maxCurrent = resultsCurrentVector.max()
 
         base_cmap = plt.get_cmap("jet", 256)
@@ -369,13 +267,6 @@ def main():
         norm = plt.Normalize(vmin=0, vmax=maxCurrent)
 
         plt.imshow(currentsDraw, cmap=cmap, norm=norm)
-
-        if config['bars']:
-            for b,bar in enumerate(bars_data):
-                fontsize = 10
-                text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
-
-                plt.text((bar.center[0]/dXmm),bar.center[1]/dYmm,text_line,fontsize=fontsize,color='black')
 
         # Adjust the ticks
         ax = plt.gca()
@@ -401,14 +292,10 @@ def main():
         cbar = plt.colorbar()
         cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
 
-        text_line = ""
-        for i,dP in enumerate(powPh):
-            text_line +=f"dP{i}:{dP:.2f}[W] "  
-
         plt.title(
             f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
             total dP = {powerLosses:.2f}[W]\n\
-            {text_line}\n \n\
+            dPa= {powPhA:.2f}[W] dPb= {powPhB:.2f}[W] dPc= {powPhC:.2f}[W]\n \n\
             Current Density distribution [A/mm2]",
             fontsize=10,
             ha="center",

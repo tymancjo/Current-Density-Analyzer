@@ -94,7 +94,7 @@ def getCanvas(textInput):
         if circles:
             sizes = [4, 2.5, 2, 1]
         else:
-            sizes = [15, 10, 5, 4, 2.5, 2, 1]
+            sizes = [ 10, 5, 4, 2.5, 2, 1]
         for xd in sizes:
             if (size[0] % xd == 0) and (size[1] % xd == 0):
                 break
@@ -239,17 +239,22 @@ def getConductors(XsecArr, phases):
                     # looking around
                     for step in range(5):
                         altered_C = min(C+step, Cols-1)
+                        
                         # to look around more if we follow a conductor of phases
                         if conductorsArr[R,altered_C] == phase_number or conductorsArr[R,altered_C] in this_phase_cond_numbers :
                             for dR,dC in dRC:
                                 # just to be able not fall of the size of array
                                 try:
-                                    N =  conductorsArr[R+dR,altered_C+dC]
+                                    N =  conductorsArr[max(0,R+dR),max(0,altered_C+dC)]
                                 except:
                                     N = 0
                                 if N > 0:
                                     conductorsArr[R,C] = N
                                     break
+                        elif conductorsArr[R,altered_C] == 0:
+                            break
+
+
                     if conductorsArr[R,C] < 1:
                         # if we didn't find any neighbor already marked. 
                         conductors_number += 1

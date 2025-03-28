@@ -34,6 +34,7 @@ import argparse
 from csdlib import csdfunctions as csdf
 from csdlib import csdmath as csdm
 from csdlib import csdsolve as csds
+from csdlib import csdos
 
 class the_bar:
     def __init__(self):
@@ -82,6 +83,13 @@ def getArgs():
         type=float,
         default=3.9e-3,
         help="temperature coeff. of resistnace [1/K]",
+    )
+    parser.add_argument(
+        "-mat",
+        "--material",
+        type=int,
+        default=-1,
+        help="Material number from the material list (in config directory)",
     )
     (
         parser.add_argument(
@@ -154,6 +162,7 @@ def main():
     if config["draw"] or config["results"]:
         import matplotlib.pyplot as plt
         from matplotlib.colors import ListedColormap
+        import matplotlib.gridspec as gridspec
 
     XSecArray = np.zeros((0, 0))
     dXmm = dYmm = 1
@@ -238,8 +247,21 @@ def main():
     f = config["frequency"]
     length = config["length"]
     t = config["temperature"]
-    sigma = config["conductivity"]
-    r20 = config["temRcoeff"]
+
+    if config['material'] >= 0:
+        # reading the material file and select the material
+        list = csdos.read_file_to_list("setup/materials.txt")[1:]
+        if list:
+            Materials = csdos.get_material_from_list(list)
+            csdf.myLog(f"Materials: \n {Materials}")
+            if config['material'] < len(Materials):
+                this_material = Materials[config['material']]
+
+    else:
+        this_material = csdos.Material('Cu',config['conductivity'],config['temRcoeff'])
+    csdf.myLog(f"Using material: {this_material.name}")
+    sigma = this_material.sigma
+    r20 = this_material.alpha
 
     csdf.myLog()
     csdf.myLog("Starting solver for")
@@ -272,12 +294,51 @@ def main():
 
         conductorsXsecArr,total_conductors, phases_conductors = csdf.getConductors(XSecArray,vPh)
 
+        if config['draw']:
+
+            # making the draw of the geometry in initial state.
+
+
+            base_cmap = plt.get_cmap("jet", 256)
+            colors = base_cmap(np.arange(256))
+            colors[0] = [1, 1, 1, 1]
+            cmap = ListedColormap(colors)
+            norm = plt.Normalize(vmin=0, vmax=total_conductors)
+
+            # Adjust the ticks
+            ax = plt.gca()
+            num_ticks_x = len(XSecArray[0])
+            num_ticks_y = len(XSecArray)
+
+            # Set the ticks and corresponding labels
+            step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
+
+            x_ticks = np.arange(0, num_ticks_x, step)
+            y_ticks = np.arange(0, num_ticks_y, step)
+
+            # Set the ticks based on the array dimensions
+            ax.set_xticks(x_ticks)
+            ax.set_yticks(y_ticks)
+
+            # Set the tick labels by multiplying
+            # the tick values by the scaling factor
+            ax.set_xticklabels((x_ticks * dXmm).astype(int))
+            ax.set_yticklabels((y_ticks * dYmm).astype(int))
+
+            # plt.imshow(XSecArray, cmap=cmap, norm=norm)
+            plt.imshow(conductorsXsecArr, cmap=cmap)
+            plt.show()
+
 
 
         bars_data = []
         for b in range(1,total_conductors+1):
             temp_bar_obj = the_bar()
             temp_bar_obj.elements = csdm.arrayVectorize(conductorsXsecArr,phaseNumber=b,dXmm=dXmm,dYmm=dYmm)
+            coordinateX = sum([x[2] for x in temp_bar_obj.elements]) / len(temp_bar_obj.elements)
+            coordinateY = sum([x[3] for x in temp_bar_obj.elements]) / len(temp_bar_obj.elements)
+
+            csdf.myLog(f"Building bar {b} for {dXmm=} {dYmm=} center: {coordinateX}:{coordinateY} elements: {len(temp_bar_obj.elements)}")
             bars_data.append(temp_bar_obj)
 
         for i,bar in enumerate(bars_data):
@@ -371,60 +432,69 @@ def main():
         )
         maxCurrent = resultsCurrentVector.max()
 
-        base_cmap = plt.get_cmap("jet", 256)
-        colors = base_cmap(np.arange(256))
-        colors[0] = [1, 1, 1, 1]
-        cmap = ListedColormap(colors)
-        norm = plt.Normalize(vmin=0, vmax=maxCurrent)
+        if 1:
+            # making the draw of the geometry in initial state.
+            base_cmap = plt.get_cmap("jet", 256)
+            colors = base_cmap(np.arange(256))
+            colors[0] = [1, 1, 1, 1]
+            cmap = ListedColormap(colors)
+            norm = plt.Normalize(vmin=0, vmax=maxCurrent)
 
-        plt.imshow(currentsDraw, cmap=cmap, norm=norm)
+            # Adjust the ticks
+            # ax = plt.gca()
+            fig = plt.figure()
+            gs = gridspec.GridSpec(1, 2, width_ratios=[80, 20])
+            ax = plt.subplot(gs[0])
+            bx = plt.subplot(gs[1])
+            bx.axis('off')
 
-        if config['bars']:
-            for b,bar in enumerate(bars_data):
-                fontsize = 10
-                text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
+            num_ticks_x = len(XSecArray[0])
+            num_ticks_y = len(XSecArray)
 
-                plt.text((bar.center[0]/dXmm),bar.center[1]/dYmm,text_line,fontsize=fontsize,color='black')
+            # Set the ticks and corresponding labels
+            step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
 
-        # Adjust the ticks
-        ax = plt.gca()
-        num_ticks_x = len(currentsDraw[0])
-        num_ticks_y = len(currentsDraw)
+            x_ticks = np.arange(0, num_ticks_x, step)
+            y_ticks = np.arange(0, num_ticks_y, step)
 
-        # Set the ticks and corresponding labels
-        step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
+            # Set the ticks based on the array dimensions
+            ax.set_xticks(x_ticks)
+            ax.set_yticks(y_ticks)
 
-        x_ticks = np.arange(0, num_ticks_x, step)
-        y_ticks = np.arange(0, num_ticks_y, step)
+            # Set the tick labels by multiplying
+            # the tick values by the scaling factor
+            ax.set_xticklabels((x_ticks * dXmm).astype(int))
+            ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
-        # Set the ticks based on the array dimensions
-        ax.set_xticks(x_ticks)
-        ax.set_yticks(y_ticks)
+            # plt.imshow(XSecArray, cmap=cmap, norm=norm)
+            cax = ax.imshow(currentsDraw, cmap=cmap)
 
-        # Set the tick labels by multiplying the
-        # tick values by the scaling factor
-        ax.set_xticklabels((x_ticks * dXmm).astype(int))
-        ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
-        # Add a color bar
-        cbar = plt.colorbar()
-        cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
+            # Add a color bar
+            cbar = plt.colorbar(cax,ax=bx)
+            cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
 
-        text_line = ""
-        for i,dP in enumerate(powPh):
-            text_line +=f"dP{i}:{dP:.2f}[W] "  
+            text_line = ""
+            for i,dP in enumerate(powPh):
+                text_line +=f"dP{i}:{dP:.2f}[W] "  
 
-        plt.title(
-            f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
-            total dP = {powerLosses:.2f}[W]\n\
-            {text_line}\n \n\
-            Current Density distribution [A/mm2]",
-            fontsize=10,
-            ha="center",
-            pad=20,
-        )
+            ax.set_title(
+                f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
+                total dP = {powerLosses:.2f}[W]\n\
+                {text_line}\n\
+                Current Density distribution [A/mm2]",
+                fontsize=10,
+                ha="center",
+                pad=20,
+            )
 
-        plt.show()
+            if config['bars']:
+                for b,bar in enumerate(bars_data):
+                    fontsize = 10
+                    text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
+
+                    ax.text((bar.center[0]/dXmm),bar.center[1]/dYmm,text_line,fontsize=fontsize,color='black')
+            plt.show()
 
 
 # Doing the main work here.

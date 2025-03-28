@@ -1365,7 +1365,7 @@ def getCanvas():
         if circles:
             sizes = [4,2.5,2,1]
         else:
-            sizes = [15,10,5,4,2.5,2,1]
+            sizes = [10,5,4,2.5,2,1]
         for xd in sizes :
             if ( size[0]% xd == 0 ) and (size[1]% xd == 0):
                 break

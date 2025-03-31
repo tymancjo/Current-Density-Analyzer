@@ -129,11 +129,13 @@ def textToCode(input_text):
         'a': [None, [2]],
         'l': [None,[1]],
         'mv': [moveCells,[3]],
-        'cp': [copyCells,[3]]
+        'cp': [copyCells,[3]],
+        'current':[None,[4]],
     }
 
     innerCodeSteps = []
     innerVariables = {}
+    currents = []
 
     # loops are separate function as they need to be recursion for nested loops
     input_text = codeLoops(input_text)
@@ -161,6 +163,11 @@ def textToCode(input_text):
                             variable_value = innerVariables[variable_name]+float(ar[1])
                             innerVariables[variable_name] = variable_value
 
+                elif command == 'current':
+                        ar = line.split('(')[1].replace(')','').strip().split(',')
+                        if len(ar) in commands[command][1]:
+                            currents.append(ar)
+
                 else:
                     # ar as arguments 
                     # ar = line[2:-1].strip().split(',')
@@ -176,7 +183,7 @@ def textToCode(input_text):
                         ar = [float(a) for a in ar]
                         innerCodeSteps.append([commands[command][0],ar,command])
 
-    return innerCodeSteps
+    return innerCodeSteps, currents
 
 
 

@@ -350,7 +350,7 @@ def solve_multi_system(
 
     for n,x in enumerate(zip(modI,currentsPh,I)):
         mod_i,cPh,i = x
-        if mod_i:
+        if mod_i != 0 and i[0]!=0:
             currentsPh[n] = cPh * i[0]/mod_i
 
     I_results = [np.sum(cPh) for cPh in currentsPh]

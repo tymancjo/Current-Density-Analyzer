@@ -18,8 +18,13 @@ is generated on the standard output.
 # 5. Prepare results - done
 # 6. csdf.myLog results - done
 # 7. adding inner code working - done
-# 8. cleanu and make use of modules - done
-# 9. adding support of the materials - by the line parameters.
+# 8. clean and make use of modules - done
+# 9. adding support of the materials - by the line parameters. done
+# 10. Use of material database file - done
+# 11. Use multiphase currents definition - by a currentfile? - done by the 'current(phase, Irms, elshift, extra shift)' innerocde params
+# 12. Use multiple materials - define material per phase by a innercode 
+
+
 
 # General imports
 import numpy as np
@@ -36,15 +41,6 @@ from csdlib import csdmath as csdm
 from csdlib import csdsolve as csds
 from csdlib import csdos
 
-class the_bar:
-    def __init__(self):
-        self.elements = []
-        self.center = []
-        self.power = 0
-        self.current = 0
-        self.number = 0
-        self.phase = 0
-        self.perymiter = 0
 
 def getArgs():
     """
@@ -96,7 +92,10 @@ def getArgs():
             "-sp", "--simple", action="store_true", help="Show only simple output"
         ),
         parser.add_argument(
-            "-md", "--markdown", action="store_true", help="Results for bars as markdown table"
+            "-md",
+            "--markdown",
+            action="store_true",
+            help="Results for bars as markdown table",
         ),
         parser.add_argument(
             "-csv",
@@ -168,7 +167,7 @@ def main():
     dXmm = dYmm = 1
 
     # 2 loading the geometry data:
-    XSecArray, dXmm, dYmm = csdf.loadTheData(config["geometry"])
+    XSecArray, dXmm, dYmm, currents = csdf.loadTheData(config["geometry"])
 
     csdf.myLog("Initial geometry array parameters:")
     csdf.myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
@@ -192,36 +191,31 @@ def main():
     if config["draw"]:
         # making the draw of the geometry in initial state.
 
-        all_colors = ["white", "red", "green", "blue","crimson","blueviolet","yellow","azure","cyan","darksalmon"]
+        all_colors = [
+            "white",
+            "red",
+            "green",
+            "blue",
+            "crimson",
+            "blueviolet",
+            "yellow",
+            "azure",
+            "cyan",
+            "darksalmon",
+        ]
         colors = [all_colors[int(n)] for n in number_of_phases]
 
         print(colors)
-        
+
         cmap = ListedColormap(colors)
-        # norm = plt.Normalize(vmin=0, vmax=len(colors))
-
-        # Adjust the ticks
         ax = plt.gca()
-        num_ticks_x = len(XSecArray[0])
-        num_ticks_y = len(XSecArray)
-
-        # Set the ticks and corresponding labels
-        step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
-
-        x_ticks = np.arange(0, num_ticks_x, step)
-        y_ticks = np.arange(0, num_ticks_y, step)
-
-        # Set the ticks based on the array dimensions
-        ax.set_xticks(x_ticks)
-        ax.set_yticks(y_ticks)
-
-        # Set the tick labels by multiplying
-        # the tick values by the scaling factor
-        ax.set_xticklabels((x_ticks * dXmm).astype(int))
-        ax.set_yticklabels((y_ticks * dYmm).astype(int))
-
-        # plt.imshow(XSecArray, cmap=cmap, norm=norm)
-        plt.imshow(XSecArray, cmap=cmap)
+        csdf.plot_the_geometry(
+            XSecArray,
+            ax,
+            cmap,
+            dXmm=dXmm,
+            dYmm=dYmm,
+        )
         plt.show()
 
         question = input("Do you want to run the analysis? [y]/[n]")
@@ -231,34 +225,41 @@ def main():
     # 3 preparing the solution
     Irms = config["current"]
     # Current vector
-    Icurrent = []
+    if len(currents) == len(number_of_phases)-1:
+        # for i in currents:
+        #     Icurrent.append([0,0])
 
-    phi = [120,0,240,120,0,240]
-    direction = [0,0,0,180,180,180]
+        Icurrent = [[0,0] for _ in range(len(number_of_phases)-1)]
+        for i in currents:
+            Icurrent[int(i[0])-1] = [float(i[1]),float(i[2])+float(i[3])]
+    else:
+        Icurrent = []
+        phi = [120, 0, 240, 120, 0, 240]
+        direction = [0, 0, 0, 180, 180, 180]
+        x = 0
+        for n in range(len(number_of_phases) - 1):
+            Icurrent.append((Irms, phi[x] + direction[x]))
+            x += 1
+            if x > len(phi):
+                x = 0
 
-    x = 0
-    for n in range(len(number_of_phases)-1):
-        Icurrent.append((Irms,phi[x]+direction[x]))
-        x+=1
-        if x > len(phi):
-            x = 0
-
-    # Icurrent = [(Irms, 120), (Irms, 0), (Irms, 240), (-Irms, 120)]
     f = config["frequency"]
     length = config["length"]
     t = config["temperature"]
 
-    if config['material'] >= 0:
+    if config["material"] >= 0:
         # reading the material file and select the material
         list = csdos.read_file_to_list("setup/materials.txt")[1:]
         if list:
             Materials = csdos.get_material_from_list(list)
             csdf.myLog(f"Materials: \n {Materials}")
-            if config['material'] < len(Materials):
-                this_material = Materials[config['material']]
+            if config["material"] < len(Materials):
+                this_material = Materials[config["material"]]
 
     else:
-        this_material = csdos.Material('Cu',config['conductivity'],config['temRcoeff'])
+        this_material = csdos.Material(
+            "Cu", config["conductivity"], config["temRcoeff"]
+        )
     csdf.myLog(f"Using material: {this_material.name}")
     sigma = this_material.sigma
     r20 = this_material.alpha
@@ -269,7 +270,14 @@ def main():
     csdf.myLog()
     csdf.myLog("Complex form:")
 
-    (resultsCurrentVector, powerResults, elementsVector, powerLossesSolution,complexCurrent,vPh) = csds.solve_multi_system(
+    (
+        resultsCurrentVector,
+        powerResults,
+        elementsVector,
+        powerLossesSolution,
+        complexCurrent,
+        vPh,
+    ) = csds.solve_multi_system(
         XSecArray,
         dXmm,
         dYmm,
@@ -284,7 +292,7 @@ def main():
 
     powerLosses, powPh = powerResults
 
-    if config['bars']:
+    if config["bars"]:
         currentsDraw = csdm.recreateresultsArray(
             elementsVector, complexCurrent, XSecArray, dtype=complex
         )
@@ -292,12 +300,13 @@ def main():
             elementsVector, powerLossesSolution, XSecArray
         )
 
-        conductorsXsecArr,total_conductors, phases_conductors = csdf.getConductors(XSecArray,vPh)
+        conductorsXsecArr, total_conductors, phases_conductors = csdf.getConductors(
+            XSecArray, vPh
+        )
 
-        if config['draw']:
+        if config["draw"]:
 
             # making the draw of the geometry in initial state.
-
 
             base_cmap = plt.get_cmap("jet", 256)
             colors = base_cmap(np.arange(256))
@@ -305,124 +314,132 @@ def main():
             cmap = ListedColormap(colors)
             norm = plt.Normalize(vmin=0, vmax=total_conductors)
 
-            # Adjust the ticks
             ax = plt.gca()
-            num_ticks_x = len(XSecArray[0])
-            num_ticks_y = len(XSecArray)
-
-            # Set the ticks and corresponding labels
-            step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
-
-            x_ticks = np.arange(0, num_ticks_x, step)
-            y_ticks = np.arange(0, num_ticks_y, step)
-
-            # Set the ticks based on the array dimensions
-            ax.set_xticks(x_ticks)
-            ax.set_yticks(y_ticks)
-
-            # Set the tick labels by multiplying
-            # the tick values by the scaling factor
-            ax.set_xticklabels((x_ticks * dXmm).astype(int))
-            ax.set_yticklabels((y_ticks * dYmm).astype(int))
-
-            # plt.imshow(XSecArray, cmap=cmap, norm=norm)
-            plt.imshow(conductorsXsecArr, cmap=cmap)
+            csdf.plot_the_geometry(
+                conductorsXsecArr,
+                ax,
+                cmap,
+                dXmm=dXmm,
+                dYmm=dYmm,
+            )
             plt.show()
 
-
-
         bars_data = []
-        for b in range(1,total_conductors+1):
-            temp_bar_obj = the_bar()
-            temp_bar_obj.elements = csdm.arrayVectorize(conductorsXsecArr,phaseNumber=b,dXmm=dXmm,dYmm=dYmm)
-            coordinateX = sum([x[2] for x in temp_bar_obj.elements]) / len(temp_bar_obj.elements)
-            coordinateY = sum([x[3] for x in temp_bar_obj.elements]) / len(temp_bar_obj.elements)
+        for b in range(1, total_conductors + 1):
+            temp_bar_obj = csdf.the_bar()
+            temp_bar_obj.elements = csdm.arrayVectorize(
+                conductorsXsecArr, phaseNumber=b, dXmm=dXmm, dYmm=dYmm
+            )
+            coordinateX = sum([x[2] for x in temp_bar_obj.elements]) / len(
+                temp_bar_obj.elements
+            )
+            coordinateY = sum([x[3] for x in temp_bar_obj.elements]) / len(
+                temp_bar_obj.elements
+            )
 
-            csdf.myLog(f"Building bar {b} for {dXmm=} {dYmm=} center: {coordinateX}:{coordinateY} elements: {len(temp_bar_obj.elements)}")
+            csdf.myLog(
+                f"Building bar {b} for {dXmm=} {dYmm=} center: {coordinateX}:{coordinateY} elements: {len(temp_bar_obj.elements)}"
+            )
             bars_data.append(temp_bar_obj)
 
-        for i,bar in enumerate(bars_data):
+        for i, bar in enumerate(bars_data):
 
             bar.number = i
 
-            bar.perymiter = csdf.getPerymiter(bar.elements,XSecArray,dXmm,dYmm)
+            bar.perymiter = csdf.getPerymiter(bar.elements, XSecArray, dXmm, dYmm)
 
             x = y = 0
             for element in bar.elements:
                 R = int(element[0])
                 C = int(element[1])
 
-                bar.current += currentsDraw[R,C]
-                bar.power += powerDraw[R,C]
+                bar.current += currentsDraw[R, C]
+                bar.power += powerDraw[R, C]
 
                 x += element[2]
                 y += element[3]
-            bar.center = [x/len(bar.elements),y/len(bar.elements)]
+            bar.center = [x / len(bar.elements), y / len(bar.elements)]
 
-        for i,phase in enumerate(phases_conductors):
+        for i, phase in enumerate(phases_conductors):
             for b in phase:
-                bars_data[b-1].phase = i
+                bars_data[b - 1].phase = i
 
-        
-
-        
     # Results of power losses
     if not simple and not csv:
         print()
-        print("--------------------------------------------------------------------------------------")
+        print(
+            "--------------------------------------------------------------------------------------"
+        )
         print("Results of power losses")
         print(f"\tgeometry: {config['geometry']}")
         print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm], T={t}[degC]")
-        print("--------------------------------------------------------------------------------------")
+        print(
+            "--------------------------------------------------------------------------------------"
+        )
 
-        text_line ="Sum [W]\t| "
-        for i,dP in enumerate(powPh):
-            text_line +=f"dP{i} [W]\t| "  
+        text_line = "Sum [W]\t| "
+        for i, dP in enumerate(powPh):
+            text_line += f"dP{i} [W]\t| "
         print(text_line)
 
-        text_line =f"{powerLosses:>6.2f}\t| "
-        for i,dP in enumerate(powPh):
-            text_line +=f"{dP:>6.2f}\t| "  
+        text_line = f"{powerLosses:>6.2f}\t| "
+        for i, dP in enumerate(powPh):
+            text_line += f"{dP:>6.2f}\t| "
         print(text_line)
-        print("--------------------------------------------------------------------------------------")
+        print(
+            "--------------------------------------------------------------------------------------"
+        )
 
-        if config['bars']:
-            for i,bars in enumerate(phases_conductors):
+        if config["bars"]:
+            for i, bars in enumerate(phases_conductors):
                 print(f"Phase {i}:")
                 phase_curr = 0
 
                 for b in bars:
-                    bar = bars_data[b-1]
-                    print(f"\t{bar.current=:.2f} {bar.power=:.2f} {bar.perymiter=:.1f} {bar.center=}")
+                    bar = bars_data[b - 1]
+                    print(
+                        f"\t{bar.current=:.2f} {bar.power=:.2f} {bar.perymiter=:.1f} {bar.center=}"
+                    )
                     phase_curr += bar.current
-                print(f"\tPhase {i} current sum {phase_curr} / {csdm.getComplexModule(phase_curr)}")
+                print(
+                    f"\tPhase {i} current sum {phase_curr} / {csdm.getComplexModule(phase_curr)}"
+                )
 
     elif not csv:
         print(f"{f}[Hz] \t {powerLosses:.2f} [W]")
 
-        if config['bars']:
-            for i,bars in enumerate(phases_conductors):
+        if config["bars"]:
+            for i, bars in enumerate(phases_conductors):
                 print(f"Phase {i}: ")
                 phase_curr = 0
 
                 for b in bars:
-                    bar = bars_data[b-1]
-                    print(f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]")
+                    bar = bars_data[b - 1]
+                    print(
+                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]"
+                    )
                     phase_curr += bar.current
     else:
-        if config['bars']:
-            if config['markdown']:
-                print(f"phase | bar | Bar Current [A] | Bar dP[W] | Bar Perymetr[mm] | Bar Center X[mm] | Bar Center Y[mm]")
+        if config["bars"]:
+            if config["markdown"]:
+                print(
+                    f"phase | bar | Bar Current [A] | Bar dP[W] | Bar Perymetr[mm] | Bar Center X[mm] | Bar Center Y[mm]"
+                )
                 print(f"---|---|---|---|---|---|---")
                 for bar in bars_data:
-                    print(f"{bar.phase}|{bar.number:>2}|{csdm.getComplexModule(bar.current):>8.2f}|{bar.power:>7.2f}|{bar.perymiter:>7.2f}|{bar.center[0]}|{bar.center[1]}")
+                    print(
+                        f"{bar.phase}|{bar.number:>2}|{csdm.getComplexModule(bar.current):>8.2f}|{bar.power:>7.2f}|{bar.perymiter:>7.2f}|{bar.center[0]}|{bar.center[1]}"
+                    )
             else:
-                print(f"phase ; bar ; Bar Current [A] ; Bar dP[W] ; Bar Perymetr[mm] ; Bar Center X[mm] ; Bar Center Y[mm]")
+                print(
+                    f"phase ; bar ; Bar Current [A] ; Bar dP[W] ; Bar Perymetr[mm] ; Bar Center X[mm] ; Bar Center Y[mm]"
+                )
                 for bar in bars_data:
-                    print(f"{bar.phase};{bar.number:>2};{csdm.getComplexModule(bar.current):>8.2f};{bar.power:>7.2f};{bar.perymiter:>7.2f};{bar.center[0]};{bar.center[1]}")
+                    print(
+                        f"{bar.phase};{bar.number:>2};{csdm.getComplexModule(bar.current):>8.2f};{bar.power:>7.2f};{bar.perymiter:>7.2f};{bar.center[0]};{bar.center[1]}"
+                    )
         else:
             print(f"{f},{powerLosses:.2f}")
-
 
     if config["results"]:
         # getting the current density
@@ -446,37 +463,23 @@ def main():
             gs = gridspec.GridSpec(1, 2, width_ratios=[80, 20])
             ax = plt.subplot(gs[0])
             bx = plt.subplot(gs[1])
-            bx.axis('off')
+            bx.axis("off")
 
-            num_ticks_x = len(XSecArray[0])
-            num_ticks_y = len(XSecArray)
-
-            # Set the ticks and corresponding labels
-            step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
-
-            x_ticks = np.arange(0, num_ticks_x, step)
-            y_ticks = np.arange(0, num_ticks_y, step)
-
-            # Set the ticks based on the array dimensions
-            ax.set_xticks(x_ticks)
-            ax.set_yticks(y_ticks)
-
-            # Set the tick labels by multiplying
-            # the tick values by the scaling factor
-            ax.set_xticklabels((x_ticks * dXmm).astype(int))
-            ax.set_yticklabels((y_ticks * dYmm).astype(int))
-
-            # plt.imshow(XSecArray, cmap=cmap, norm=norm)
-            cax = ax.imshow(currentsDraw, cmap=cmap)
-
+            cax = csdf.plot_the_geometry(
+                currentsDraw,
+                ax,
+                cmap,
+                dXmm=dXmm,
+                dYmm=dYmm,
+            )
 
             # Add a color bar
-            cbar = plt.colorbar(cax,ax=bx)
+            cbar = plt.colorbar(cax, ax=bx)
             cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
 
             text_line = ""
-            for i,dP in enumerate(powPh):
-                text_line +=f"dP{i}:{dP:.2f}[W] "  
+            for i, dP in enumerate(powPh):
+                text_line += f"dP{i}:{dP:.2f}[W] "
 
             ax.set_title(
                 f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
@@ -488,12 +491,18 @@ def main():
                 pad=20,
             )
 
-            if config['bars']:
-                for b,bar in enumerate(bars_data):
+            if config["bars"]:
+                for b, bar in enumerate(bars_data):
                     fontsize = 10
                     text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
 
-                    ax.text((bar.center[0]/dXmm),bar.center[1]/dYmm,text_line,fontsize=fontsize,color='black')
+                    ax.text(
+                        (bar.center[0] / dXmm),
+                        bar.center[1] / dYmm,
+                        text_line,
+                        fontsize=fontsize,
+                        color="black",
+                    )
             plt.show()
 
 

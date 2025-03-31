@@ -54,6 +54,16 @@ class cointainer:
         return self.ic
 
 
+class the_bar:
+    def __init__(self):
+        self.elements = []
+        self.center = []
+        self.power = 0
+        self.current = 0
+        self.number = 0
+        self.phase = 0
+        self.perymiter = 0
+
 def myLog(s: str = "", *args, **kwargs):
     if verbose:
         print(s, *args, *kwargs)
@@ -64,7 +74,7 @@ def getCanvas(textInput):
     based on the given geometry steps defined by the inner code."""
 
     codeLines = textInput.splitlines()
-    codeSteps = ic.textToCode(codeLines)
+    codeSteps, currents = ic.textToCode(codeLines)
 
     X = []
     Y = []
@@ -112,7 +122,7 @@ def getCanvas(textInput):
         # adding the defiend cells to the geometry array
         for step in codeSteps:
             step[0](*step[1], shift=(min(X), min(Y)), XSecArray=XSecArray, dXmm=dXmm)
-        return XSecArray, dXmm, dYmm
+        return XSecArray, dXmm, dYmm, currents
 
     return False
 
@@ -122,6 +132,7 @@ def loadTheData(filename):
     This is sub function to load data
     """
 
+    currents = []
     if os.path.isfile(filename):
         _, extension = os.path.splitext(filename)
         myLog("File type: " + extension)
@@ -132,7 +143,7 @@ def loadTheData(filename):
                 with open(filename, "r") as f:
                     file_content = f.read()
 
-                XSecArray, dXmm, dYmm = getCanvas(file_content)
+                XSecArray, dXmm, dYmm,currents = getCanvas(file_content)
             except IOError:
                 print("Error reading the file " + filename)
                 sys.exit(1)
@@ -141,7 +152,7 @@ def loadTheData(filename):
             myLog("reading from file :" + filename)
             XSecArray, dXmm, dYmm = loadObj(filename).restore()
 
-        return XSecArray, dXmm, dYmm
+        return XSecArray, dXmm, dYmm, currents
     else:
         myLog(f"The file {filename} can't be opened!")
         sys.exit(1)
@@ -162,34 +173,6 @@ def loadObj(filename):
     """
     with open(filename, "rb") as myInput:
         return pickle.load(myInput)
-
-
-# def combineVectors(vPhA, vPhB, vPhC):
-#     """Function is joining the 3 phase vectors together"""
-
-#     # Lets put the all phases together
-#     elementsPhaseA = len(vPhA)
-#     elementsPhaseB = len(vPhB)
-#     elementsPhaseC = len(vPhC)
-
-#     if elementsPhaseA != 0 and elementsPhaseB != 0 and elementsPhaseC != 0:
-#         elementsVector = np.concatenate((vPhA, vPhB, vPhC), axis=0)
-#     elif elementsPhaseA == 0:
-#         if elementsPhaseB == 0:
-#             elementsVector = vPhC
-#         elif elementsPhaseC == 0:
-#             elementsVector = vPhB
-#         else:
-#             elementsVector = np.concatenate((vPhB, vPhC), axis=0)
-#     else:
-#         if elementsPhaseB == 0 and elementsPhaseC == 0:
-#             elementsVector = vPhA
-#         elif elementsPhaseC == 0:
-#             elementsVector = np.concatenate((vPhA, vPhB), axis=0)
-#         else:
-#             elementsVector = np.concatenate((vPhA, vPhC), axis=0)
-
-#     return elementsVector, elementsPhaseA, elementsPhaseB, elementsPhaseC
 
 def combineVectors(*list_of_vectors):
     # previous version was unnecessary over-complicated 
@@ -268,9 +251,8 @@ def getConductors(XsecArr, phases):
 
     return conductorsArr, conductors_number, phaseCond
 
-
-
 def getPerymiter(vec, arr, dXmm, dYmm):
+
     """
     This function returns the area perynmiter lenght for given
     vector of conducting elements in the array
@@ -326,3 +308,32 @@ def getPerymiter(vec, arr, dXmm, dYmm):
             perymiter += dXmm
 
     return perymiter
+
+
+def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10):
+
+    num_ticks_x = len(DataArray[0])
+    num_ticks_y = len(DataArray)
+
+    # Set the ticks and corresponding labels
+    step = int(num_ticks_x / (num_ticks_x * dXmm / 10))
+
+    x_ticks = np.arange(0, num_ticks_x, step)
+    y_ticks = np.arange(0, num_ticks_y, step)
+
+    # Set the ticks based on the array dimensions
+    ax.set_xticks(x_ticks)
+    ax.set_yticks(y_ticks)
+
+    # Set the tick labels by multiplying
+    # the tick values by the scaling factor
+    ax.set_xticklabels((x_ticks * dXmm).astype(int))
+    ax.set_yticklabels((y_ticks * dYmm).astype(int))
+
+    # plt.imshow(XSecArray, cmap=cmap, norm=norm)
+    return ax.imshow(DataArray, cmap=cmap)
+
+
+
+
+

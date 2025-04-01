@@ -1,10 +1,17 @@
-current(4,00,0,180)
 
 current(1,5000,1200,0)
 current(2,5000,0,0)
 current(3,5000,240,0)
+#
+current(99,0.0,0,180)
 
-r(0,0,255,570,4)
+material(1,2)
+material(2,2)
+material(3,2)
+#
+material(99,4)
+
+r(0,0,255,570,99)
 r(5,5,245,560,0)
 
 

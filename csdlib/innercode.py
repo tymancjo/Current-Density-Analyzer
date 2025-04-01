@@ -36,7 +36,6 @@ def addCircle(x0,y0,D1,Set, D2=0,Set2=0,draw=True,shift=(0,0),XSecArray=None,dXm
     yE = y0 + D1
     return [x0,y0,xE,yE]
 
-    
 def addRect(x0,y0,W,H,Set,draw=True, shift=(0,0),XSecArray=None,dXmm=1):
     """Generalized formula to add rectangle at given position 
     start - left top corner(x,y)[mm]
@@ -80,7 +79,6 @@ def copyCells(phase,shift_X,shift_Y,XSecArray=None,dXmm=1):
     dY = int(shift_Y / dXmm)
 
     csd.n_shiftPhase(phase,dX,dY,XSecArray,remain=phase)
-
 
 def codeLoops(input_text):
     """This function analyze the inner code fot the loops
@@ -131,11 +129,13 @@ def textToCode(input_text):
         'mv': [moveCells,[3]],
         'cp': [copyCells,[3]],
         'current':[None,[4]],
+        'material':[None,[2]],
     }
 
     innerCodeSteps = []
     innerVariables = {}
     currents = []
+    materials = []
 
     # loops are separate function as they need to be recursion for nested loops
     input_text = codeLoops(input_text)
@@ -147,7 +147,6 @@ def textToCode(input_text):
             if command in commands:
                 if command == 'v':
                     # taking care if the command sets the variable
-                    # ar = line[2:-1].strip().split(',')
                     ar = line.split('(')[1].replace(')','').strip().split(',')
                     if len(ar) in commands[command][1]:
                         variable_name = str(ar[0])
@@ -156,7 +155,6 @@ def textToCode(input_text):
                 elif command == 'a':
                     if len(innerVariables):
                         # taking care if the command sets the variable
-                        # ar = line[2:-1].strip().split(',')
                         ar = line.split('(')[1].replace(')','').strip().split(',')
                         if len(ar) in commands[command][1]:
                             variable_name = str(ar[0])
@@ -168,9 +166,12 @@ def textToCode(input_text):
                         if len(ar) in commands[command][1]:
                             currents.append(ar)
 
+                elif command == 'material':
+                        ar = line.split('(')[1].replace(')','').strip().split(',')
+                        if len(ar) in commands[command][1]:
+                            materials.append(ar)
                 else:
                     # ar as arguments 
-                    # ar = line[2:-1].strip().split(',')
                     ar = line.split('(')[1].replace(')','').strip().split(',')
                     # insert inner variables if any
                     if len(innerVariables):
@@ -183,7 +184,7 @@ def textToCode(input_text):
                         ar = [float(a) for a in ar]
                         innerCodeSteps.append([commands[command][0],ar,command])
 
-    return innerCodeSteps, currents
+    return innerCodeSteps, currents, materials
 
 
 

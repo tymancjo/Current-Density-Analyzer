@@ -51,7 +51,7 @@ def getImpedanceArray(
     temperature=20,
     sigma20C=58e6,
     temCoRe=3.9e-3,
-):
+ ):
     """
     Calculate the array of impedance as complex values for each element
     Input:
@@ -76,8 +76,8 @@ def getImpedanceArray(
                     sizeY=dYmm,
                     lenght=lenght,
                     temp=temperature,
-                    sigma20C=sigma20C,
-                    temCoRe=temCoRe,
+                    sigma20C=sigma20C[X],
+                    temCoRe=temCoRe[X],
                 ) + 1j * omega * getSelfInductance(
                     sizeX=dXmm, sizeY=dYmm, lenght=lenght
                 )
@@ -195,7 +195,10 @@ def getResistanceArray(
     temperature=20,
     sigma20C=58e6,
     temCoRe=3.9e-3,
-):
+    sigma_array = [],
+    alpha_array = []
+
+    ):
     """
     Calculate the array of resistance values for each element
     Input:
@@ -209,15 +212,28 @@ def getResistanceArray(
     """
 
     resistanceArray = np.zeros(elementsVector.shape[0])
-    for element in range(elementsVector.shape[0]):
-        resistanceArray[element] = getResistance(
-            sizeX=dXmm,
-            sizeY=dYmm,
-            lenght=lenght,
-            temp=temperature,
-            sigma20C=sigma20C,
-            temCoRe=temCoRe,
-        )
+
+    if len(alpha_array) and len(sigma_array):
+        for index,element in enumerate(elementsVector):
+            mat_index = int(element[4])
+            resistanceArray[index] = getResistance(
+                sizeX=dXmm,
+                sizeY=dYmm,
+                lenght=lenght,
+                temp=temperature,
+                sigma20C=sigma_array[mat_index],
+                temCoRe=alpha_array[mat_index],
+            )
+    else:
+        for idx,element in enumerate(elementsVector):
+            resistanceArray[idx] = getResistance(
+                sizeX=dXmm,
+                sizeY=dYmm,
+                lenght=lenght,
+                temp=temperature,
+                sigma20C=sigma20C,
+                temCoRe=temCoRe,
+            )
 
     return resistanceArray
 
@@ -291,7 +307,7 @@ def arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
                 coordinateY = (0.5 + Row) * dYmm
                 coordinateX = (0.5 + Col) * dXmm
 
-                vectorArray.append([Row, Col, coordinateX, coordinateY])
+                vectorArray.append([Row, Col, coordinateX, coordinateY,phaseNumber])
 
     return np.array(vectorArray)
 

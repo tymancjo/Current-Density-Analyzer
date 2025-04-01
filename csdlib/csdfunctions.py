@@ -53,7 +53,6 @@ class cointainer:
     def getIC(self):
         return self.ic
 
-
 class the_bar:
     def __init__(self):
         self.elements = []
@@ -68,13 +67,12 @@ def myLog(s: str = "", *args, **kwargs):
     if verbose:
         print(s, *args, *kwargs)
 
-
-def getCanvas(textInput):
+def getCanvas(codeSteps):
     """This function is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
 
-    codeLines = textInput.splitlines()
-    codeSteps, currents = ic.textToCode(codeLines)
+    # codeLines = textInput.splitlines()
+    # codeSteps, currents = ic.textToCode(codeLines)
 
     X = []
     Y = []
@@ -122,10 +120,9 @@ def getCanvas(textInput):
         # adding the defiend cells to the geometry array
         for step in codeSteps:
             step[0](*step[1], shift=(min(X), min(Y)), XSecArray=XSecArray, dXmm=dXmm)
-        return XSecArray, dXmm, dYmm, currents
+        return XSecArray, dXmm, dYmm 
 
     return False
-
 
 def loadTheData(filename):
     """
@@ -133,6 +130,7 @@ def loadTheData(filename):
     """
 
     currents = []
+    materials = []
     if os.path.isfile(filename):
         _, extension = os.path.splitext(filename)
         myLog("File type: " + extension)
@@ -143,7 +141,10 @@ def loadTheData(filename):
                 with open(filename, "r") as f:
                     file_content = f.read()
 
-                XSecArray, dXmm, dYmm,currents = getCanvas(file_content)
+                codeLines = file_content.splitlines()
+                codeSteps, currents, materials = ic.textToCode(codeLines)
+
+                XSecArray, dXmm, dYmm = getCanvas(codeSteps)
             except IOError:
                 print("Error reading the file " + filename)
                 sys.exit(1)
@@ -152,11 +153,10 @@ def loadTheData(filename):
             myLog("reading from file :" + filename)
             XSecArray, dXmm, dYmm = loadObj(filename).restore()
 
-        return XSecArray, dXmm, dYmm, currents
+        return XSecArray, dXmm, dYmm, currents, materials
     else:
-        myLog(f"The file {filename} can't be opened!")
+        print(f"The file {filename} can't be opened!")
         sys.exit(1)
-
 
 def loadObj(filename):
     """load object data from file that was saved by saveObj function.
@@ -308,7 +308,6 @@ def getPerymiter(vec, arr, dXmm, dYmm):
             perymiter += dXmm
 
     return perymiter
-
 
 def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10):
 

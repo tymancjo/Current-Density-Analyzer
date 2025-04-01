@@ -1,10 +1,12 @@
-""""
-The module with the solver related functions. 
+""" 
+The module with the solver related functions.
 """
+
 import sys
 import numpy as np
 from csdlib import csdfunctions as csdf
 from csdlib import csdmath as csdm
+from csdlib import csdos
 
 
 def solve_system(
@@ -18,7 +20,7 @@ def solve_system(
     verbose=False,
     sigma20C=56e6,
     temCoRe=3.9e-3,
-):
+    ):
     # lets workout the  current in phases as is defined
     in_Ia = I[0] * np.cos(I[1] * np.pi / 180) + I[0] * np.sin(I[1] * np.pi / 180) * 1j
     csdf.myLog(f"Ia: {in_Ia}")
@@ -206,7 +208,6 @@ def solve_system(
     )
 
 
-
 def solve_multi_system(
     XsecArray,
     dXmm,
@@ -216,40 +217,70 @@ def solve_multi_system(
     length,
     temperature,
     verbose=False,
+    phases_material=[],
     sigma20C=56e6,
     temCoRe=3.9e-3,
-):
+    ):
+
+    # Figuring out phases material
+    if len(phases_material) == 0:
+        phases_material.append(csdos.Material("Cu", sigma, temCoRe))
 
     # Determining the number of phases
-    array_of_phases = np.unique(XsecArray)
-    number_of_phases = len(np.unique(XsecArray))-1 #as there is an 0 for empty in this
+    list_of_phases = np.unique(XsecArray).astype(int)
+    number_of_phases = (
+        len(np.unique(XsecArray)) - 1
+    )  # as there is an 0 for empty in this
+    phase_index = {phase: index for index, phase in enumerate(list_of_phases)}
 
     # Let's check if the delivered currents data are given for all phases
     currents = []
     if len(I) == number_of_phases:
         for i in I:
-            this_current = i[0] * np.cos(i[1] * np.pi / 180) + i[0] * np.sin(i[1] * np.pi / 180) * 1j
+            this_current = (
+                i[0] * np.cos(i[1] * np.pi / 180)
+                + i[0] * np.sin(i[1] * np.pi / 180) * 1j
+            )
             currents.append(this_current)
     else:
-        csdf.myLog(f"Error! Found {number_of_phases=} and {len(I)} currents definitions. Mismatch!")
+        csdf.myLog(
+            f"Error! Found {number_of_phases=} and {len(I)} currents definitions. Mismatch!"
+        )
         sys.exit(1)
-        
-    csdf.myLog(f"Currents {currents=}")
 
+    if len(phases_material) != number_of_phases:
+        temp = phases_material[0]
+        phases_material = []
+        for _ in range(number_of_phases):
+            phases_material.append(temp)
+
+    csdf.myLog(f"Currents {currents=}")
+    csdf.myLog(f"MAterials {phases_material}")
 
     # Let's work out the phases elements vectors
     vPh = []
     elementsPhase = []
-    for p in array_of_phases:
+    for p in list_of_phases:
         if p != 0:
             this_vPh = csdm.arrayVectorize(
-                        inputArray=XsecArray, phaseNumber=int(p), dXmm=dXmm, dYmm=dYmm)
+                inputArray=XsecArray, phaseNumber=int(p), dXmm=dXmm, dYmm=dYmm
+            )
             vPh.append(this_vPh)
             elementsPhase.append(len(this_vPh))
 
     elementsVector = np.concatenate(vPh)
 
-    csdf.myLog(f"{elementsVector=}")
+    # we need to prepare the vector versions of the material properties and temperatures
+    sigma_array = []
+    alpha_array = []
+    for element in elementsVector:
+        index = phase_index[int(element[4])] - 1
+        sigma_array.append(phases_material[index].sigma)
+        alpha_array.append(phases_material[index].alpha)
+
+    sigma_array = np.array(sigma_array)
+    alpha_array = np.array(alpha_array)
+
     csdf.myLog(f"{elementsPhase=}")
 
     if len(elementsVector) > 1200:
@@ -273,22 +304,21 @@ def solve_multi_system(
             dYmm=dYmm,
             temperature=temperature,
             lenght=length,
-            sigma20C=sigma20C,
-            temCoRe=temCoRe,
+            sigma20C=sigma_array,
+            temCoRe=alpha_array,
         )
     )
 
     # Let's put here some voltage vector
-
     U = []
     for i in I:
         this_u = np.cos(i[1] * np.pi / 180) + np.sin(i[1] * np.pi / 180) * 1j
         U.append(this_u)
-    
+
     voltageVector = np.array([])
     for elements, u in zip(elementsPhase, U):
         this_v = np.ones(elements) * u
-        voltageVector = np.concatenate((voltageVector,this_v), axis=0)
+        voltageVector = np.concatenate((voltageVector, this_v), axis=0)
 
     currentVector = csdm.solveTheEquation(admitanceMatrix, voltageVector)
 
@@ -299,27 +329,25 @@ def solve_multi_system(
         end_index = start_index + l
         currentsPh.append(currentVector[start_index:end_index])
         start_index = end_index
-    
+
     # Bringing each phase current to the assumed Irms level
     I_results = [np.sum(cPh) for cPh in currentsPh]
 
     # Normalizing to get the currents as in input parameters
     # ratios of currents will give us new voltages for phases
-
     csdf.myLog(f"Initial Voltages {U=}")
-    for n, x  in enumerate(zip(I_results, currents, U)):
-        i_r, i,u = x
+    for n, x in enumerate(zip(I_results, currents, U)):
+        i_r, i, u = x
         if i_r:
             this_Z = u / i_r
             U[n] = this_Z * i
     csdf.myLog(f"Modified Voltages {U=}")
-    
 
     # Setting up the voltage vector for final solve
     voltageVector = np.array([])
     for elements, u in zip(elementsPhase, U):
         this_v = np.ones(elements) * u
-        voltageVector = np.concatenate((voltageVector,this_v), axis=0)
+        voltageVector = np.concatenate((voltageVector, this_v), axis=0)
 
     # Final solve
     # Main equation solve
@@ -348,10 +376,10 @@ def solve_multi_system(
     modI = [np.abs(cPh) for cPh in I_results]
     csdf.myLog(f"Mod: {modI=}")
 
-    for n,x in enumerate(zip(modI,currentsPh,I)):
-        mod_i,cPh,i = x
-        if mod_i != 0 and i[0]!=0:
-            currentsPh[n] = cPh * i[0]/mod_i
+    for n, x in enumerate(zip(modI, currentsPh, I)):
+        mod_i, cPh, i = x
+        if mod_i != 0 and i[0] != 0:
+            currentsPh[n] = cPh * i[0] / mod_i
 
     I_results = [np.sum(cPh) for cPh in currentsPh]
 
@@ -376,8 +404,8 @@ def solve_multi_system(
         dYmm=dYmm,
         temperature=temperature,
         lenght=length,
-        sigma20C=sigma20C,
-        temCoRe=temCoRe,
+        sigma_array=sigma_array,
+        alpha_array=alpha_array,
     )
 
     # This is the total power losses vector
@@ -392,7 +420,6 @@ def solve_multi_system(
         powPh.append(np.sum(powerLossesVector[start_index:end_index]))
         start_index = end_index
 
-
     return (
         resultsCurrentVector,
         (powerLosses, powPh),
@@ -401,4 +428,3 @@ def solve_multi_system(
         currentVector,
         vPh,
     )
-

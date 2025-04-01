@@ -22,8 +22,9 @@ is generated on the standard output.
 # 9. adding support of the materials - by the line parameters. done
 # 10. Use of material database file - done
 # 11. Use multiphase currents definition - by a currentfile? - done by the 'current(phase, Irms, elshift, extra shift)' innerocde params
-# 12. Use multiple materials - define material per phase by a innercode 
-
+# 12. Use multiple materials - define material per phase by a innercode - DONE
+# 13. Clean up the phases numbering - allow for any numbers
+# 99. Update the doc.
 
 
 # General imports
@@ -166,16 +167,21 @@ def main():
     XSecArray = np.zeros((0, 0))
     dXmm = dYmm = 1
 
-    # 2 loading the geometry data:
-    XSecArray, dXmm, dYmm, currents = csdf.loadTheData(config["geometry"])
+    # 2 loading the geometry  and other data:
+    XSecArray, dXmm, dYmm, currents, materials = csdf.loadTheData(config["geometry"])
 
     csdf.myLog("Initial geometry array parameters:")
     csdf.myLog(f"dX:{dXmm}mm dY:{dYmm}mm")
     csdf.myLog(f"Data table size: {XSecArray.shape}")
+    csdf.myLog(f"Currents definition: {currents}")
+    csdf.myLog(f"Material definition pattern: {materials}")
 
-    number_of_phases = np.unique(XSecArray)
+    list_of_phases = np.unique(XSecArray).astype(int)
+    number_of_phases = len(list_of_phases)
+    phase_index = {phase: index for index,phase in enumerate(list_of_phases)}
 
-    csdf.myLog(f"phases: {len(number_of_phases)} | {number_of_phases=}")
+    csdf.myLog(f"phases: {number_of_phases} | {list_of_phases=}")
+    csdf.myLog(f"phases: {phase_index=}")
 
     while dXmm > config["size"]:
         csdf.myLog("Splitting the geometry cells...", end="")
@@ -203,7 +209,7 @@ def main():
             "cyan",
             "darksalmon",
         ]
-        colors = [all_colors[int(n)] for n in number_of_phases]
+        colors = [all_colors[phase_index[n]] for n in list_of_phases]
 
         print(colors)
 
@@ -225,19 +231,18 @@ def main():
     # 3 preparing the solution
     Irms = config["current"]
     # Current vector
-    if len(currents) == len(number_of_phases)-1:
-        # for i in currents:
-        #     Icurrent.append([0,0])
+    if len(currents) == number_of_phases - 1:
 
-        Icurrent = [[0,0] for _ in range(len(number_of_phases)-1)]
+        Icurrent = [[0, 0] for _ in range(number_of_phases - 1)]
         for i in currents:
-            Icurrent[int(i[0])-1] = [float(i[1]),float(i[2])+float(i[3])]
+            p = phase_index[int(i[0])]
+            Icurrent[p - 1] = [float(i[1]), float(i[2]) + float(i[3])]
     else:
         Icurrent = []
         phi = [120, 0, 240, 120, 0, 240]
         direction = [0, 0, 0, 180, 180, 180]
         x = 0
-        for n in range(len(number_of_phases) - 1):
+        for n in range(number_of_phases - 1):
             Icurrent.append((Irms, phi[x] + direction[x]))
             x += 1
             if x > len(phi):
@@ -247,25 +252,49 @@ def main():
     length = config["length"]
     t = config["temperature"]
 
-    if config["material"] >= 0:
+    # Reading Material data
+    list = csdos.read_file_to_list("setup/materials.txt")[1:]
+    if list:
+        MaterialsDB = csdos.get_material_from_list(list)
+        csdf.myLog(f"Materials: \n {MaterialsDB}")
+
+    phases_material = [0 for _ in range(number_of_phases -1 )]
+    if len(materials) == number_of_phases - 1:
+        # [phase, mat_number]
+        for m in materials:
+            index = phase_index[int(m[0])]-1
+            index_m = int(m[1])
+            if number_of_phases < index  or index < 0:
+                csdf.myLog("Error! Defined materials for not existing phases!")
+                print("Error! Defined materials for not existing phases!")
+                sys.exit(1)
+            if len(MaterialsDB) < index_m or index_m < 0:
+                csdf.myLog("Error! Defined material not id Materials DB file!")
+                print("Error! Defined material not id Materials DB file!")
+                sys.exit(1)
+
+            phases_material[index] = MaterialsDB[index_m]
+            this_material = None
+
+    elif config["material"] >= 0:
         # reading the material file and select the material
-        list = csdos.read_file_to_list("setup/materials.txt")[1:]
-        if list:
-            Materials = csdos.get_material_from_list(list)
-            csdf.myLog(f"Materials: \n {Materials}")
-            if config["material"] < len(Materials):
-                this_material = Materials[config["material"]]
+        if config["material"] < len(MaterialsDB):
+            this_material = MaterialsDB[config["material"]]
 
     else:
         this_material = csdos.Material(
-            "Cu", config["conductivity"], config["temRcoeff"]
+            "Cu", config["conductivity"], config["temRcoeff"],0,0
         )
-    csdf.myLog(f"Using material: {this_material.name}")
-    sigma = this_material.sigma
-    r20 = this_material.alpha
+
+    if this_material:
+        csdf.myLog(f"Using material: {this_material.name}")
+        sigma = this_material.sigma
+        r20 = this_material.alpha
+        phases_material = [this_material]
 
     csdf.myLog()
     csdf.myLog("Starting solver for")
+    csdf.myLog(f"{phases_material}")
 
     csdf.myLog()
     csdf.myLog("Complex form:")
@@ -286,8 +315,9 @@ def main():
         length,
         t,
         verbose,
-        sigma20C=sigma,
-        temCoRe=r20,
+        phases_material,
+        # sigma20C=sigma,
+        # temCoRe=r20,
     )
 
     powerLosses, powPh = powerResults

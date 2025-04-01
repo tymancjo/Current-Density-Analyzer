@@ -402,7 +402,8 @@ def main():
         )
         print("Results of power losses")
         print(f"\tgeometry: {config['geometry']}")
-        print(f"\tI={config['current']}[A], f={f}[Hz], l={length}[mm], T={t}[degC]")
+        print(f"\tMaterials:\n\t{[m.name for m in phases_material]}")
+        print(f"\tCurrents\n\t{Icurrent}[A,deg]\n\tf={f}[Hz], l={length}[mm], T={t}[degC]")
         print(
             "--------------------------------------------------------------------------------------"
         )

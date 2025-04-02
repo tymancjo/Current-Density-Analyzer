@@ -24,6 +24,7 @@ is generated on the standard output.
 # General imports
 import numpy as np
 
+
 # import os.path
 import sys
 

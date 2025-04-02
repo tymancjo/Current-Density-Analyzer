@@ -23,7 +23,7 @@ is generated on the standard output.
 # 10. Use of material database file - done
 # 11. Use multiphase currents definition - by a currentfile? - done by the 'current(phase, Irms, elshift, extra shift)' innerocde params
 # 12. Use multiple materials - define material per phase by a innercode - DONE
-# 13. Clean up the phases numbering - allow for any numbers
+# 13. Clean up the phases numbering - allow for any numbers - DONE
 # 99. Update the doc.
 
 

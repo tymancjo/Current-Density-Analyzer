@@ -428,3 +428,35 @@ def solve_multi_system(
         currentVector,
         vPh,
     )
+
+
+def solve_with_magnetic():
+    """
+    This is the new version of the solver intended to incorporate the magnetic 
+    influence of the sketched geometry. The idea is to have solver that uses the 
+    magnetic permeability of the materials and the analysis domain.
+    This shall lead to calculate impact on the inductances L and M 
+    and by those to observe the impact of presence of the paramagnetic materials like 
+    carbon steel and by this the impact on current distribution.
+
+
+    The plan:
+    - no need to be 100% compatible with previous versions 
+    1. Get the geometry data, materials data, current data, dXmm and dYmm data.
+    2. Create the m_r array - reflecting the geometry data
+    3. Create the m_r_weighted array - having calculated the weighted average for each coordinates 
+    4. Prepare the Admittance Array using the 2 and 3 when calculating L and M
+    5. Solve for currents - like in previous solvers - with the same normalization approach 
+    
+    Inputs:
+    XsecArray - the 2D np array with the geometry
+    phases_materials - the dictionary with phase materials definitions
+    dXmm, dYmm - real world size of the cell in [mm]
+    currents - the phase currents dictionary.
+    frequency - in [Hz]
+    length - the length of the analysis [mm]
+    temperature - the temperature of the analyzed conductors in [deg C]
+    """
+    ...
+
+

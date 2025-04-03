@@ -2,12 +2,13 @@
 
 
 class Material:
-    def __init__(self,name, sigma, alpha, ro, cp):
+    def __init__(self,name, sigma, alpha, ro, cp,mi_r=1):
         self.name = name
         self.sigma = sigma
         self.alpha = alpha
         self.ro = ro
         self.cp = cp
+        self.mi_r = mi_r
 
 
 def read_file_to_list(file_path):
@@ -32,7 +33,7 @@ def read_file_to_list(file_path):
         return []
 
 
-def get_material_from_list(materials, delim=";", inputs=5):
+def get_material_from_list(materials, delim=";", inputs=6):
     material_library = []
     for line in materials:
         material = line.split(delim)
@@ -42,6 +43,7 @@ def get_material_from_list(materials, delim=";", inputs=5):
             alpha = float(material[2])
             ro = float(material[3])
             cp = float(material[4])
-            material_library.append(Material(name, sigma, alpha, ro, cp))
+            mi_r = float(material[5])
+            material_library.append(Material(name, sigma, alpha, ro, cp,mi_r))
 
     return material_library

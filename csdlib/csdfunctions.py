@@ -309,7 +309,7 @@ def getPerymiter(vec, arr, dXmm, dYmm):
 
     return perymiter
 
-def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10):
+def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10, norm=None):
 
     num_ticks_x = len(DataArray[0])
     num_ticks_y = len(DataArray)
@@ -330,8 +330,7 @@ def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10):
     ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
     # plt.imshow(XSecArray, cmap=cmap, norm=norm)
-    return ax.imshow(DataArray, cmap=cmap)
-
+    return ax.imshow(DataArray, cmap=cmap, norm=norm)
 
 
 

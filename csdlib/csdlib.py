@@ -16,7 +16,7 @@ import pickle
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.use("TKAgg")
+# matplotlib.use("TKAgg")
 
 
 # End of external Loads

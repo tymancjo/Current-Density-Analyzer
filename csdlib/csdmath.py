@@ -1,6 +1,6 @@
 """
 this is the library of function to cover the math and calculation operations
-in the CSD package. 
+in the CSD package.
 """
 
 import numpy as np
@@ -41,7 +41,7 @@ def getGmatrix(input):
     return np.linalg.inv(input)
 
 
-@conditional_decorator(njit, use_njit)
+# @conditional_decorator(njit, use_njit)
 def getImpedanceArray(
     distanceArray,
     freq,
@@ -51,7 +51,10 @@ def getImpedanceArray(
     temperature=20,
     sigma20C=58e6,
     temCoRe=3.9e-3,
- ):
+    mi_r=1,
+    mi_r_w=1,
+    use_mi_array=False,
+):
     """
     Calculate the array of impedance as complex values for each element
     Input:
@@ -64,39 +67,80 @@ def getImpedanceArray(
     sigma20C - conductivity of conductor material in 20degC in [S] / default = 58MS (copper)
     temCoRe - temperature resistance coefficient / default is copper
     """
-    omega = 2 * np.pi * freq
+    # this is to help numba jit
+    # sigma20C = np.array(sigma20C)
+    # temCoRe = np.array(temCoRe)
+    if not use_mi_array:
+        mi_r = np.array([1])
+        mi_r_w = np.array([1])
 
+
+    omega = 2 * np.pi * freq
     impedanceArray = np.zeros((distanceArray.shape), dtype=np.complex128)
 
     for X in range(distanceArray.shape[0]):
         for Y in range(distanceArray.shape[0]):
-            if X == Y:
-                impedanceArray[Y, X] = getResistance(
-                    sizeX=dXmm,
-                    sizeY=dYmm,
-                    lenght=lenght,
-                    temp=temperature,
-                    sigma20C=sigma20C[X],
-                    temCoRe=temCoRe[X],
-                ) + 1j * omega * getSelfInductance(
-                    sizeX=dXmm, sizeY=dYmm, lenght=lenght
-                )
-            else:
-                impedanceArray[Y, X] = (
-                    1j
-                    * omega
-                    * getMutualInductance(
+            if use_mi_array:
+                if X == Y:
+                    impedanceArray[Y, X] = getResistance(
                         sizeX=dXmm,
                         sizeY=dYmm,
                         lenght=lenght,
-                        distance=distanceArray[Y, X],
+                        temp=temperature,
+                        sigma20C=sigma20C[X],
+                        temCoRe=temCoRe[X],
+                    ) + 1j * omega * getSelfInductance(
+                        sizeX=dXmm,
+                        sizeY=dYmm,
+                        lenght=lenght,
+                        mi_r=mi_r[X],
+                        mi_r_w=mi_r_w[X],
                     )
-                )
+                else:
+                    impedanceArray[Y, X] = (
+                        1j
+                        * omega
+                        * getMutualInductance(
+                            sizeX=dXmm,
+                            sizeY=dYmm,
+                            lenght=lenght,
+                            distance=distanceArray[Y, X],
+                            mi_r_w=(mi_r_w[X] + mi_r_w[Y]) / 2,
+                        )
+                    )
+            else:
+                if X == Y:
+                    impedanceArray[Y, X] = getResistance(
+                        sizeX=dXmm,
+                        sizeY=dYmm,
+                        lenght=lenght,
+                        temp=temperature,
+                        sigma20C=sigma20C[X],
+                        temCoRe=temCoRe[X],
+                    ) + 1j * omega * getSelfInductance(
+                        sizeX=dXmm,
+                        sizeY=dYmm,
+                        lenght=lenght,
+                        mi_r=mi_r[0],
+                        mi_r_w=mi_r_w[0],
+                    )
+                else:
+                    impedanceArray[Y, X] = (
+                        1j
+                        * omega
+                        * getMutualInductance(
+                            sizeX=dXmm,
+                            sizeY=dYmm,
+                            lenght=lenght,
+                            distance=distanceArray[Y, X],
+                            mi_r_w=mi_r_w[0],
+                        )
+                    )
     return impedanceArray
 
 
 @conditional_decorator(njit, use_njit)
-def getSelfInductance(sizeX, sizeY, lenght):
+def getSelfInductance(sizeX, sizeY, lenght, mi_r=1, mi_r_w=1):
     """
     Calculate the self inductance for the subconductor
     It assumes rectangular shape. If you want put for circular shape just
@@ -121,10 +165,17 @@ def getSelfInductance(sizeX, sizeY, lenght):
     # )
 
     # this is the above formula just with pre calculated constant
-    L = (C2 * l) * (np.log(2 * l / a) + C1)
+    # L = (C2 * mi_r_w * l) * (np.log(2 * l / a) + C1)
 
     # this was the previous formula
     # return 0.000000001*2*100*lenght*1e-3*(np.log(2*lenght*1e-3/(0.5*srednica*1e-3))-(3/4))
+
+    # New formula to use both mi_r for material and the surroundings
+    r = a / 2.0
+    mu_o = mi0 * mi_r_w  # przenikalność magnetyczna ośrodka
+
+    L_m = (mu_o / (2 * np.pi)) * (np.log(2 * l / r) - 1 + mi_r / 4)
+    L = L_m * l
 
     return L
 
@@ -143,7 +194,7 @@ def getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
 
 
 @conditional_decorator(njit, use_njit)
-def getMutualInductance(sizeX, sizeY, lenght, distance):
+def getMutualInductance(sizeX, sizeY, lenght, distance, mi_r_w=1):
     """
     Calculate the mutual inductance for the subconductor
     It assumes rectangular shape. If you want put for circular shape just
@@ -160,30 +211,32 @@ def getMutualInductance(sizeX, sizeY, lenght, distance):
     """
     srednica = (sizeX + sizeY) / 2
 
-    a = srednica * 1e-3
+    a = 0.5 * srednica * 1e-3
     l = lenght * 1e-3
     d = distance * 1e-3
     # mi0 = 4 * np.pi * 1e-7
 
     # formula by:
     # https://pdfs.semanticscholar.org/b0f4/eff92e31d4c5ff42af4a873ebdd826e610f5.pdf
-    # M = (mi0 * l / (2 * np.pi)) * (
-    #     np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
-    # )
-    # the same as above with the pre-calculated C2
-    M = (
-        C2
-        * l
-        * (
-            np.log((l + np.sqrt(l**2 + d**2)) / d)
-            - np.sqrt(1 + (d / l) ** 2)
-            + d / l
-        )
+    M = (mi0 * mi_r_w * l / (2 * np.pi)) * (
+        np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l
     )
+    # the same as above with the pre-calculated C2
+    # M = (
+    #     C2
+    #     * mi_r_w
+    #     * l
+    #     * (np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d / l) ** 2) + d / l)
+    # )
 
     # previous formula
     # return 0.000000001*2*lenght*1e-1*(np.log(2*lenght*1e-1/(distance/10))-(3/4))
-    return M
+
+    # New formula with the m_r calculations - for now it seems to not work well...
+    # M = (μ₀ * μr / 2π) * l * ln(1 + (a² / d²))
+    # M = (mi0 * mi_r_w / (2*np.pi)) * l * np.log(1+(a**2/d**2))
+
+    return float(M)
 
 
 @conditional_decorator(njit, use_njit)
@@ -195,10 +248,9 @@ def getResistanceArray(
     temperature=20,
     sigma20C=58e6,
     temCoRe=3.9e-3,
-    sigma_array = [],
-    alpha_array = []
-
-    ):
+    sigma_array=[],
+    alpha_array=[],
+):
     """
     Calculate the array of resistance values for each element
     Input:
@@ -214,7 +266,7 @@ def getResistanceArray(
     resistanceArray = np.zeros(elementsVector.shape[0])
 
     if len(alpha_array) and len(sigma_array):
-        for index,element in enumerate(elementsVector):
+        for index, element in enumerate(elementsVector):
             mat_index = int(element[4])
             resistanceArray[index] = getResistance(
                 sizeX=dXmm,
@@ -225,7 +277,7 @@ def getResistanceArray(
                 temCoRe=alpha_array[mat_index],
             )
     else:
-        for idx,element in enumerate(elementsVector):
+        for idx, element in enumerate(elementsVector):
             resistanceArray[idx] = getResistance(
                 sizeX=dXmm,
                 sizeY=dYmm,
@@ -269,6 +321,94 @@ def getDistancesArray(inputVector):
     return distanceArray
 
 
+@conditional_decorator(njit, use_njit)
+def get_mi_weighted(XsecArr, mi_r_siatka, dXmm, delta=10):
+    """
+    Oblicza zastępcze mi_r dla całej macierzy, uwzględniając sąsiedztwo ±10 komórek.
+
+    Args:
+        mi_r_siatka: Macierz 2D z wartościami mi_r dla każdego kwadratu.
+        dXmm: Długość boku kwadratu w mm.
+
+    Returns:
+        Macierz z zastępczymi wartościami mi_r.
+    """
+
+    delta = delta // dXmm
+    rows, cols = mi_r_siatka.shape
+    zastepcze_mi_r_macierz = np.ones((rows, cols))
+
+    nonzero_indices = np.nonzero(XsecArr)
+    elements_coordinates = np.stack(nonzero_indices, axis=-1)
+
+    # for x in range(rows):
+    #     for y in range(cols):
+    if 1:
+        for x, y in elements_coordinates:
+
+            wagi = []
+            mi_r_sasiadow = []
+
+            for i in range(max(0, x - delta), min(rows, x + delta + 1)):
+                for j in range(max(0, y - delta), min(cols, y + delta + 1)):
+                    if i == x and j == y:
+                        continue  # Pomijamy bieżący kwadrat
+
+                    odleglosc = (
+                        np.sqrt((i - x) ** 2 + (j - y) ** 2) * dXmm
+                    )  # Odległość w mm
+                    waga = 1 / (
+                        odleglosc + 0.0001
+                    )  # Dodajemy małą wartość, aby uniknąć dzielenia przez zero
+                    wagi.append(waga)
+                    mi_r_sasiadow.append(mi_r_siatka[i, j])
+
+            wagi = np.array(wagi)
+            mi_r_sasiadow = np.array(mi_r_sasiadow)
+
+            zastepcze_mi_r = np.sum(wagi * mi_r_sasiadow) / np.sum(wagi)
+            zastepcze_mi_r_macierz[x, y] = zastepcze_mi_r
+
+    return zastepcze_mi_r_macierz
+
+
+@conditional_decorator(njit, use_njit)
+def get_mi_averaged(XsecArr, mi_r_array, dXmm, delta=10):
+    """
+    This is different approach to the the average mi_r calculation.
+    The idea is:
+        we start from a R,C coordinate,
+        we do delta times the average value of sub array around the R,C
+        each time taking bigger area around.
+    """
+
+    rows, cols = mi_r_array.shape
+    mi_r_average = np.ones((rows, cols))
+
+    nonzero_indices = np.nonzero(XsecArr)
+    elements_coordinates = np.stack(nonzero_indices, axis=-1)
+
+    sizes = [1, 3, 7] + [
+        s for s in range(10, min(rows, cols), min(rows, cols) // delta)
+    ]
+
+    for R, C in elements_coordinates:
+        mi_r_av = 0
+        for s in sizes:
+            r_top = max(R - s, 0)
+            r_btm = min(R + s, rows)
+
+            c_left = max(C - s, 0)
+            c_right = min(C + s, cols)
+
+            sub_array_num_elements = (r_btm-r_top)*(c_right-c_left) - 1
+
+            mi_r_av += (np.sum(mi_r_array[r_top:r_btm, c_left:c_right]) - mi_r_array[R,C]) / sub_array_num_elements
+        mi_r_average[R, C] = mi_r_av / len(sizes)
+
+    return mi_r_average
+
+
 def arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
     """
     Desription:
@@ -307,7 +447,7 @@ def arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
                 coordinateY = (0.5 + Row) * dYmm
                 coordinateX = (0.5 + Col) * dXmm
 
-                vectorArray.append([Row, Col, coordinateX, coordinateY,phaseNumber])
+                vectorArray.append([Row, Col, coordinateX, coordinateY, phaseNumber])
 
     return np.array(vectorArray)
 
@@ -337,7 +477,9 @@ def getComplexModule(x):
 
 # Function that put back together the solution vectr back to represent the cross
 # section shape array
-def recreateresultsArray(elementsVector, resultsVector, initialGeometryArray, dtype=float):
+def recreateresultsArray(
+    elementsVector, resultsVector, initialGeometryArray, dtype=float
+):
     """
     Functions returns recreate cross section array with mapperd solution results
     Inputs:

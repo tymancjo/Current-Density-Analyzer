@@ -128,6 +128,12 @@ def getArgs():
             action="store_true",
             help="Execute the detections of particular conductors.",
         ),
+        parser.add_argument(
+            "-bd",
+            "--bardetails",
+            action="store_true",
+            help="If bars - the this define if to show results on plot.",
+        ),
     )
 
     parser.add_argument("geometry", help="Geometry description file in .csd format")
@@ -408,10 +414,14 @@ def main():
                 x += element[2]
                 y += element[3]
             bar.center = [x / len(bar.elements), y / len(bar.elements)]
+            bar.length = length
 
         for i, phase in enumerate(phases_conductors):
             for b in phase:
                 bars_data[b - 1].phase = i
+
+        csds.solve_thermal_for_bars(bars_data)
+
 
     # Results of power losses
     if not simple and not csv:
@@ -468,7 +478,7 @@ def main():
                 for b in bars:
                     bar = bars_data[b - 1]
                     print(
-                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]"
+                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]\t{bar.dT:>4.1f}[K]"
                     )
                     phase_curr += bar.current
     else:
@@ -548,7 +558,10 @@ def main():
             if config["bars"]:
                 for b, bar in enumerate(bars_data):
                     fontsize = 10
-                    text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
+                    if config["bardetails"]:
+                        text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
+                    else:
+                        text_line = f"[{b:>2}]"
 
                     ax.text(
                         (bar.center[0] / dXmm),

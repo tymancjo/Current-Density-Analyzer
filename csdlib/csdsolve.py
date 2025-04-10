@@ -730,3 +730,32 @@ def solve_with_magnetic(
         vPh,
         mi_r_weighted_array
     )
+
+def solve_thermal_for_bars(list_of_bars, HTC=5):
+    ...
+    # we need to make the thermal conductivity array for the whole system.
+    # this will be a np array of B X B size, where B is the number of bars. 
+    B = len(list_of_bars)
+
+    thermal_G_matrix_cond = np.zeros((B,B),dtype = float)
+    thermal_G_matrix = np.zeros((B,B),dtype = float)
+    vector_Q = np.zeros((B),dtype=float)
+
+    for r,bar_n in enumerate(list_of_bars):
+        for c,bar_m in enumerate(list_of_bars):
+            if bar_n is bar_m:
+                thermal_G_matrix[r,c] =  bar_n.length * bar_n.perymiter*1e-6 * HTC + thermal_G_matrix_cond[r,:].sum()
+                vector_Q[r] = bar_n.power
+            else:
+                thermal_G_matrix[r,c] = -thermal_G_matrix_cond[r,c]
+    
+    inverse_G_matrix = np.linalg.inv(thermal_G_matrix)
+    dT_vector = np.matmul(inverse_G_matrix,vector_Q)
+
+    for bar,dt in zip(list_of_bars,dT_vector):
+        bar.dT = dt
+
+    
+
+
+    

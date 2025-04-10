@@ -62,6 +62,8 @@ class the_bar:
         self.number = 0
         self.phase = 0
         self.perymiter = 0
+        self.length = 1000
+        self.dT = 0
 
 def myLog(s: str = "", *args, **kwargs):
     if verbose:

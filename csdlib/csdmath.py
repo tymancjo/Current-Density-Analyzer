@@ -403,7 +403,8 @@ def get_mi_averaged(XsecArr, mi_r_array, dXmm, delta=10):
 
             sub_array_num_elements = (r_btm-r_top)*(c_right-c_left) - 1
 
-            mi_r_av += (np.sum(mi_r_array[r_top:r_btm, c_left:c_right]) - mi_r_array[R,C]) / sub_array_num_elements
+            if sub_array_num_elements:
+                mi_r_av += (np.sum(mi_r_array[r_top:r_btm, c_left:c_right]) - mi_r_array[R,C]) / sub_array_num_elements
         mi_r_average[R, C] = mi_r_av / len(sizes)
 
     return mi_r_average

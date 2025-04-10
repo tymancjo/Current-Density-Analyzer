@@ -522,8 +522,8 @@ def solve_with_magnetic(
 
     csdf.myLog("Starting with mi_r weighted...")
 
-    # mi_r_weighted_array = csdm.get_mi_weighted(XsecArr, mi_r_array, dXmm, delta=250)
-    mi_r_weighted_array = csdm.get_mi_averaged(XsecArr, mi_r_array, dXmm, delta=10) 
+    mi_r_weighted_array = csdm.get_mi_weighted(XsecArr, mi_r_array, dXmm, delta=250)
+    # mi_r_weighted_array = csdm.get_mi_averaged(XsecArr, mi_r_array, dXmm, delta=10) 
 
     csdf.myLog("...")
 

@@ -14,9 +14,12 @@ The whole idea is based on the assumption of quick-turnaround workflow:
 
 ## Application area and limitation
 
-Tool is based on the AC circuit theory and therefore is capable to simulate only sinusoidal currents _(except the force solver - which assumes constant current)_. Basic underlying calculation methodology is a simple type of FEA method. It's approximating the given _(sketched)_ geometry by set of squares ant treat each of such piece _(element)_ as separate conductor in which the current density is uniform. Whit this assumption taken - the system wide ohm law based matrix equations are solved delivering the currents values in each element - and hence - the current density distribution.
+Tool is based on the AC circuit theory and therefore is capable to simulate only sinusoidal currents _(except the force solver - which assumes constant current)_. Basic underlying calculation methodology is a simple type of FEA method. It's approximating the given _(sketched)_ geometry by set of squares and treat each of such a piece _(element)_ as separate conductor in which the current density is uniform. Whit this assumption taken - the system wide ohm law based matrix equations in complex form are solved delivering the currents values in each element - and hence - the current density distribution.
 
 With this principia the tool works well for a currents that are sinusoidal in shape of given frequency. The precision of the solution depends of the _elements_ size and can be increased by subdividing the sketched geometry into smaller _mesh_ approximation. But this comes with the cost of longer calculation times. 
+
+### The detailed description of the working principia can be found under the link:
+[Working idea](doc/working_idea.md)
 
 ## Used technology
 
@@ -118,3 +121,6 @@ More in depth text description will be added later on.
 
 
  
+
+
+[def]: doc/working_idea.md

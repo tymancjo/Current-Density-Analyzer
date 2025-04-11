@@ -85,13 +85,22 @@ def codeLoops(input_text):
     it unwind this to plain innercode text. 
 
     the loops are analyzed from the end, as it's assumed
-    that the loop is always form the l(n) command till the end code.
-
+    that the loop is always form the l(n) command till the 'break' command od to the code end.
     """
 
     commands = {
         'l': [None,[1]] # l(n) l - command takes 1 argument
     }
+
+    if 'break' in input_text:
+        # print(f"There is break!")
+        break_index = input_text.index('break')
+        rest_of_text = input_text[break_index+1:]
+        input_text = input_text[:break_index]
+    else:
+        rest_of_text = []
+
+    
 
     for line_nr,line in enumerate(reversed(input_text)):
 
@@ -113,7 +122,7 @@ def codeLoops(input_text):
                         input_text.extend(loop_code)
                     codeLoops(input_text)
 
-    return input_text
+    return input_text + rest_of_text
 
 def textToCode(input_text):
     """This is the function that will return the list 

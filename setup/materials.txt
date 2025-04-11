@@ -1,6 +1,6 @@
-name;   conductivity [S/m]; Alpha [1/K]; density [kg/m3]; cp [J/kg.K]; mi_r [-]
-copper; 56e6; 3.9e-3; 8960;385;1
-FakeAl; 31e6; 4.4e-3; 4560;885;1
-Aluminium; 31e6; 4.4e-3; 4560;885;1
-Carbon Steel;  6.99e6; 6.5e-3; 7850; 490;100
-Stainless Steel; 1.45e6; 1.0e-3; 7900; 500;1
+name;   conductivity [S/m]; Alpha [1/K]; density [kg/m3]; cp [J/kg.K]; mi_r [-],Thermal Conductivity [W/m.K] 
+copper; 56e6; 3.9e-3; 8960;385;1;400
+FakeAl; 31e6; 4.4e-3; 4560;885;1;237
+Aluminium; 31e6; 4.4e-3; 4560;885;1;237
+Carbon Steel;  6.99e6; 6.5e-3; 7850; 490;100;50
+Stainless Steel; 1.45e6; 1.0e-3; 7900; 500;1;17

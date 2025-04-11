@@ -737,9 +737,16 @@ def solve_thermal_for_bars(list_of_bars, HTC=5):
     # this will be a np array of B X B size, where B is the number of bars. 
     B = len(list_of_bars)
 
+
     thermal_G_matrix_cond = np.zeros((B,B),dtype = float)
     thermal_G_matrix = np.zeros((B,B),dtype = float)
     vector_Q = np.zeros((B),dtype=float)
+
+    ## For the first approach we combine the phases together at the ends (both ends) thermally 
+    for r,bar_n in enumerate(list_of_bars):
+        for c,bar_m in enumerate(list_of_bars):
+            if bar_n.phase == bar_m.phase and bar_n is not bar_m:
+                thermal_G_matrix_cond[r,c] = 2*(1 / (bar_n.Rth+bar_m.Rth))
 
     for r,bar_n in enumerate(list_of_bars):
         for c,bar_m in enumerate(list_of_bars):

@@ -397,10 +397,14 @@ def main():
             )
             bars_data.append(temp_bar_obj)
 
+        for i, phase in enumerate(phases_conductors):
+            for b in phase:
+                bars_data[b - 1].phase = i
+                bars_data[b - 1].material = phases_material[i]
+
         for i, bar in enumerate(bars_data):
 
             bar.number = i
-
             bar.perymiter = csdf.getPerymiter(bar.elements, XSecArray, dXmm, dYmm)
 
             x = y = 0
@@ -415,10 +419,13 @@ def main():
                 y += element[3]
             bar.center = [x / len(bar.elements), y / len(bar.elements)]
             bar.length = length
+            bar.xsection = len(bar.elements) * dXmm * dYmm
 
-        for i, phase in enumerate(phases_conductors):
-            for b in phase:
-                bars_data[b - 1].phase = i
+            bar.Rth = bar.length *1e-3 / (bar.xsection*1e-6 * bar.material.thermal_conductivity)
+            bar.R = bar.length *1e-3 / (bar.xsection*1e-6 * bar.material.sigma)
+
+
+
 
         csds.solve_thermal_for_bars(bars_data)
 
@@ -478,7 +485,7 @@ def main():
                 for b in bars:
                     bar = bars_data[b - 1]
                     print(
-                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]\t{bar.dT:>4.1f}[K]"
+                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]\t{bar.dT:>5.1f}[K]\t{bar.material.name}"
                     )
                     phase_curr += bar.current
     else:

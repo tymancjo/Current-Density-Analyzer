@@ -2,6 +2,9 @@ material(1,0)
 material(2,0)
 material(3,0)
 
+material(4,0)
+material(5,0)
+material(6,0)
 
 current(1,4300,0,0)
 current(2,4300,120,0)
@@ -9,9 +12,9 @@ current(3,4300,240,0)
 
 
 #
-#current(4,4300,0,180)
-#current(5,4300,120,180)
-#current(6,4300,240,180)
+current(4,4300,0,180)
+current(5,4300,120,180)
+current(6,4300,240,180)
 #
 
 material(9,3)
@@ -19,10 +22,10 @@ current(9,0.0001,0,0)
 c(447,0,75,9,70,0)
 
 v(f,1)
-v(y,-410)
+v(y,-210)
 
-#l(2)
-a(y,410)
+l(2)
+a(y,210)
 v(a,100)
 v(b,195)
 

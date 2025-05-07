@@ -64,6 +64,7 @@ class the_bar:
         self.perymiter = 0
         self.length = 1000
         self.dT = 0
+        self.thermal_group = 0
 
 def myLog(s: str = "", *args, **kwargs):
     if verbose:
@@ -336,4 +337,25 @@ def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10, norm=None):
 
 
 
+
+def recreate_temperature_array(bars, xsec_array_shape):
+    """
+    This function recreates the XY cross section array with the temperature
+    results. 
+
+    """
+    temperatures_array = np.zeros(xsec_array_shape)
+
+    for bar in bars:
+        for element in bar.elements:
+            R = int(element[0])
+            C = int(element[1])
+            temperatures_array[R,C] = bar.dT
+
+    return temperatures_array
+
+def move_to_phase(bars, from_phase, to_phase):
+    for bar in bars:
+        if bar.phase == from_phase:
+            bar.phase = to_phase
 

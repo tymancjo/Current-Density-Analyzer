@@ -745,7 +745,7 @@ def solve_thermal_for_bars(list_of_bars, HTC=5):
     ## For the first approach we combine the phases together at the ends (both ends) thermally 
     for r,bar_n in enumerate(list_of_bars):
         for c,bar_m in enumerate(list_of_bars):
-            if bar_n.phase == bar_m.phase and bar_n is not bar_m:
+            if (bar_n.thermal_group !=0 and bar_n.thermal_group == bar_m.thermal_group and bar_n is not bar_m) or (bar_n.thermal_group==0 and bar_n.phase == bar_m.phase and bar_n is not bar_m):
                 thermal_G_matrix_cond[r,c] = 2*(1 / (bar_n.Rth+bar_m.Rth))
 
     for r,bar_n in enumerate(list_of_bars):
@@ -758,7 +758,8 @@ def solve_thermal_for_bars(list_of_bars, HTC=5):
     
     inverse_G_matrix = np.linalg.inv(thermal_G_matrix)
     dT_vector = np.matmul(inverse_G_matrix,vector_Q)
-
+   
+   
     for bar,dt in zip(list_of_bars,dT_vector):
         bar.dT = dt
 

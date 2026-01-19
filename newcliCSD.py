@@ -288,11 +288,11 @@ def main():
             index_m = int(m[1])
             if number_of_phases < index or index < 0:
                 csdf.myLog("Error! Defined materials for not existing phases!")
-                print("Error! Defined materials for not existing phases!")
+                # print("Error! Defined materials for not existing phases!")
                 sys.exit(1)
             if len(MaterialsDB) < index_m or index_m < 0:
                 csdf.myLog("Error! Defined material not id Materials DB file!")
-                print("Error! Defined material not id Materials DB file!")
+                # print("Error! Defined material not id Materials DB file!")
                 sys.exit(1)
 
             phases_material[index] = MaterialsDB[index_m]
@@ -439,7 +439,7 @@ def main():
 
 
         # rebasing phases numbers in bars for the original ones:
-        print(original_phase_index)
+        csdf.myLog(original_phase_index)
         for bar in bars_data:
             bar.phase = original_phase_index[bar.phase]
         
@@ -554,7 +554,7 @@ def main():
         )
         maxCurrent = resultsCurrentVector.max()
         minCurrent = resultsCurrentVector.min()
-        min_to_draw = maxCurrent/250
+        # min_to_draw = maxCurrent/250
         min_to_draw = minCurrent * 0.9
 
         if 1:

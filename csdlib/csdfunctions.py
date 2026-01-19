@@ -24,7 +24,7 @@ class cointainer:
         self.dX = dX
         self.dY = dY
         self.ic = ic
-        print("The container is created")
+        myLog("The container is created")
 
     def save(self, filename):
         if filename[-4:] == ".csd":  # the name already have extension
@@ -123,7 +123,7 @@ def getCanvas(codeSteps):
 
         # adding the defined cells to the geometry array
         for step in codeSteps:
-            print(step)
+            myLog(step)
             step[0](*step[1], shift=(min(X), min(Y)), XSecArray=XSecArray, dXmm=dXmm)
         return XSecArray, dXmm, dYmm 
 

@@ -189,7 +189,6 @@ def textToCode(input_text):
                             for i,argument in enumerate(ar):
                                 if argument in innerVariables:
                                     ar[i] = innerVariables[argument]
-                        print(f"Materials: {ar}")
                         if len(ar) in commands[command][1]:
                             materials.append(ar)
                 else:

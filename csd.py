@@ -13,8 +13,7 @@ from csdlib import csdlib as csd
 from csdlib.vect import Vector as v2
 from csdlib import csdgui as gui
 from csdlib import csdcli as cli
-from csdlib import innercode as ic 
-
+from csdlib import innercode as ic
 
 
 def showXsecArray(event):
@@ -1015,7 +1014,7 @@ def setPoint(event):
         )
     # elif 20 < actualPhase < 24:
     #     # we are in circle mode
-        
+
     #     placeCircle(event,zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
 
     #  Plotting on CAD view if exist
@@ -1311,9 +1310,6 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
             # selectionArray = None
 
 
-
-
-
 def InterCode():
     """This is internal sudo-code inerpreter for easier geometry creation
     Available commands:
@@ -1323,21 +1319,21 @@ def InterCode():
     """
 
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps = ic.textToCode(codeLines)
+    codeSteps, *_ = ic.textToCode(codeLines)
 
     if codeSteps:
         for step in codeSteps:
-            step[0](*step[1],XSecArray=XSecArray,dXmm=dXmm)
+            step[0](*step[1], XSecArray=XSecArray, dXmm=dXmm)
 
     redraw()
+
 
 def getCanvas():
     """This functoion is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
 
-
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps = ic.textToCode(codeLines)
+    codeSteps, *_ = ic.textToCode(codeLines)
 
     X = []
     Y = []
@@ -1345,10 +1341,10 @@ def getCanvas():
     circles = False
     if codeSteps:
         for step in codeSteps:
-            tmp = step[0](*step[1],draw=False)
+            tmp = step[0](*step[1], draw=False)
             if step[0] is ic.addCircle:
                 circles = True
-            
+
             X.append(tmp[0])
             X.append(tmp[2])
             Y.append(tmp[1])
@@ -1357,36 +1353,36 @@ def getCanvas():
         print(X)
         print(Y)
         print(f"Dimention range: {min(X)}:{max(X)}; {min(Y)}:{max(Y)}")
-        size = (max(X)-min(X), max(Y)-min(Y))
+        size = (max(X) - min(X), max(Y) - min(Y))
         print(size)
 
         # I have no good idea how to figure out the best cell size
         # so for now it's just some stuff..
         if circles:
-            sizes = [4,2.5,2,1]
+            sizes = [4, 2.5, 2, 1]
         else:
-            sizes = [10,5,4,2.5,2,1]
-        for xd in sizes :
-            if ( size[0]% xd == 0 ) and (size[1]% xd == 0):
+            sizes = [10, 5, 4, 2.5, 2, 1]
+        for xd in sizes:
+            if (size[0] % xd == 0) and (size[1] % xd == 0):
                 break
         print(f"The dx: {xd}mm")
-        
 
-        elements = int(max(size[0] / xd, size[1]/xd))
+        elements = int(max(size[0] / xd, size[1] / xd))
         print(f"Canvas elements neede: {elements}")
 
         global dXmm, dYmm, XSecArray
         dXmm = dYmm = xd
-        XSecArray = np.zeros([elements,elements])
+        XSecArray = np.zeros([elements, elements])
 
         for step in codeSteps:
-            step[0](*step[1],shift=(min(X),min(Y)),XSecArray=XSecArray,dXmm=dXmm)
+            step[0](*step[1], shift=(min(X), min(Y)), XSecArray=XSecArray, dXmm=dXmm)
 
     myEntryDx.delete(0, END)
     myEntryDx.insert(END, str(dXmm))
     redraw()
-######## End of functions definition ############
 
+
+######## End of functions definition ############
 
 
 master = Tk()
@@ -1702,7 +1698,6 @@ myEntryDx.bind("<Return>", setParameters)
 myEntryDx.bind("<FocusOut>", setParameters)
 
 
-
 # Geometry navigation frame
 zoom_in_icon = PhotoImage(file="csdicons/zoomin.png")
 zoom_out_icon = PhotoImage(file="csdicons/zoomout.png")
@@ -1772,14 +1767,14 @@ print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
 
 # advanced geometry triggers
 code_frame = LabelFrame(master, text="inner-code window")
-code_frame.grid(row=1, column=11, rowspan=25, columnspan=3, sticky="N",padx=5, pady=0)
+code_frame.grid(row=1, column=11, rowspan=25, columnspan=3, sticky="N", padx=5, pady=0)
 
 text_input = Text(code_frame, height=20, width=25)
-text_input.grid(row=1,column=1,columnspan=3,padx=10, pady=10)
-btn = Button(code_frame, text="Execute InnerCode as is",command=InterCode)
-btn.grid(row=19,column=1, columnspan=3)
-btn = Button(code_frame, text="Create new geometry",command=getCanvas)
-btn.grid(row=20,column=1, columnspan=3)
+text_input.grid(row=1, column=1, columnspan=3, padx=10, pady=10)
+btn = Button(code_frame, text="Execute InnerCode as is", command=InterCode)
+btn.grid(row=19, column=1, columnspan=3)
+btn = Button(code_frame, text="Create new geometry", command=getCanvas)
+btn.grid(row=20, column=1, columnspan=3)
 
 
 w.bind("<Button 1>", setPoint)

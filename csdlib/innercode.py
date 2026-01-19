@@ -172,11 +172,24 @@ def textToCode(input_text):
 
                 elif command == 'current':
                         ar = line.split('(')[1].replace(')','').strip().split(',')
+                        # insert inner variables if any
+                        if len(innerVariables):
+                            # let's replace the variables with values
+                            for i,argument in enumerate(ar):
+                                if argument in innerVariables:
+                                    ar[i] = innerVariables[argument]
                         if len(ar) in commands[command][1]:
                             currents.append(ar)
 
                 elif command == 'material':
                         ar = line.split('(')[1].replace(')','').strip().split(',')
+                        # insert inner variables if any
+                        if len(innerVariables):
+                            # let's replace the variables with values
+                            for i,argument in enumerate(ar):
+                                if argument in innerVariables:
+                                    ar[i] = innerVariables[argument]
+                        print(f"Materials: {ar}")
                         if len(ar) in commands[command][1]:
                             materials.append(ar)
                 else:

@@ -483,8 +483,8 @@ def solve_with_magnetic(
     # and preparing the starting data
     if len(currents) != number_of_phases:
         print(f"Error! Currents definition don't match phases!")
-        csdf.myLog(f"{currents=}")
-        csdf.myLog(f"{list_of_phases=}")
+        print(f"{currents=}")
+        print(f"{list_of_phases=}")
         sys.exit(1)
     else:
         I = []
@@ -495,6 +495,8 @@ def solve_with_magnetic(
 
     if len(phases_materials) != number_of_phases:
         print(f"Error! Material definition don't match phases!")
+        print(f"{len(phases_materials)=}")
+        print(f"{number_of_phases=}")
         sys.exit(1)
 
     # preparing the material properties geometry like arrays

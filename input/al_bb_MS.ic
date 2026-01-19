@@ -25,8 +25,8 @@ material(11,2)
 material(12,2)
 material(13,2)
 #
-material(98,5)
-material(99,5)
+material(98,3)
+material(99,3)
 
 # the profiles of the frame
 r(-40,-40,5,610,98)

@@ -103,7 +103,8 @@ def getCanvas(codeSteps):
         # I have no good idea how to figure out the best cell size
         # so for now it's just some stuff..
         if circles:
-            sizes = [4, 2.5, 2, 1]
+            # sizes = [4, 2.5, 2, 1]
+            sizes = [2.5,2,1.5,1]
         else:
             sizes = [ 10, 5, 4, 2.5, 2, 1]
         for xd in sizes:
@@ -120,8 +121,9 @@ def getCanvas(codeSteps):
         dXmm = dYmm = xd
         XSecArray = np.zeros([elements_x, elements_y])
 
-        # adding the defiend cells to the geometry array
+        # adding the defined cells to the geometry array
         for step in codeSteps:
+            print(step)
             step[0](*step[1], shift=(min(X), min(Y)), XSecArray=XSecArray, dXmm=dXmm)
         return XSecArray, dXmm, dYmm 
 

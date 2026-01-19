@@ -192,15 +192,15 @@ def main():
     csdf.myLog(f"Material definition pattern: {materials}")
 
     list_of_phases = np.unique(XSecArray).astype(int)
-    list_of_phases = [int(n) for n in list_of_phases]
-    original_phase_index = {index: phase for index, phase in enumerate(list_of_phases[1:])} 
+    list_of_phases = [int(n) for n in list_of_phases if n != 0]
+    original_phase_index = {index: phase for index, phase in enumerate(list_of_phases)} 
     new_phase_index = {phase: index for index, phase in enumerate(list_of_phases)} 
     # normalizing the phases numbering
     normalized_XsecArr = np.zeros(XSecArray.shape)
-    for index,phase in enumerate(list_of_phases):
+    for index,phase in enumerate([0]+list_of_phases):
         if phase != 0:
             normalized_XsecArr[XSecArray==phase]=index
-    XSecArray = normalized_XsecArr 
+    XSecArray = normalized_XsecArr  
 
     number_of_phases = len(list_of_phases)
     # will create this dict - just to don't modify the downhill code yet.
@@ -236,7 +236,7 @@ def main():
             "darksalmon",
         ]
 
-        colors = [all_colors[new_phase_index[n]] for n in list_of_phases]
+        colors = [all_colors[new_phase_index[n] % len(all_colors)] for n in list_of_phases]
 
         # Create a custom colormap
         cmap = ListedColormap(colors)
@@ -252,12 +252,11 @@ def main():
     # 3 preparing the solution
     Irms = config["current"]
     # Current vector
-    if len(currents) == number_of_phases - 1:
-
-        Icurrent = [[0, 0] for _ in range(number_of_phases - 1)]
+    if len(currents) == number_of_phases :
+        Icurrent = [[0, 0] for _ in range(number_of_phases)]
         for i in currents:
             p = new_phase_index[int(i[0])]
-            Icurrent[p - 1] = [float(i[1]), float(i[2]) + float(i[3])]
+            Icurrent[p] = [float(i[1]), float(i[2]) + float(i[3])]
     else:
         Icurrent = []
         phi = [120, 0, 240, 120, 0, 240]
@@ -278,13 +277,14 @@ def main():
     M_list = csdos.read_file_to_list("setup/materials.txt")[1:]
     if M_list:
         MaterialsDB = csdos.get_material_from_list(M_list)
-        csdf.myLog(f"Materials: \n {MaterialsDB}")
+        csdf.myLog(f"Materials are: \n {MaterialsDB}")
 
-    phases_material = [0 for _ in range(number_of_phases - 1)]
-    if len(materials) == number_of_phases - 1:
+    phases_material = [0 for _ in range(number_of_phases)]
+    # if len(materials) == number_of_phases - 1:
+    if len(materials) == number_of_phases:
         # [phase, mat_number]
         for m in materials:
-            index = new_phase_index[int(m[0])] - 1
+            index = new_phase_index[int(m[0])] 
             index_m = int(m[1])
             if number_of_phases < index or index < 0:
                 csdf.myLog("Error! Defined materials for not existing phases!")
@@ -342,6 +342,7 @@ def main():
     )
 
     powerLosses, powPh = powerResults
+
 
     if config["bars"]:
         currentsDraw = csdm.recreateresultsArray(
@@ -491,6 +492,7 @@ def main():
         )
 
         if config["bars"]:
+            phase_currents = []
             for i, bars in enumerate(phases_conductors):
                 print(f"Phase {i}:")
                 phase_curr = 0
@@ -501,6 +503,9 @@ def main():
                         f"\t{bar.current=:.2f} {bar.power=:.2f} {bar.perymiter=:.1f} {bar.center=}"
                     )
                     phase_curr += bar.current
+
+                phase_currents.append(phase_curr)
+
                 print(
                     f"\tPhase {i} current sum {phase_curr} / {csdm.getComplexModule(phase_curr)}"
                 )
@@ -548,7 +553,9 @@ def main():
             elementsVector, resultsCurrentVector, XSecArray
         )
         maxCurrent = resultsCurrentVector.max()
+        minCurrent = resultsCurrentVector.min()
         min_to_draw = maxCurrent/250
+        min_to_draw = minCurrent * 0.9
 
         if 1:
             # making the draw of the geometry in initial state.

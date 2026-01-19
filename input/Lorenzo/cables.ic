@@ -1,0 +1,67 @@
+# num name;   conductivity [S/m]; Alpha [1/K]; density [kg/m3]; cp [J/kg.K]; mi_r [-],Thermal Conductivity [W/m.K] 
+# 0 copper; 56e6; 3.9e-3; 8960;385;1;400
+# 1 FakeAl; 31e6; 4.4e-3; 4560;885;1;237
+# 2 Aluminium; 31e6; 4.4e-3; 4560;885;1;237
+# 3 Carbon Steel;  6.99e6; 6.5e-3; 7850; 490;100;50
+# 4 Stainless Steel; 1.45e6; 1.0e-3; 7900; 500;1;17
+# 5 Fake Carbon Steel;  6.99e6; 6.5e-3; 7850; 490;10;50 modded stainless steel to acomodate the profile length as 1/10 of analysis length
+
+#variables
+#230 A per cable load
+v(i,238) 
+v(phA,1)
+v(phB,2)
+v(phC,3)
+
+# geometric variables
+v(fi,20.5)
+
+v(y,0)
+v(x1,0)
+v(x2,50)
+v(x3,100)
+
+# looping per modules 1 to 5
+l(5)
+
+# setting materials
+material(phA,1)
+material(phB,1)
+material(phC,1)
+
+# setting currents
+current(phA,i,-120,0)
+current(phB,i,0,0)
+current(phC,i,+120,0)
+
+# drawing geometry
+c(x1,y,fi,phA) 
+c(x2,y,fi,phB) 
+c(x3,y,fi,phC) 
+
+
+# end of loop variables increase
+a(phA,3)
+a(phB,3)
+a(phC,3)
+
+a(y,60)
+
+# breaking the loop
+break
+
+# the 3 cables on the side, 
+
+# setting materials
+material(21,2)
+material(22,2)
+material(23,2)
+
+# setting currents
+current(21,i,-120,0)
+current(22,i,0,0)
+current(23,i,+120,0)
+
+c(-50,60,fi,21)
+c(-50,120,fi,22)
+c(-50,180,fi,23)

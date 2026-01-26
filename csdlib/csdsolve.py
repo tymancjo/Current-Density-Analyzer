@@ -75,10 +75,6 @@ def solve_system(
     )
 
     # Let's put here some voltage vector
-    # Ua = complex(1, 0)
-    # Ub = complex(-0.5, np.sqrt(3) / 2)
-    # Uc = complex(-0.5, -np.sqrt(3) / 2)
-
     Ua = np.cos(I[1] * np.pi / 180) + np.sin(I[1] * np.pi / 180) * 1j
     Ub = np.cos(I[3] * np.pi / 180) + np.sin(I[3] * np.pi / 180) * 1j
     Uc = np.cos(I[5] * np.pi / 180) + np.sin(I[5] * np.pi / 180) * 1j
@@ -89,7 +85,6 @@ def solve_system(
 
     # voltageVector = np.concatenate((vA, vB, vC), axis=0)
     voltageVector, _, _, _ = csdf.combineVectors(vA, vB, vC)
-    # print(f"{voltageVector=}, {len(voltageVector)=}")
     currentVector = csdm.solveTheEquation(admitanceMatrix, voltageVector)
 
     # And now we need to get solution for each phase to normalize it
@@ -525,7 +520,6 @@ def solve_with_magnetic(
     csdf.myLog("Starting with mi_r weighted...")
 
     mi_r_weighted_array = csdm.get_mi_weighted(XsecArr, mi_r_array, dXmm, delta=250)
-    # mi_r_weighted_array = csdm.get_mi_averaged(XsecArr, mi_r_array, dXmm, delta=10) 
 
     csdf.myLog("...")
 

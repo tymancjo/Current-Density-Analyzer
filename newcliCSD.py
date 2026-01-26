@@ -443,21 +443,6 @@ def main():
         for bar in bars_data:
             bar.phase = original_phase_index[bar.phase]
         
-        
-        # post electrical solution conductors regruping to phases if needed
-        # for now it's manually here - later to be added as mtp "moveToPhase(A->B)" ic command
-        # csdf.move_to_phase(bars_data,11,1)
-        # csdf.move_to_phase(bars_data,12,2)
-        # csdf.move_to_phase(bars_data,13,3)
-
-        # Crating the thermal groups to connect the bars not by phase, but by definition
-        # thermal_grups = [[0,1,2,6,7,8],[3,4,5,9,10,11],[12,13,14,18,19,20],[15,16,17,21,22,23],[24,25,26,30,31,32],[27,28,29,33,34,35]]
-        # for tg,bars in enumerate(thermal_grups):
-        #     for bar in bars:
-        #         bars_data[bar].thermal_group = tg+1
-
-
-
         csds.solve_thermal_for_bars(bars_data,HTC=HTC)
         temperature_array = csdf.recreate_temperature_array(bars_data,XSecArray.shape)
 
@@ -566,7 +551,6 @@ def main():
             norm = plt.Normalize(vmin=min_to_draw, vmax=maxCurrent)
 
             # Adjust the ticks
-            # ax = plt.gca()
             fig = plt.figure()
             if config['bars']:
                 gs = gridspec.GridSpec(1, 2, width_ratios=[1, 1])

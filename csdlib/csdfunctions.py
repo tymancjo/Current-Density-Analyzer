@@ -74,9 +74,6 @@ def getCanvas(codeSteps):
     """This function is to determine the best parameters for the canvas
     based on the given geometry steps defined by the inner code."""
 
-    # codeLines = textInput.splitlines()
-    # codeSteps, currents = ic.textToCode(codeLines)
-
     X = []
     Y = []
 
@@ -252,8 +249,6 @@ def getConductors(XsecArr, phases):
 
 
         phaseCond.append(this_phase_cond_numbers)
-
-
     return conductorsArr, conductors_number, phaseCond
 
 def getPerymiter(vec, arr, dXmm, dYmm):
@@ -274,7 +269,7 @@ def getPerymiter(vec, arr, dXmm, dYmm):
     Output:
     perymiter lenght in the same units as dXmm and dYmm
     """
-    # TODO: adding check if we dont exeed dimensions of array
+    # TODO: adding check if we dont exceed dimensions of array
     # its done
     perymiter = 0
     for box in vec:
@@ -334,7 +329,6 @@ def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10, norm=None):
     ax.set_xticklabels((x_ticks * dXmm).astype(int))
     ax.set_yticklabels((y_ticks * dYmm).astype(int))
 
-    # plt.imshow(XSecArray, cmap=cmap, norm=norm)
     return ax.imshow(DataArray, cmap=cmap, norm=norm)
 
 

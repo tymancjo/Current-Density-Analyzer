@@ -7,7 +7,6 @@ import numpy as np
 
 try:
     from numba import njit
-
     use_njit = True
 
 except ImportError:
@@ -68,8 +67,6 @@ def getImpedanceArray(
     temCoRe - temperature resistance coefficient / default is copper
     """
     # this is to help numba jit
-    # sigma20C = np.array(sigma20C)
-    # temCoRe = np.array(temCoRe)
     if not use_mi_array:
         mi_r = np.array([1])
         mi_r_w = np.array([1])
@@ -471,7 +468,6 @@ def getComplexModule(x):
     """
     if isinstance(x, complex):
         return np.absolute(x)
-        # return np.sqrt(x.real ** 2 + x.imag ** 2)
     else:
         return x
 

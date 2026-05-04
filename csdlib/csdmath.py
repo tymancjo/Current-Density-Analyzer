@@ -107,13 +107,19 @@ def getImpedanceArray(
                     )
             else:
                 if X == Y:
+                    if not isinstance(sigma20C,(int,float)):
+                        sigma20C = sigma20C[X]
+
+                    if not isinstance(temCoRe,(int,float)):
+                        temCoRe = temCoRe[X]
+                        
                     impedanceArray[Y, X] = getResistance(
                         sizeX=dXmm,
                         sizeY=dYmm,
                         lenght=lenght,
                         temp=temperature,
-                        sigma20C=sigma20C[X],
-                        temCoRe=temCoRe[X],
+                        sigma20C=sigma20C,
+                        temCoRe=temCoRe,
                     ) + 1j * omega * getSelfInductance(
                         sizeX=dXmm,
                         sizeY=dYmm,

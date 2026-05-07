@@ -19,7 +19,6 @@
         #phase-management { margin-top: 20px; }
         #phase-list { list-style: none; padding: 0; }
         #phase-list li { margin-bottom: 10px; padding: 5px; border: 1px solid #eee; }
-        textarea { width: 100%; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -30,12 +29,6 @@
             <button id="select-btn" class="tool-btn">Select</button>
             <button id="rect-btn" class="tool-btn">Rectangle</button>
             <button id="circle-btn" class="tool-btn">Circle</button>
-        </div>
-        <hr>
-        <h2>Materials</h2>
-        <div>
-            <textarea id="materials-input" rows="5" placeholder="Paste content of materials.txt here..."></textarea>
-            <button id="load-materials-btn">Load Materials</button>
         </div>
         <hr>
         <h2>Phases</h2>
@@ -66,6 +59,17 @@
         const canvas = document.getElementById('editor-canvas');
         const ctx = canvas.getContext('2d');
 
+        // --- PRE-LOADED DATA ---
+        const preloadedMaterials = `
+name;   conductivity [S/m]; Alpha [1/K]; density [kg/m3]; cp [J/kg.K]; mi_r [-],Thermal Conductivity [W/m.K] 
+copper; 56e6; 3.9e-3; 8960;385;1;400
+FakeAl; 31e6; 4.4e-3; 4560;885;1;237
+Aluminium; 31e6; 4.4e-3; 4560;885;1;237
+Carbon Steel;  6.99e6; 6.5e-3; 7850; 490;100;50
+Stainless Steel; 1.45e6; 1.0e-3; 7900; 500;1;17
+Fake Carbon Steel;  6.99e6; 6.5e-3; 7850; 490;10;50
+        `;
+
         // --- STATE ---
         let shapes = [];
         let phases = {};
@@ -85,57 +89,55 @@
         const propertiesPanel = document.getElementById('shape-properties');
         const addPhaseBtn = document.getElementById('add-phase-btn');
         const phaseList = document.getElementById('phase-list');
-        const materialsInput = document.getElementById('materials-input');
-        const loadMaterialsBtn = document.getElementById('load-materials-btn');
         const generateBtn = document.getElementById('generate-btn');
 
         // --- EVENT LISTENERS ---
         selectBtn.addEventListener('click', () => { currentTool = 'select'; selectedShape = null; updatePropertiesPanel(); });
         rectBtn.addEventListener('click', () => { currentTool = 'rect'; selectedShape = null; updatePropertiesPanel(); });
         circleBtn.addEventListener('click', () => { currentTool = 'circle'; selectedShape = null; updatePropertiesPanel(); });
-        loadMaterialsBtn.addEventListener('click', parseMaterials);
         addPhaseBtn.addEventListener('click', addPhase);
         generateBtn.addEventListener('click', generateIcFile);
         canvas.addEventListener('mousedown', onMouseDown);
         canvas.addEventListener('mousemove', onMouseMove);
         canvas.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedShape) deleteShape();
+            }
+            if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (selectedShape) duplicateShape();
+            }
+        });
 
 
         // --- MATERIAL & PHASE MANAGEMENT ---
-        function parseMaterials() {
-            const text = materialsInput.value;
-            if (!text) {
-                alert("Please paste material data into the text area.");
-                return;
-            }
+        function parseMaterials(text) {
             materials = text.split('\n')
                 .map(line => line.trim())
-                .filter(line => line && !line.startsWith('#'))
+                .filter(line => line && !line.startsWith('name;')) // Ignore header
                 .map((line, index) => {
                     const parts = line.split(';');
+                    // The backend is 0-indexed for materials
                     return { id: index, name: parts[0] ? parts[0].trim() : `Material ${index}` };
                 });
-            alert(`Loaded ${materials.length} materials.`);
-            updatePhaseList(); // Refresh list to show new materials
+            updatePhaseList();
         }
 
         function addPhase() {
-            const newPhaseId = (Object.keys(phases).length) + 1;
-            phases[newPhaseId] = {
-                color: colors[newPhaseId % colors.length],
-                current: [newPhaseId, 0, 0, 0], // phase, Irms, elshift, extra shift
-                material: 0
-            };
+            const existingIds = Object.keys(phases).map(Number);
+            const newPhaseId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+            phases[newPhaseId] = { color: colors[(newPhaseId - 1) % colors.length], current: [newPhaseId, 0, 0, 0], material: 0 };
             updatePhaseList();
         }
 
         function updatePhaseList() {
             phaseList.innerHTML = '';
             for (const id in phases) {
+                if (id === '0') continue;
                 const phase = phases[id];
                 const li = document.createElement('li');
                 li.style.borderLeft = `5px solid ${phase.color}`;
-
                 const materialOptions = materials.map(m => `<option value="${m.id}" ${m.id === phase.material ? 'selected' : ''}>${m.name}</option>`).join('');
 
                 li.innerHTML = `
@@ -170,49 +172,36 @@
         }
 
 
-        // --- PROPERTIES PANEL ---
+        // --- PROPERTIES PANEL & SHAPE MANIPULATION ---
         function updatePropertiesPanel() {
             if (!selectedShape) {
                 propertiesPanel.innerHTML = '<p>No shape selected</p>';
                 return;
             }
-
-            const phaseOptions = Object.keys(phases).map(pId => `<option value="${pId}" ${pId == selectedShape.phase ? 'selected' : ''}>Phase ${pId}</option>`).join('');
-
+            const phaseOptions = Object.keys(phases).map(pId => `<option value="${pId}" ${pId == selectedShape.phase ? 'selected' : ''}>${pId === '0' ? 'Phase 0 (Cut)' : `Phase ${pId}`}</option>`).join('');
             let content = `
                 <div class="prop-group">
                     <label>Phase</label>
                     <select id="prop-phase">${phaseOptions}</select>
                 </div>
                 <div class="prop-group">
-                    <label>X</label>
-                    <input type="number" id="prop-x" value="${selectedShape.x.toFixed(2)}">
-                </div>
-                <div class="prop-group">
-                    <label>Y</label>
-                    <input type="number" id="prop-y" value="${selectedShape.y.toFixed(2)}">
+                    <label>X: <input type="number" id="prop-x" value="${selectedShape.x.toFixed(2)}"></label>
+                    <label>Y: <input type="number" id="prop-y" value="${selectedShape.y.toFixed(2)}"></label>
                 </div>
             `;
-
             if (selectedShape.type === 'rect') {
                 content += `
                     <div class="prop-group">
-                        <label>Width</label>
-                        <input type="number" id="prop-w" value="${selectedShape.w.toFixed(2)}">
-                    </div>
-                    <div class="prop-group">
-                        <label>Height</label>
-                        <input type="number" id="prop-h" value="${selectedShape.h.toFixed(2)}">
+                        <label>Width: <input type="number" id="prop-w" value="${selectedShape.w.toFixed(2)}"></label>
+                        <label>Height: <input type="number" id="prop-h" value="${selectedShape.h.toFixed(2)}"></label>
                     </div>
                 `;
             } else if (selectedShape.type === 'circle') {
-                content += `
-                    <div class="prop-group">
-                        <label>Radius</label>
-                        <input type="number" id="prop-r" value="${selectedShape.r.toFixed(2)}">
-                    </div>
-                `;
+                content += `<div class="prop-group"><label>Radius: <input type="number" id="prop-r" value="${selectedShape.r.toFixed(2)}"></label></div>`;
             }
+            content += 
+`<button id="duplicate-shape-btn">Duplicate</button> <button id="delete-shape-btn">Delete</button>
+`;
             propertiesPanel.innerHTML = content;
             addPropertiesListeners();
         }
@@ -227,8 +216,27 @@
             } else if (selectedShape.type === 'circle') {
                 document.getElementById('prop-r').addEventListener('input', (e) => selectedShape.r = parseFloat(e.target.value));
             }
+            document.getElementById('delete-shape-btn').addEventListener('click', deleteShape);
+            document.getElementById('duplicate-shape-btn').addEventListener('click', duplicateShape);
+        }
+        
+        function deleteShape() {
+            if (!selectedShape) return;
+            const index = shapes.indexOf(selectedShape);
+            if (index > -1) shapes.splice(index, 1);
+            selectedShape = null;
+            updatePropertiesPanel();
         }
 
+        function duplicateShape() {
+            if (!selectedShape) return;
+            const newShape = JSON.parse(JSON.stringify(selectedShape)); // Deep copy
+            newShape.x += 10;
+            newShape.y += 10;
+            shapes.push(newShape);
+            selectedShape = newShape;
+            updatePropertiesPanel();
+        }
 
         // --- HIT DETECTION ---
         function isPointInRect(shape, mx, my) { return (mx >= shape.x && mx <= shape.x + shape.w && my >= shape.y && my <= shape.y + shape.h); }
@@ -257,7 +265,9 @@
                 }
             } else if (currentTool === 'rect' || currentTool === 'circle') {
                 isDrawing = true;
-                const newShape = { type: currentTool, x: startX, y: startY, phase: parseInt(Object.keys(phases).pop() || 1) };
+                // Default to the last created phase, or 1 if none exist
+                const lastPhaseId = parseInt(Object.keys(phases).filter(id => id !== '0').pop() || 1);
+                const newShape = { type: currentTool, x: startX, y: startY, phase: lastPhaseId };
                 if (currentTool === 'rect') { newShape.w = 0; newShape.h = 0; } else { newShape.r = 0; }
                 shapes.push(newShape);
                 selectedShape = newShape;
@@ -297,20 +307,34 @@
 
         // --- DRAWING FUNCTIONS ---
         function drawShape(shape) {
-            ctx.fillStyle = phases[shape.phase] ? phases[shape.phase].color : '#cccccc';
+            if (shape.phase === 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+            } else {
+                ctx.fillStyle = phases[shape.phase] ? phases[shape.phase].color : '#cccccc';
+                ctx.strokeStyle = 'transparent';
+                ctx.lineWidth = 0;
+                ctx.setLineDash([]);
+            }
+
             if (shape.type === 'rect') {
                 ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+                if (shape.phase === 0) ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
             } else if (shape.type === 'circle') {
                 ctx.beginPath();
                 ctx.arc(shape.x, shape.y, shape.r, 0, 2 * Math.PI);
                 ctx.fill();
+                if (shape.phase === 0) ctx.stroke();
             }
+            ctx.setLineDash([]); // Reset for next shape
         }
 
         function drawSelection(shape) {
             ctx.strokeStyle = '#0000FF';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
             if (shape.type === 'rect') {
                 ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
             } else if (shape.type === 'circle') {
@@ -323,7 +347,11 @@
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const shape of shapes) drawShape(shape);
+            // Draw non-cutting shapes first
+            for (const shape of shapes.filter(s => s.phase !== 0)) drawShape(shape);
+            // Draw cutting shapes on top
+            for (const shape of shapes.filter(s => s.phase === 0)) drawShape(shape);
+            
             if (selectedShape) drawSelection(selectedShape);
             requestAnimationFrame(draw);
         }
@@ -331,25 +359,31 @@
         // --- FILE GENERATION ---
         function generateIcFile() {
             let fileContent = `# Geometry generated by CSD Web UI\n\n`;
+            
+            const usedPhases = new Set(shapes.map(s => s.phase));
 
-            // Write material definitions
-            for (const id in phases) {
+            // Write material definitions for used phases
+            for (const id of usedPhases) {
+                if (id === 0) continue; // No material for phase 0
                 fileContent += `material(${id},${phases[id].material})\n`;
             }
             fileContent += `\n`;
 
-            // Write current definitions
-            for (const id in phases) {
+            // Write current definitions for used phases
+            for (const id of usedPhases) {
+                if (id === 0) continue; // No current for phase 0
                 const p = phases[id];
                 fileContent += `current(${id},${p.current[1]},${p.current[2]},0)\n`;
             }
             fileContent += `\n`;
 
-            // Write shapes
+            // Write shapes, skipping zero-size objects
             for (const shape of shapes) {
                 if (shape.type === 'rect') {
+                    if (shape.w === 0 || shape.h === 0) continue;
                     fileContent += `r(${shape.x},${shape.y},${shape.w},${shape.h},${shape.phase})\n`;
                 } else if (shape.type === 'circle') {
+                    if (shape.r === 0) continue;
                     // CSD uses diameter for circles in the ic file
                     fileContent += `c(${shape.x},${shape.y},${shape.r * 2},${shape.phase})\n`;
                 }
@@ -366,7 +400,11 @@
 
         // --- MAIN ---
         function init() {
-            addPhase(); // Start with one phase
+            // Phase 0 is special and reserved for cutting
+            phases[0] = { color: 'rgba(255, 255, 255, 0.5)' };
+            
+            parseMaterials(preloadedMaterials); // Call parseMaterials with the preloaded data
+            addPhase(); // Start with one actual phase
             updatePropertiesPanel();
             draw();
         }

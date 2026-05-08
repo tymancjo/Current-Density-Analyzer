@@ -527,12 +527,14 @@ def vectorizeTheArray(*arg):
         
         # Reading Material data
         M_list = csdos.read_file_to_list("setup/materials.txt")[1:]
-        if M_list:
-            MaterialsDB = csdos.get_material_from_list(M_list)
+        MaterialsDB = csdos.get_material_from_list(M_list) if M_list else []
 
-        this_material = csdos.Material(
-            "Cu", config["conductivity"], config["temRcoeff"], 0, 0
-        )
+        if MaterialsDB:
+            this_material = MaterialsDB[0]
+        else:
+            this_material = csdos.Material(
+                "Cu", config["conductivity"], config["temRcoeff"], 0, 0
+            )
         phases_material = [this_material] * number_of_phases
             
         (

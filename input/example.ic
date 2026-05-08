@@ -1,0 +1,27 @@
+# Five cable modules, three cables per module arranged in an equilateral triangle
+
+v(I,    238)
+v(D,    20.5)
+v(step, 60)      # vertical pitch between modules [mm]
+v(r,    30)      # triangle radius [mm]
+
+v(ph,  1)
+v(y,   0)
+
+l(5)
+    material(ph,   0)
+    material(ph+1, 0)
+    material(ph+2, 0)
+
+    current(ph,   I, -120, 0)
+    current(ph+1, I,    0, 0)
+    current(ph+2, I,  120, 0)
+
+    # equilateral triangle positions
+    c(r*cos(270*pi/180),        y + r*sin(270*pi/180),        D, ph)
+    c(r*cos(270*pi/180 + 2*pi/3), y + r*sin(270*pi/180 + 2*pi/3), D, ph+1)
+    c(r*cos(270*pi/180 + 4*pi/3), y + r*sin(270*pi/180 + 4*pi/3), D, ph+2)
+
+    a(ph, 3)
+    a(y,  step)
+break

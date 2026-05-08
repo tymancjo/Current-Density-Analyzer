@@ -711,8 +711,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
                 thQ[i] = fromBar[4]
 
             # Solving for the T vector solutions
-            thGinv = np.linalg.inv(thG)
-            thT = np.matmul(thGinv, thQ)
+            thT, _, _, _ = np.linalg.lstsq(thG, thQ, rcond=None)
 
             # cuts out the Tx joints
             self.Tout = thT[: len(self.barsData)]  # putting result to vector
@@ -993,8 +992,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
                 thQ[i] = fromBar[4]
 
             # Solving for thT vector solutions
-            thGinv = np.linalg.inv(thG)
-            thT = np.matmul(thGinv, thQ)
+            thT, _, _, _ = np.linalg.lstsq(thG, thQ, rcond=None)
 
             #  DEBUG
             # print('The G array')

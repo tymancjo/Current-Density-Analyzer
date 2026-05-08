@@ -10,6 +10,7 @@ import os
 import sys
 import pickle
 import numpy as np
+from csdlib import csdmath as csdm
 from csdlib import innercode as ic
 
 
@@ -252,62 +253,11 @@ def getConductors(XsecArr, phases):
     return conductorsArr, conductors_number, phaseCond
 
 def getPerymiter(vec, arr, dXmm, dYmm):
-
-    """
-    This function returns the area perynmiter lenght for given
-    vector of conducting elements in the array
-    Inputs:
-    vec - vector of elements to calculate the perymiter
-        lenght for (as delivered by n_vectorizeTheArray)
-
-    arr - array that describe the geometry shape
-
-    dXmm - element size in x diretion
-
-    dYmm - element size in y diretion
-
-    Output:
-    perymiter lenght in the same units as dXmm and dYmm
-    """
-    # TODO: adding check if we dont exceed dimensions of array
-    # its done
-    perymiter = 0
-    for box in vec:
-        # checking the size of the arr array
-        x, y = arr.shape
-
-        # checking in x directions lef and right
-        A, B = int(box[0] + 1), int(box[1])
-
-        if A < x:
-            if arr[A][B] == 0:
-                perymiter += dYmm
-        else:
-            perymiter += dYmm
-
-        A, B = int(box[0] - 1), int(box[1])
-        if A >= 0:
-            if arr[A][B] == 0:
-                perymiter += dYmm
-        else:
-            perymiter += dYmm
-
-        A, B = int(box[0]), int(box[1] + 1)
-        if B < y:
-            if arr[A][B] == 0:
-                perymiter += dXmm
-        else:
-            perymiter += dXmm
-
-        A, B = int(box[0]), int(box[1] - 1)
-
-        if B >= 0:
-            if arr[A][B] == 0:
-                perymiter += dXmm
-        else:
-            perymiter += dXmm
-
-    return perymiter
+    if len(vec) > 0:
+        row, col = int(vec[0, 0]), int(vec[0, 1])
+        phase_id = arr[row, col]
+        return csdm.getPerymiter(arr, dXmm, dYmm, phase_id=phase_id)
+    return 0
 
 def plot_the_geometry(DataArray, ax,cmap,  dXmm=10, dYmm=10, norm=None):
 

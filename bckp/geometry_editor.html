@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSD Geometry Editor</title>
+    <style>
+        body { font-family: sans-serif; display: flex; height: 100vh; margin: 0; }
+        #left-panel { width: 200px; padding: 10px; border-right: 1px solid #ccc; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; }
+        #canvas-container { flex-grow: 1; position: relative; }
+        canvas { border: 1px solid #000; }
+        #toolbar { padding: 10px; border-bottom: 1px solid #ccc; }
+        #properties-panel { width: 250px; padding: 10px; border-left: 1px solid #ccc; }
+        .tool-btn { margin-right: 5px; }
+        .prop-group { margin-bottom: 15px; }
+        .prop-group label { display: block; margin-bottom: 5px; }
+        .prop-group input { width: 100%; box-sizing: border-box; }
+        #phase-management { margin-top: 20px; }
+        #phase-list { list-style: none; padding: 0; }
+        #phase-list li { margin-bottom: 10px; padding: 5px; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+    <div id="left-panel">
+        <h2>Tools</h2>
+        <div id="toolbar">
+            <button id="select-btn" class="tool-btn">Select</button>
+            <button id="rect-btn" class="tool-btn">Rectangle</button>
+            <button id="circle-btn" class="tool-btn">Circle</button>
+        </div>
+        <hr>
+        <h2>Materials</h2>
+        <div>
+            <textarea id="materials-input" rows="5" placeholder="Paste content of materials.txt here..."></textarea>
+            <button id="load-materials-btn">Load Materials</button>
+        </div>
+        <hr>
+        <h2>Phases</h2>
+        <div id="phase-management">
+            <button id="add-phase-btn">Add Phase</button>
+            <ul id="phase-list">
+                <!-- Phase properties will be dynamically added here -->
+            </ul>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="canvas-container">
+            <canvas id="editor-canvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+
+    <div id="properties-panel">
+        <h2>Properties</h2>
+        <div id="shape-properties">
+            <!-- Shape properties will be dynamically shown here -->
+        </div>
+        <hr>
+        <button id="generate-btn">Generate .ic File</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('editor-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- STATE ---
+        let shapes = [];
+        let phases = {};
+        let materials = [];
+        let currentTool = 'select';
+        let selectedShape = null;
+        let isDrawing = false;
+        let isDragging = false;
+        let startX, startY, dragOffsetX, dragOffsetY;
+
+        const colors = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4'];
+
+        // --- DOM ELEMENTS ---
+        const selectBtn = document.getElementById('select-btn');
+        const rectBtn = document.getElementById('rect-btn');
+        const circleBtn = document.getElementById('circle-btn');
+        const propertiesPanel = document.getElementById('shape-properties');
+        const addPhaseBtn = document.getElementById('add-phase-btn');
+        const phaseList = document.getElementById('phase-list');
+        const materialsInput = document.getElementById('materials-input');
+        const loadMaterialsBtn = document.getElementById('load-materials-btn');
+        const generateBtn = document.getElementById('generate-btn');
+
+        // --- EVENT LISTENERS ---
+        selectBtn.addEventListener('click', () => { currentTool = 'select'; selectedShape = null; updatePropertiesPanel(); });
+        rectBtn.addEventListener('click', () => { currentTool = 'rect'; selectedShape = null; updatePropertiesPanel(); });
+        circleBtn.addEventListener('click', () => { currentTool = 'circle'; selectedShape = null; updatePropertiesPanel(); });
+        loadMaterialsBtn.addEventListener('click', parseMaterials);
+        addPhaseBtn.addEventListener('click', addPhase);
+        generateBtn.addEventListener('click', generateIcFile);
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mouseup', onMouseUp);
+
+
+        // --- MATERIAL & PHASE MANAGEMENT ---
+        function parseMaterials() {
+            const text = materialsInput.value;
+            if (!text) {
+                alert("Please paste material data into the text area.");
+                return;
+            }
+            materials = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'))
+                .map((line, index) => {
+                    const parts = line.split(';');
+                    return { id: index, name: parts[0] ? parts[0].trim() : `Material ${index}` };
+                });
+            alert(`Loaded ${materials.length} materials.`);
+            updatePhaseList(); // Refresh list to show new materials
+        }
+
+        function addPhase() {
+            const newPhaseId = (Object.keys(phases).length) + 1;
+            phases[newPhaseId] = {
+                color: colors[newPhaseId % colors.length],
+                current: [0, 0, 0, 0], // Irms, elshift, extra shift
+                material: 0
+            };
+            updatePhaseList();
+        }
+
+        function updatePhaseList() {
+            phaseList.innerHTML = '';
+            for (const id in phases) {
+                const phase = phases[id];
+                const li = document.createElement('li');
+                li.style.borderLeft = `5px solid ${phase.color}`;
+
+                const materialOptions = materials.map(m => `<option value="${m.id}" ${m.id === phase.material ? 'selected' : ''}>${m.name}</option>`).join('');
+
+                li.innerHTML = `
+                    <strong>Phase ${id}</strong>
+                    <div class="prop-group">
+                        <label>Irms (A)</label>
+                        <input type="number" value="${phase.current[1]}" data-phase="${id}" data-prop="irms">
+                        <label>Angle (°)</label>
+                        <input type="number" value="${phase.current[2]}" data-phase="${id}" data-prop="angle">
+                    </div>
+                    <div class="prop-group">
+                        <label>Material</label>
+                        <select data-phase="${id}" data-prop="material">${materialOptions}</select>
+                    </div>
+                `;
+                phaseList.appendChild(li);
+            }
+            addPhaseListListeners();
+        }
+
+        function addPhaseListListeners() {
+            phaseList.querySelectorAll('input, select').forEach(el => {
+                el.addEventListener('change', (e) => {
+                    const id = e.target.dataset.phase;
+                    const prop = e.target.dataset.prop;
+                    const value = e.target.value;
+                    if (prop === 'irms') phases[id].current[1] = parseFloat(value);
+                    if (prop === 'angle') phases[id].current[2] = parseFloat(value);
+                    if (prop === 'material') phases[id].material = parseInt(value);
+                });
+            });
+        }
+
+
+        // --- PROPERTIES PANEL ---
+        function updatePropertiesPanel() {
+            if (!selectedShape) {
+                propertiesPanel.innerHTML = '<p>No shape selected</p>';
+                return;
+            }
+            let content = `...`; // Full content generation logic here...
+            propertiesPanel.innerHTML = content;
+            addPropertiesListeners();
+        }
+        // (updatePropertiesPanel and addPropertiesListeners are now more complex)
+        function updatePropertiesPanel() {
+            if (!selectedShape) {
+                propertiesPanel.innerHTML = '<p>No shape selected</p>';
+                return;
+            }
+
+            const phaseOptions = Object.keys(phases).map(pId => `<option value="${pId}" ${pId == selectedShape.phase ? 'selected' : ''}>Phase ${pId}</option>`).join('');
+
+            let content = `
+                <div class="prop-group">
+                    <label>Phase</label>
+                    <select id="prop-phase">${phaseOptions}</select>
+                </div>
+                <div class="prop-group">
+                    <label>X</label>
+                    <input type="number" id="prop-x" value="${selectedShape.x.toFixed(2)}">
+                </div>
+                <div class="prop-group">
+                    <label>Y</label>
+                    <input type="number" id="prop-y" value="${selectedShape.y.toFixed(2)}">
+                </div>
+            `;
+
+            if (selectedShape.type === 'rect') {
+                content += `
+                    <div class="prop-group">
+                        <label>Width</label>
+                        <input type="number" id="prop-w" value="${selectedShape.w.toFixed(2)}">
+                    </div>
+                    <div class="prop-group">
+                        <label>Height</label>
+                        <input type="number" id="prop-h" value="${selectedShape.h.toFixed(2)}">
+                    </div>
+                `;
+            } else if (selectedShape.type === 'circle') {
+                content += `
+                    <div class="prop-group">
+                        <label>Radius</label>
+                        <input type="number" id="prop-r" value="${selectedShape.r.toFixed(2)}">
+                    </div>
+                `;
+            }
+            propertiesPanel.innerHTML = content;
+            addPropertiesListeners();
+        }
+
+        function addPropertiesListeners() {
+            document.getElementById('prop-phase').addEventListener('input', (e) => selectedShape.phase = parseInt(e.target.value));
+            document.getElementById('prop-x').addEventListener('input', (e) => selectedShape.x = parseFloat(e.target.value));
+            document.getElementById('prop-y').addEventListener('input', (e) => selectedShape.y = parseFloat(e.target.value));
+            if (selectedShape.type === 'rect') {
+                document.getElementById('prop-w').addEventListener('input', (e) => selectedShape.w = parseFloat(e.target.value));
+                document.getElementById('prop-h').addEventListener('input', (e) => selectedShape.h = parseFloat(e.target.value));
+            } else if (selectedShape.type === 'circle') {
+                document.getElementById('prop-r').addEventListener('input', (e) => selectedShape.r = parseFloat(e.target.value));
+            }
+        }
+
+
+        // --- HIT DETECTION ---
+        function isPointInRect(shape, mx, my) { return (mx >= shape.x && mx <= shape.x + shape.w && my >= shape.y && my <= shape.y + shape.h); }
+        function isPointInCircle(shape, mx, my) { const dist = Math.sqrt((mx - shape.x) ** 2 + (my - shape.y) ** 2); return dist <= shape.r; }
+        function getShapeAt(mx, my) {
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                const s = shapes[i];
+                if ((s.type === 'rect' && isPointInRect(s, mx, my)) || (s.type === 'circle' && isPointInCircle(s, mx, my))) return s;
+            }
+            return null;
+        }
+
+        // --- MOUSE EVENT HANDLING ---
+        function onMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+
+            if (currentTool === 'select') {
+                selectedShape = getShapeAt(startX, startY);
+                updatePropertiesPanel();
+                if (selectedShape) {
+                    isDragging = true;
+                    dragOffsetX = startX - selectedShape.x;
+                    dragOffsetY = startY - selectedShape.y;
+                }
+            } else if (currentTool === 'rect' || currentTool === 'circle') {
+                isDrawing = true;
+                const newShape = { type: currentTool, x: startX, y: startY, phase: parseInt(Object.keys(phases).pop() || 1) };
+                if (currentTool === 'rect') { newShape.w = 0; newShape.h = 0; } else { newShape.r = 0; }
+                shapes.push(newShape);
+                selectedShape = newShape;
+                updatePropertiesPanel();
+            }
+        }
+
+        function onMouseMove(e) {
+            if (!isDrawing && !isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            if (isDrawing) {
+                if (currentTool === 'rect') {
+                    selectedShape.w = mouseX - startX;
+                    selectedShape.h = mouseY - startY;
+                } else if (currentTool === 'circle') {
+                    selectedShape.r = Math.sqrt((mouseX - startX) ** 2 + (mouseY - startY) ** 2);
+                }
+            } else if (isDragging) {
+                selectedShape.x = mouseX - dragOffsetX;
+                selectedShape.y = mouseY - dragOffsetY;
+            }
+            updatePropertiesPanel();
+        }
+
+        function onMouseUp(e) {
+            if (isDrawing && selectedShape.type === 'rect') {
+                if (selectedShape.w < 0) { selectedShape.x += selectedShape.w; selectedShape.w = Math.abs(selectedShape.w); }
+                if (selectedShape.h < 0) { selectedShape.y += selectedShape.h; selectedShape.h = Math.abs(selectedShape.h); }
+            }
+            isDrawing = false;
+            isDragging = false;
+            updatePropertiesPanel();
+        }
+
+        // --- DRAWING FUNCTIONS ---
+        function drawShape(shape) {
+            ctx.fillStyle = phases[shape.phase] ? phases[shape.phase].color : '#cccccc';
+            if (shape.type === 'rect') {
+                ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+            } else if (shape.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y, shape.r, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function drawSelection(shape) {
+            ctx.strokeStyle = '#0000FF';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            if (shape.type === 'rect') {
+                ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
+            } else if (shape.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y, shape.r + 4, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const shape of shapes) drawShape(shape);
+            if (selectedShape) drawSelection(selectedShape);
+            requestAnimationFrame(draw);
+        }
+
+        // --- FILE GENERATION ---
+        function generateIcFile() {
+            let fileContent = `# Geometry generated by CSD Web UI\n\n`;
+
+            // Write material definitions
+            for (const id in phases) {
+                fileContent += `material(${id},${phases[id].material})\n`;
+            }
+            fileContent += `\n`;
+
+            // Write current definitions
+            for (const id in phases) {
+                const p = phases[id];
+                fileContent += `current(${id},${p.current[1]},${p.current[2]},0)\n`;
+            }
+            fileContent += `\n`;
+
+            // Write shapes
+            for (const shape of shapes) {
+                if (shape.type === 'rect') {
+                    fileContent += `r(${shape.x},${shape.y},${shape.w},${shape.h},${shape.phase})\n`;
+                } else if (shape.type === 'circle') {
+                    fileContent += `c(${shape.x},${shape.y},${shape.r * 2},${shape.phase})\n`;
+                }
+            }
+
+            const blob = new Blob([fileContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.download = 'geometry.ic';
+            link.href = window.URL.createObjectURL(blob);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- MAIN ---
+        function init() {
+            addPhase(); // Start with one phase
+            updatePropertiesPanel();
+            draw();
+        }
+
+        init();
+    </script>
+
+</body>
+</html>

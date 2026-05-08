@@ -203,6 +203,32 @@ def solve_system(
     )
 
 
+def solve_gui_3f(XsecArray, dXmm, dYmm, frequency=50, curentRMS=1000, temperature=35, length=1000,
+                 conductivity=56e6, alpha=3.9e-3, density=8960, cp=385, mi_r=1, thermal_conductivity=400):
+    """
+    This is a helper function to provide the same results as the GUI's 
+    original solver but using the modern optimized engine.
+    """
+    # Setup the 3 phase symmetrical currents as (rms, phase_deg)
+    # Phase A: 0 deg, Phase B: 120 deg, Phase C: 240 deg
+    I = [(curentRMS, 0), (curentRMS, 120), (curentRMS, 240)]
+    
+    # Create material objects for each phase using the passed global properties
+    # Assuming all phases use the same material for symmetrical 3-phase analysis
+    material_obj = csdos.Material(
+        name="Selected Material", # A generic name, actual name can be passed from GUI
+        sigma=conductivity,
+        alpha=alpha,
+        ro=density,
+        cp=cp,
+        mi_r=mi_r,
+        thermal_conductivity=thermal_conductivity
+    )
+    phases_material = [material_obj, material_obj, material_obj] # For 3 phases
+
+    return solve_multi_system(XsecArray, dXmm, dYmm, I, frequency, length, temperature, phases_material=phases_material)
+
+
 def solve_multi_system(
     XsecArray,
     dXmm,
@@ -219,7 +245,8 @@ def solve_multi_system(
 
     # Figuring out phases material
     if len(phases_material) == 0:
-        phases_material.append(csdos.Material("Cu", sigma, temCoRe))
+        # Default material (Copper) if none provided
+        phases_material.append(csdos.Material("Cu", 58e6, 3.9e-3))
 
     # Determining the number of phases
     list_of_phases = np.unique(XsecArray).astype(int)

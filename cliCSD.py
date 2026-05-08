@@ -197,10 +197,9 @@ def main():
     new_phase_index = {phase: index for index, phase in enumerate(list_of_phases)} 
     # normalizing the phases numbering
     normalized_XsecArr = np.zeros(XSecArray.shape)
-    for index,phase in enumerate([0]+list_of_phases):
-        if phase != 0:
-            normalized_XsecArr[XSecArray==phase]=index
-    XSecArray = normalized_XsecArr  
+    for index, phase in enumerate(list_of_phases, start=1):
+        normalized_XsecArr[XSecArray == phase] = index
+    XSecArray = normalized_XsecArr
 
     number_of_phases = len(list_of_phases)
     # will create this dict - just to don't modify the downhill code yet.
@@ -262,10 +261,10 @@ def main():
         phi = [120, 0, 240, 120, 0, 240]
         direction = [0, 0, 0, 180, 180, 180]
         x = 0
-        for n in range(number_of_phases - 1):
+        for n in range(number_of_phases):
             Icurrent.append((Irms, phi[x] + direction[x]))
             x += 1
-            if x > len(phi):
+            if x >= len(phi):
                 x = 0
 
     f = config["frequency"]

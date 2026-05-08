@@ -81,8 +81,7 @@ def getImpedanceArray(
     # Mutual Inductance for all pairs
     # Use a copy to avoid modifying the input and avoid log(0) on diagonal
     dist_safe = distanceArray.copy()
-    for i in range(dist_safe.shape[0]):
-        dist_safe[i, i] = 1.0
+    np.fill_diagonal(dist_safe, 1.0)
         
     M = getMutualInductance(dXmm, dYmm, lenght, dist_safe, mi_r_w_m)
     impedanceArray = 1j * omega * M
@@ -95,11 +94,7 @@ def getImpedanceArray(
     # R and L_self can be scalars or arrays
     diag_val = R + 1j * omega * L_self
     
-    for i in range(impedanceArray.shape[0]):
-        if isinstance(diag_val, np.ndarray):
-            impedanceArray[i, i] = diag_val[i]
-        else:
-            impedanceArray[i, i] = diag_val
+    np.fill_diagonal(impedanceArray, diag_val)
             
     return impedanceArray
 
@@ -202,20 +197,7 @@ def getResistanceArray(
     """
 
     if sigma_array is not None and alpha_array is not None:
-        # We need to map material properties to each element
-        # elementsVector[:, 4] contains the phase/material number
-        # We need to ensure we use the correct mapping
-        
-        # To handle this vectorized, we pre-allocate properties
-        s = np.zeros(elementsVector.shape[0])
-        a = np.zeros(elementsVector.shape[0])
-        
-        for i in range(elementsVector.shape[0]):
-            mat_idx = int(elementsVector[i, 4])
-            s[i] = sigma_array[mat_idx]
-            a[i] = alpha_array[mat_idx]
-        
-        return (lenght / (dXmm * dYmm * s)) * 1e3 * (1 + a * (temperature - 20))
+        return (lenght / (dXmm * dYmm * sigma_array)) * 1e3 * (1 + alpha_array * (temperature - 20))
     else:
         res = (lenght / (dXmm * dYmm * sigma20C)) * 1e3 * (1 + temCoRe * (temperature - 20))
         return np.full(elementsVector.shape[0], res)
@@ -362,46 +344,13 @@ def get_mi_averaged(XsecArr, mi_r_array, dXmm, delta=10):
 
 
 def arrayVectorize(inputArray, phaseNumber, dXmm, dYmm):
-    """
-    Desription:
-    This function returns vector of 4 dimension vectors that deliver
-
-    input:
-    inputArray = 3D array thet describe by 1's position of
-    conductors in cross section
-    dXmm - size of each element in X direction [mm]
-    dYmm - size of each element in Y direction [mm]
-    Output:
-    [0,1,2,3] - 4 elements vector for each element, where:
-
-    0 - Original inputArray geometry origin Row for the set cell
-    1 - Original inputArray geometry origin Col for the set cell
-    2 - X position in mm of the current element
-    3 - Y position in mm of the current element
-
-    Number of such [0,1,2,3] elements is equal to the number of defined
-    conductor cells in geometry
-
-    """
-    # Let's check the size of the array
-    elementsInY = inputArray.shape[0]
-    elementsInX = inputArray.shape[1]
-
-    # lets define the empty vectorArray
-    vectorArray = []
-
-    # lets go for each input array position and check if is set
-    # and if yes then put it into putput vectorArray
-    for Row in range(elementsInY):
-        for Col in range(elementsInX):
-            if inputArray[Row][Col] == phaseNumber:
-                # Let's calculate the X and Y coordinates
-                coordinateY = (0.5 + Row) * dYmm
-                coordinateX = (0.5 + Col) * dXmm
-
-                vectorArray.append([Row, Col, coordinateX, coordinateY, phaseNumber])
-
-    return np.array(vectorArray)
+    positions = np.argwhere(inputArray == phaseNumber)
+    if len(positions) == 0:
+        return np.empty((0, 5))
+    coordinateX = (0.5 + positions[:, 1]) * dXmm
+    coordinateY = (0.5 + positions[:, 0]) * dYmm
+    phase_col = np.full(len(positions), float(phaseNumber))
+    return np.column_stack([positions.astype(float), coordinateX, coordinateY, phase_col])
 
 
 def arraySlicer(inputArray, subDivisions=2):
@@ -439,10 +388,8 @@ def recreateresultsArray(
     initialGeometryArray - the array that contains the cross section geometry model
     """
     localResultsArray = np.zeros((initialGeometryArray.shape), dtype=dtype)
-
-    for vectorIndex, result in enumerate(resultsVector):
-        localResultsArray[
-            int(elementsVector[vectorIndex][0]), int(elementsVector[vectorIndex][1])
-        ] = result
-
+    elementsVector = np.asarray(elementsVector)
+    rows = elementsVector[:, 0].astype(int)
+    cols = elementsVector[:, 1].astype(int)
+    localResultsArray[rows, cols] = resultsVector
     return localResultsArray

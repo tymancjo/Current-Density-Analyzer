@@ -664,6 +664,9 @@ def mainSetup(startSize=3):
     curentRMS = 1000
     temperature = 35
 
+ic_currents  = []   # populated by getCanvas / InterCode from .ic current() lines
+ic_materials = []   # populated by getCanvas / InterCode from .ic material() lines
+
 
 def setParameters(*arg):
     global \
@@ -1055,8 +1058,9 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
 
 
 def InterCode():
+    global ic_currents, ic_materials
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps, *_ = ic.textToCode(codeLines)
+    codeSteps, ic_currents, ic_materials = ic.textToCode(codeLines)
 
     if codeSteps:
         for step in codeSteps:
@@ -1066,8 +1070,9 @@ def InterCode():
 
 
 def getCanvas():
+    global ic_currents, ic_materials
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps, *_ = ic.textToCode(codeLines)
+    codeSteps, ic_currents, ic_materials = ic.textToCode(codeLines)
 
     X = []
     Y = []

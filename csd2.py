@@ -341,7 +341,11 @@ def showMePro(*arg):
     if np.sum(XSecArray) > 0:
         root = Tk()
         root.title("Pro Power Losses Solver")
-        powerCalc = gui.currentDensityWindowPro(root, XSecArray, dXmm, dYmm)
+        powerCalc = gui.currentDensityWindowPro(
+            root, XSecArray, dXmm, dYmm,
+            ic_currents=ic_currents,
+            ic_materials=ic_materials,
+        )
 
 
 def showMeZ(*arg):
@@ -441,16 +445,26 @@ def vectorizeTheArray(*arg):
 
         number_of_phases = len(list_of_phases)
 
+        # Build new_phase_index: maps original .ic phase ID → 0-based solver index
+        new_phase_index = {phase_val: idx for idx, phase_val in enumerate(list_of_phases)}
+
         Irms = config["current"]
         Icurrent = []
         phi = [120, 0, 240, 120, 0, 240]
         direction = [0, 0, 0, 180, 180, 180]
         x = 0
         for n in range(number_of_phases):
-            Icurrent.append((Irms, phi[x] + direction[x]))
+            Icurrent.append([Irms, phi[x] + direction[x]])
             x += 1
             if x >= len(phi):
                 x = 0
+
+        if ic_currents:
+            for entry in ic_currents:
+                phase_id = int(entry[0])
+                if phase_id in new_phase_index:
+                    idx = new_phase_index[phase_id]
+                    Icurrent[idx] = [float(entry[1]), float(entry[2]) + float(entry[3])]
 
         f = config["frequency"]
         length = config["length"]
@@ -756,6 +770,10 @@ def mainSetup(startSize=3):
     frequency = 50
     curentRMS = 1000
     temperature = 35
+
+
+ic_currents  = []   # populated by getCanvas / InterCode from .ic current() lines
+ic_materials = []   # populated by getCanvas / InterCode from .ic material() lines
 
 
 def setParameters(*arg):
@@ -1095,8 +1113,9 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
 
 
 def InterCode():
+    global ic_currents, ic_materials
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps, *_ = ic.textToCode(codeLines)
+    codeSteps, ic_currents, ic_materials = ic.textToCode(codeLines)
 
     if codeSteps:
         for step in codeSteps:
@@ -1106,8 +1125,9 @@ def InterCode():
 
 
 def getCanvas():
+    global ic_currents, ic_materials
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps, *_ = ic.textToCode(codeLines)
+    codeSteps, ic_currents, ic_materials = ic.textToCode(codeLines)
 
     X = []
     Y = []

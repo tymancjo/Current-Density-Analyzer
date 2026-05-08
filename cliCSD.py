@@ -24,6 +24,7 @@ is generated on the standard output.
 # 11. Use multiphase currents definition - by a currentfile? - done by the 'current(phase, Irms, elshift, extra shift)' innerocde params
 # 12. Use multiple materials - define material per phase by a innercode - DONE
 # 13. Clean up the phases numbering - allow for any numbers - DONE
+# 14. Add the MoveToPhase(A->B) command to the IC. 
 # 99. Update the doc.
 
 
@@ -66,6 +67,13 @@ def getArgs():
     )
     parser.add_argument(
         "-l", "--length", type=float, default=1000.0, help="Analyzed length"
+    )
+    parser.add_argument(
+        "-htc",
+        "--htc",
+        type=float,
+        default=5,
+        help="Heat transfer coefficient for cooling of conductors in [W/m.K]",
     )
     parser.add_argument(
         "-sig",
@@ -128,6 +136,12 @@ def getArgs():
             action="store_true",
             help="Execute the detections of particular conductors.",
         ),
+        parser.add_argument(
+            "-bd",
+            "--bardetails",
+            action="store_true",
+            help="If bars - the this define if to show results on plot.",
+        ),
     )
 
     parser.add_argument("geometry", help="Geometry description file in .csd format")
@@ -163,6 +177,7 @@ def main():
         import matplotlib.pyplot as plt
         from matplotlib.colors import ListedColormap
         import matplotlib.gridspec as gridspec
+        from matplotlib.colors import ListedColormap, BoundaryNorm
 
     XSecArray = np.zeros((0, 0))
     dXmm = dYmm = 1
@@ -177,8 +192,18 @@ def main():
     csdf.myLog(f"Material definition pattern: {materials}")
 
     list_of_phases = np.unique(XSecArray).astype(int)
+    list_of_phases = [int(n) for n in list_of_phases if n != 0]
+    original_phase_index = {index: phase for index, phase in enumerate(list_of_phases)} 
+    new_phase_index = {phase: index for index, phase in enumerate(list_of_phases)} 
+    # normalizing the phases numbering
+    normalized_XsecArr = np.zeros(XSecArray.shape)
+    for index, phase in enumerate(list_of_phases, start=1):
+        normalized_XsecArr[XSecArray == phase] = index
+    XSecArray = normalized_XsecArr
+
     number_of_phases = len(list_of_phases)
-    phase_index = {phase: index for index,phase in enumerate(list_of_phases)}
+    # will create this dict - just to don't modify the downhill code yet.
+    phase_index = {index: index for index, phase in enumerate(list_of_phases)}
 
     csdf.myLog(f"phases: {number_of_phases} | {list_of_phases=}")
     csdf.myLog(f"phases: {phase_index=}")
@@ -209,19 +234,14 @@ def main():
             "cyan",
             "darksalmon",
         ]
-        colors = [all_colors[phase_index[n]] for n in list_of_phases]
 
-        print(colors)
+        colors = [all_colors[new_phase_index[n] % len(all_colors)] for n in list_of_phases]
 
+        # Create a custom colormap
         cmap = ListedColormap(colors)
+
         ax = plt.gca()
-        csdf.plot_the_geometry(
-            XSecArray,
-            ax,
-            cmap,
-            dXmm=dXmm,
-            dYmm=dYmm,
-        )
+        csdf.plot_the_geometry(XSecArray, ax, cmap, dXmm=dXmm, dYmm=dYmm, norm=None)
         plt.show()
 
         question = input("Do you want to run the analysis? [y]/[n]")
@@ -231,46 +251,47 @@ def main():
     # 3 preparing the solution
     Irms = config["current"]
     # Current vector
-    if len(currents) == number_of_phases - 1:
-
-        Icurrent = [[0, 0] for _ in range(number_of_phases - 1)]
+    if len(currents) == number_of_phases :
+        Icurrent = [[0, 0] for _ in range(number_of_phases)]
         for i in currents:
-            p = phase_index[int(i[0])]
-            Icurrent[p - 1] = [float(i[1]), float(i[2]) + float(i[3])]
+            p = new_phase_index[int(i[0])]
+            Icurrent[p] = [float(i[1]), float(i[2]) + float(i[3])]
     else:
         Icurrent = []
         phi = [120, 0, 240, 120, 0, 240]
         direction = [0, 0, 0, 180, 180, 180]
         x = 0
-        for n in range(number_of_phases - 1):
+        for n in range(number_of_phases):
             Icurrent.append((Irms, phi[x] + direction[x]))
             x += 1
-            if x > len(phi):
+            if x >= len(phi):
                 x = 0
 
     f = config["frequency"]
     length = config["length"]
     t = config["temperature"]
+    HTC = config["htc"]
 
     # Reading Material data
-    list = csdos.read_file_to_list("setup/materials.txt")[1:]
-    if list:
-        MaterialsDB = csdos.get_material_from_list(list)
-        csdf.myLog(f"Materials: \n {MaterialsDB}")
+    M_list = csdos.read_file_to_list("setup/materials.txt")[1:]
+    if M_list:
+        MaterialsDB = csdos.get_material_from_list(M_list)
+        csdf.myLog(f"Materials are: \n {MaterialsDB}")
 
-    phases_material = [0 for _ in range(number_of_phases -1 )]
-    if len(materials) == number_of_phases - 1:
+    phases_material = [0 for _ in range(number_of_phases)]
+    # if len(materials) == number_of_phases - 1:
+    if len(materials) == number_of_phases:
         # [phase, mat_number]
         for m in materials:
-            index = phase_index[int(m[0])]-1
+            index = new_phase_index[int(m[0])] 
             index_m = int(m[1])
-            if number_of_phases < index  or index < 0:
+            if number_of_phases < index or index < 0:
                 csdf.myLog("Error! Defined materials for not existing phases!")
-                print("Error! Defined materials for not existing phases!")
+                # print("Error! Defined materials for not existing phases!")
                 sys.exit(1)
             if len(MaterialsDB) < index_m or index_m < 0:
                 csdf.myLog("Error! Defined material not id Materials DB file!")
-                print("Error! Defined material not id Materials DB file!")
+                # print("Error! Defined material not id Materials DB file!")
                 sys.exit(1)
 
             phases_material[index] = MaterialsDB[index_m]
@@ -283,7 +304,7 @@ def main():
 
     else:
         this_material = csdos.Material(
-            "Cu", config["conductivity"], config["temRcoeff"],0,0
+            "Cu", config["conductivity"], config["temRcoeff"], 0, 0
         )
 
     if this_material:
@@ -306,21 +327,21 @@ def main():
         powerLossesSolution,
         complexCurrent,
         vPh,
-    ) = csds.solve_multi_system(
-        XSecArray,
-        dXmm,
-        dYmm,
-        Icurrent,
-        f,
-        length,
-        t,
-        verbose,
-        phases_material,
-        # sigma20C=sigma,
-        # temCoRe=r20,
+        mi_r_weighted
+    ) = csds.solve_with_magnetic(
+        XsecArr=XSecArray,
+        phases_materials=phases_material,
+        dXmm=dXmm,
+        dYmm=dYmm,
+        currents=Icurrent,
+        frequency=f,
+        length=length,
+        temperature=t,
+        verbose=verbose,
     )
 
     powerLosses, powPh = powerResults
+
 
     if config["bars"]:
         currentsDraw = csdm.recreateresultsArray(
@@ -351,6 +372,20 @@ def main():
                 cmap,
                 dXmm=dXmm,
                 dYmm=dYmm,
+                norm=norm
+            )
+            plt.show()
+
+            # just to check
+            norm = plt.Normalize(vmin=0, vmax=100)
+            ax = plt.gca()
+            csdf.plot_the_geometry(
+                mi_r_weighted,
+                ax,
+                cmap,
+                dXmm=dXmm,
+                dYmm=dYmm,
+                norm=norm
             )
             plt.show()
 
@@ -372,10 +407,14 @@ def main():
             )
             bars_data.append(temp_bar_obj)
 
+        for i, phase in enumerate(phases_conductors):
+            for b in phase:
+                bars_data[b - 1].phase = i
+                bars_data[b - 1].material = phases_material[i]
+
         for i, bar in enumerate(bars_data):
 
             bar.number = i
-
             bar.perymiter = csdf.getPerymiter(bar.elements, XSecArray, dXmm, dYmm)
 
             x = y = 0
@@ -389,10 +428,23 @@ def main():
                 x += element[2]
                 y += element[3]
             bar.center = [x / len(bar.elements), y / len(bar.elements)]
+            bar.length = length
+            bar.xsection = len(bar.elements) * dXmm * dYmm
 
-        for i, phase in enumerate(phases_conductors):
-            for b in phase:
-                bars_data[b - 1].phase = i
+            bar.Rth = bar.length *1e-3 / (bar.xsection*1e-6 * bar.material.thermal_conductivity)
+            bar.R = bar.length *1e-3 / (bar.xsection*1e-6 * bar.material.sigma)
+
+
+
+
+        # rebasing phases numbers in bars for the original ones:
+        csdf.myLog(original_phase_index)
+        for bar in bars_data:
+            bar.phase = original_phase_index[bar.phase]
+        
+        csds.solve_thermal_for_bars(bars_data,HTC=HTC)
+        temperature_array = csdf.recreate_temperature_array(bars_data,XSecArray.shape)
+
 
     # Results of power losses
     if not simple and not csv:
@@ -403,7 +455,9 @@ def main():
         print("Results of power losses")
         print(f"\tgeometry: {config['geometry']}")
         print(f"\tMaterials:\n\t{[m.name for m in phases_material]}")
-        print(f"\tCurrents\n\t{Icurrent}[A,deg]\n\tf={f}[Hz], l={length}[mm], T={t}[degC]")
+        print(
+            f"\tCurrents\n\t{Icurrent}[A,deg]\n\tf={f}[Hz], l={length}[mm], T={t}[degC]"
+        )
         print(
             "--------------------------------------------------------------------------------------"
         )
@@ -422,6 +476,7 @@ def main():
         )
 
         if config["bars"]:
+            phase_currents = []
             for i, bars in enumerate(phases_conductors):
                 print(f"Phase {i}:")
                 phase_curr = 0
@@ -432,6 +487,9 @@ def main():
                         f"\t{bar.current=:.2f} {bar.power=:.2f} {bar.perymiter=:.1f} {bar.center=}"
                     )
                     phase_curr += bar.current
+
+                phase_currents.append(phase_curr)
+
                 print(
                     f"\tPhase {i} current sum {phase_curr} / {csdm.getComplexModule(phase_curr)}"
                 )
@@ -447,19 +505,19 @@ def main():
                 for b in bars:
                     bar = bars_data[b - 1]
                     print(
-                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]"
+                        f"\t{bar.number:>2}\t{csdm.getComplexModule(bar.current):>8.2f}[A]\t{bar.power:>7.2f}[W]\t{bar.perymiter:>7.2f}[mm]\t{bar.dT:>5.1f}[K]\t{bar.material.name}"
                     )
                     phase_curr += bar.current
     else:
         if config["bars"]:
             if config["markdown"]:
                 print(
-                    f"phase | bar | Bar Current [A] | Bar dP[W] | Bar Perymetr[mm] | Bar Center X[mm] | Bar Center Y[mm]"
+                    f"phase | bar | TG | Bar Current [A] | Bar dP[W] | Bar Perymetr[mm] | Bar Center X[mm] | Bar Center Y[mm]"
                 )
-                print(f"---|---|---|---|---|---|---")
+                print(f"---|---|---|---|---|---|---|---")
                 for bar in bars_data:
                     print(
-                        f"{bar.phase}|{bar.number:>2}|{csdm.getComplexModule(bar.current):>8.2f}|{bar.power:>7.2f}|{bar.perymiter:>7.2f}|{bar.center[0]}|{bar.center[1]}"
+                        f"{bar.phase}|{bar.number:>2}|{bar.thermal_group:>2}|{csdm.getComplexModule(bar.current):>8.2f}|{bar.power:>7.2f}|{bar.perymiter:>7.2f}|{bar.center[0]}|{bar.center[1]}"
                     )
             else:
                 print(
@@ -479,6 +537,9 @@ def main():
             elementsVector, resultsCurrentVector, XSecArray
         )
         maxCurrent = resultsCurrentVector.max()
+        minCurrent = resultsCurrentVector.min()
+        # min_to_draw = maxCurrent/250
+        min_to_draw = minCurrent * 0.9
 
         if 1:
             # making the draw of the geometry in initial state.
@@ -486,15 +547,27 @@ def main():
             colors = base_cmap(np.arange(256))
             colors[0] = [1, 1, 1, 1]
             cmap = ListedColormap(colors)
-            norm = plt.Normalize(vmin=0, vmax=maxCurrent)
+            norm = plt.Normalize(vmin=min_to_draw, vmax=maxCurrent)
 
             # Adjust the ticks
-            # ax = plt.gca()
             fig = plt.figure()
-            gs = gridspec.GridSpec(1, 2, width_ratios=[80, 20])
+            if config['bars']:
+                gs = gridspec.GridSpec(1, 2, width_ratios=[1, 1])
+            else:
+                gs = gridspec.GridSpec(1, 2, width_ratios=[80, 20])
+
             ax = plt.subplot(gs[0])
             bx = plt.subplot(gs[1])
-            bx.axis("off")
+            
+
+            if config['bars']:
+                mapx=ax
+                norm_t = plt.Normalize(vmin=temperature_array.min(), vmax=temperature_array.max())
+                cbx = csdf.plot_the_geometry(temperature_array,bx,cmap,dXmm=dXmm,dYmm=dYmm,norm=norm_t)
+                cbar = plt.colorbar(cbx, ax=bx)
+            else:
+                bx.axis("off")
+                mapx = bx
 
             cax = csdf.plot_the_geometry(
                 currentsDraw,
@@ -502,10 +575,12 @@ def main():
                 cmap,
                 dXmm=dXmm,
                 dYmm=dYmm,
+                norm=norm
             )
 
+
             # Add a color bar
-            cbar = plt.colorbar(cax, ax=bx)
+            cbar = plt.colorbar(cax, ax=mapx)
             cbar.set_label("Current density [A/mm2]", rotation=270, labelpad=20)
 
             text_line = ""
@@ -513,7 +588,7 @@ def main():
                 text_line += f"dP{i}:{dP:.2f}[W] "
 
             ax.set_title(
-                f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\n\
+                f"I={config['current']}A, f={f}Hz, l={length}mm, Temp={t}degC\n\
                 total dP = {powerLosses:.2f}[W]\n\
                 {text_line}\n\
                 Current Density distribution [A/mm2]",
@@ -525,12 +600,28 @@ def main():
             if config["bars"]:
                 for b, bar in enumerate(bars_data):
                     fontsize = 10
-                    text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
+                    text_shift_y = -1 * fontsize
+                    if b %  2:
+                        text_shift_y = fontsize
+
+                    if config["bardetails"]:
+                        text_line = f"[{b:>2}] {csdm.getComplexModule(bar.current):.1f}A\n dP: {bar.power:.1f}W"
+                        text_line_thermal = f"[{bar.dT:.1f}K]"
+                    else:
+                        text_line = f"[{b:>2}]"
+                        text_line_thermal = f"[{bar.dT:.1f}K]"
 
                     ax.text(
-                        (bar.center[0] / dXmm),
-                        bar.center[1] / dYmm,
+                        (-(len(text_line)//2)*fontsize/2+bar.center[0]) / dXmm,
+                        (text_shift_y + bar.center[1]) / dYmm,
                         text_line,
+                        fontsize=fontsize,
+                        color="black",
+                    )
+                    bx.text(
+                        (-(len(text_line)//2)*fontsize/2+bar.center[0]) / dXmm,
+                        (text_shift_y + bar.center[1])/ dYmm,
+                        text_line_thermal,
                         fontsize=fontsize,
                         color="black",
                     )

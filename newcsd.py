@@ -3,7 +3,7 @@ import matplotlib
 matplotlib.use("TKAgg")
 import matplotlib.pyplot as plt
 from tkinter import *
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 import numpy as np
 import os.path
 import time
@@ -20,18 +20,32 @@ from csdlib import csdmath as csdm
 from csdlib import csdsolve as csds
 from csdlib import csdos
 
+# ── Dark UI palette ───────────────────────────────────────────────────────────
+BG        = "#1e1e1e"   # window / master background
+BG_PANEL  = "#252526"   # panel / LabelFrame background
+BG_WIDGET = "#2d2d30"   # entry / text widget fill
+ACCENT    = "#007acc"   # blue accent (hover / active)
+FG        = "#d4d4d4"   # primary text
+FG2       = "#9d9d9d"   # caption / secondary text
+C_BG      = "#2a2a2a"   # canvas background
+C_BG2     = "#2f2f2f"   # drawing-area fill (paper)
+GRID      = "#3c3c3c"   # minor grid lines
+GRID_MAJ  = "#525252"   # major grid lines (every 5 cells)
+PH_A      = "#c0392b"   # phase-A button colour
+PH_B      = "#27ae60"   # phase-B button colour
+PH_C      = "#2980b9"   # phase-C button colour
+PH_X      = "#4a4a4a"   # erase / neutral button colour
+DRAW_A    = "#e74c3c"   # phase-A cell colour on canvas
+DRAW_B    = "#2ecc71"   # phase-B cell colour on canvas
+DRAW_C    = "#3498db"   # phase-C cell colour on canvas
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 def showXsecArray(event):
-    """
-    This function print the array to the terminal
-    """
     print(XSecArray)
 
 
 def saveArrayToFile():
-    """
-    This function saves the data of cross section array to file
-    """
     filename = filedialog.asksaveasfilename()
     filename = os.path.normpath(filename)
     if filename:
@@ -39,28 +53,16 @@ def saveArrayToFile():
 
 
 def saveTheData(filename):
-    """
-    This is the subfunction for saving data
-    """
-    # print('Saving to file :' + filename)
-    # np.save(filename, XSecArray)
-
     S = csd.cointainer(XSecArray, dXmm, dYmm)
     S.save(filename)
     del S
 
 
 def loadArrayFromFile():
-    """
-    This function loads the data from the file
-    !!!!! Need some work - it dosn't reset properly the dXmm and dYmm
-    """
     filename = filedialog.askopenfilename(filetypes=[("CSD files", "*.csd")])
     filename = os.path.normpath(filename)
 
-    if (
-        os.path.isfile(filename) and np.sum(XSecArray) != 0
-    ):  # Test if there is anything draw on the array
+    if os.path.isfile(filename) and np.sum(XSecArray) != 0:
         q = messagebox.askquestion(
             "Delete", "This will delete current shape. Are You Sure?", icon="warning"
         )
@@ -72,17 +74,12 @@ def loadArrayFromFile():
 
 
 def importArrayFromPicture():
-    """
-    This function triggers the importing data from a picture process
-    """
     filename = filedialog.askopenfilename(
         filetypes=[("Pictures", "*.jpg *.jpeg *.JPG *.PNG *.png")]
     )
     filename = os.path.normpath(filename)
 
-    if (
-        os.path.isfile(filename) and np.sum(XSecArray) != 0
-    ):  # Test if there is anything draw on the array
+    if os.path.isfile(filename) and np.sum(XSecArray) != 0:
         q = messagebox.askquestion(
             "Delete", "This will delete current shape. Are You Sure?", icon="warning"
         )
@@ -94,13 +91,9 @@ def importArrayFromPicture():
 
 
 def loadTheData(filename):
-    """
-    This is sub function to load data
-    """
     global XSecArray, dXmm, dYmm
 
     print("reading from file :" + filename)
-    # XSecArray =  np.load(filename)
     S = csd.loadObj(filename)
     XSecArray, dXmm, dYmm = S.restore()
     print("dX:{} dY:{}".format(dXmm, dYmm))
@@ -112,9 +105,6 @@ def loadTheData(filename):
 
 
 def importTheData(filename):
-    """
-    This function is to import the picture as a geometry data
-    """
     global XSecArray, dXmm, dYmm
 
     img_w = img_h = 1000
@@ -193,7 +183,6 @@ def zoomOut():
 
 
 def redraw(*args):
-    # global globalX, globalY
     printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY), canvas=w)
 
 
@@ -238,43 +227,28 @@ def zoomD():
 
 
 def displayArrayAsImage():
-    """
-    This function print the array to termianl and shows additional info of the
-    dX and dy size in mm
-    and redraw the array on the graphical working area
-    """
     print(XSecArray)
     print(str(dXmm) + "[mm] :" + str(dYmm) + "[mm]")
     printTheArray(zoomInArray(XSecArray, globalZoom, globalX, globalY), canvas=w)
-
     drawGeometryArray(XSecArray)
 
 
 def clearArrayAndDisplay():
-    """
-    This function erase the datat form array and return it back to initial
-    setup
-    """
     global XSecArray, dX, dY
-    if np.sum(XSecArray) != 0:  # Test if there is anything draw on the array
+    if np.sum(XSecArray) != 0:
         q = messagebox.askquestion(
             "Delete", "This will delete current shape. Are You Sure?", icon="warning"
         )
         if q == "yes":
             XSecArray = np.zeros(XSecArray.shape)
-            # checkered(w, dX, dY)
             mainSetup()
-            # csd.n_checkered(w, elementsInX, elementsInY)
             printTheArray(XSecArray, w)
             myEntryDx.delete(0, END)
             myEntryDx.insert(END, str(dXmm))
             setParameters()
-
     else:
         XSecArray = np.zeros(XSecArray.shape)
-        # checkered(w, dX, dY)
         mainSetup()
-        # csd.n_checkered(w, elementsInX, elementsInY)
         printTheArray(XSecArray, w)
         myEntryDx.delete(0, END)
         myEntryDx.insert(END, str(dXmm))
@@ -282,10 +256,6 @@ def clearArrayAndDisplay():
 
 
 def subdivideArray():
-    """
-    This function is logical wrapper for array slicer
-    it take care to not loose any entered data from the modified array
-    """
     global XSecArray, dXmm, dYmm, selectionArray
 
     if dXmm > 1 and dYmm > 1:
@@ -294,7 +264,6 @@ def subdivideArray():
         dXmm = dXmm / 2
         dYmm = dYmm / 2
 
-        # just maiking the lock fo the smallest 1mm size.
         dXmm = max(dXmm, 1)
         dYmm = max(dYmm, 1)
 
@@ -309,15 +278,8 @@ def subdivideArray():
     myEntryDx.insert(END, str(dXmm))
     setParameters()
 
-    # end= time.clock()
-    # print('subdiv time :'+str(end - start))
-
 
 def simplifyArray():
-    """
-    This function simplified array - but it take more care to not loose any data
-    entered by user
-    """
     global XSecArray, dXmm, dYmm, selectionArray
 
     if dXmm < 30 and dYmm < 30:
@@ -327,7 +289,6 @@ def simplifyArray():
         dYmm = dYmm * 2
 
         selectionArray = None
-        # print(str(dXmm)+'[mm] :'+str(dYmm)+'[mm]')
         printTheArray(dataArray=XSecArray, canvas=w)
     else:
         print("No further simplification make sense :)")
@@ -338,9 +299,6 @@ def simplifyArray():
 
 
 def extendArray():
-    """This function modifies the original array of geometry
-    and extends it by adding a empty space around the existing range
-    it is adding extension (10) rows/cols each side"""
     global XSecArray
 
     rows = XSecArray.shape[0]
@@ -355,17 +313,10 @@ def extendArray():
 
 
 def showMeForces(*arg):
-    """
-    This function trigger the forceWindow object to make it possible for
-    Icw forces calculations
-    """
-    # Maiking it global - as for now it's not all object based gui
     global forceCalc
 
-    # Read the setup params from GUI
     setParameters()
 
-    # lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
         root = Tk()
         root.title("Forces calculator")
@@ -373,7 +324,6 @@ def showMeForces(*arg):
 
 
 def showMePower(*arg):
-    # lets check if there is anything in the xsection geom array
     setParameters()
 
     if np.sum(XSecArray) > 0:
@@ -383,7 +333,6 @@ def showMePower(*arg):
 
 
 def showMePro(*arg):
-    # lets check if there is anything in the xsection geom array
     setParameters()
 
     if np.sum(XSecArray) > 0:
@@ -393,31 +342,28 @@ def showMePro(*arg):
 
 
 def showMeZ(*arg):
-    # lets check if there is anything in the xsection geom array
     setParameters()
 
     if np.sum(XSecArray) > 0:
         root = Tk()
-        root.title("Impednaces Calculator")
+        root.title("Impedances Calculator")
         zCalc = gui.zWindow(root, XSecArray, dXmm, dYmm)
 
 
 def showMeZ3f(*arg):
-    # lets check if there is anything in the xsection geom array
     setParameters()
 
     if np.sum(XSecArray) > 0:
         root = Tk()
-        root.title("Impednaces Calculator")
+        root.title("Impedances Calculator")
         zCalc = gui.zWindow3f(root, XSecArray, dXmm, dYmm)
 
 
 def showReplacer(*arg):
     global XSecArray
 
-    # TODO: New window phase switcher based on below
     root = Tk()
-    root.title("Impednaces Calculator")
+    root.title("Impedances Calculator")
     TestWindow = gui.geometryModWindow(root, w)
 
     try:
@@ -427,7 +373,6 @@ def showReplacer(*arg):
         sourcePhase = 0
         toPhase = 0
 
-    # some protective checks
     if sourcePhase in [1, 2, 3] and toPhase in [1, 2, 3] and sourcePhase != toPhase:
         XSecArray[XSecArray == sourcePhase] = toPhase
         print("Phase {} changed to phase {}".format(sourcePhase, toPhase))
@@ -437,10 +382,6 @@ def showReplacer(*arg):
 
 
 def showMeGeom(*arg):
-    # kicking off the geometry navi Window
-    # root = Tk()
-    # root.title('Geometry Modifications')
-    # geomMod = gui.geometryModWindow(root, canvas=w)
     global XSecArray
 
     inDialog = gui.MyPtrn(master)
@@ -462,13 +403,6 @@ def showMeGeom(*arg):
 
 
 def vectorizeTheArray(*arg):
-    """
-    This function analyse the cross section array and returns vector of all set
-    (equal to 1) elements. This allows to minimize the size of further calculation
-    arrays only to active elements.
-
-    and for te moment do the all math for calculations.
-    """
     global \
         elementsVector, \
         resultsArray, \
@@ -479,37 +413,32 @@ def vectorizeTheArray(*arg):
         resultsArrayPower, \
         powerLossesVector
 
-    # Read the setup params from GUI
     setParameters()
 
-    # lets check if there is anything in the xsection geom array
     if np.sum(XSecArray) > 0:
-        
-        config = {'frequency': frequency, 'temperature': temperature, 'length': 1000, 'htc': 5, 'conductivity': 56e6, 'temRcoeff': 3.9e-3, 'material': -1, 'simple': False, 'markdown': False, 'csv': False, 'verbose': False, 'draw': False, 'results': True, 'bars': False, 'bardetails': False, 'geometry': '', 'current': curentRMS}
-        
-        verbose = config["verbose"]
-        simple = config["simple"]
-        csv = config["csv"]
 
-        # for simplicity so the log procedure can see it globally
+        config = {
+            'frequency': frequency, 'temperature': temperature, 'length': 1000,
+            'htc': 5, 'conductivity': 56e6, 'temRcoeff': 3.9e-3, 'material': -1,
+            'simple': False, 'markdown': False, 'csv': False, 'verbose': False,
+            'draw': False, 'results': True, 'bars': False, 'bardetails': False,
+            'geometry': '', 'current': curentRMS,
+        }
+
+        verbose = config["verbose"]
         csd.verbose = verbose
 
         list_of_phases = np.unique(XSecArray).astype(int)
         list_of_phases = [int(n) for n in list_of_phases if n != 0]
-        original_phase_index = {index: phase for index, phase in enumerate(list_of_phases)} 
-        new_phase_index = {phase: index for index, phase in enumerate(list_of_phases)} 
-        # normalizing the phases numbering
+
         normalized_XsecArr = np.zeros(XSecArray.shape)
-        for index, phase in enumerate(list_of_phases, start=1):
-            normalized_XsecArr[XSecArray == phase] = index
+        for index, phase_val in enumerate(list_of_phases, start=1):
+            normalized_XsecArr[XSecArray == phase_val] = index
         XSecArray = normalized_XsecArr
 
         number_of_phases = len(list_of_phases)
-        # will create this dict - just to don't modify the downhill code yet.
-        phase_index = {index: index for index, phase in enumerate(list_of_phases)}
-        
+
         Irms = config["current"]
-        # Current vector
         Icurrent = []
         phi = [120, 0, 240, 120, 0, 240]
         direction = [0, 0, 0, 180, 180, 180]
@@ -523,9 +452,7 @@ def vectorizeTheArray(*arg):
         f = config["frequency"]
         length = config["length"]
         t = config["temperature"]
-        HTC = config["htc"]
-        
-        # Reading Material data
+
         M_list = csdos.read_file_to_list("setup/materials.txt")[1:]
         MaterialsDB = csdos.get_material_from_list(M_list) if M_list else []
 
@@ -536,7 +463,7 @@ def vectorizeTheArray(*arg):
                 "Cu", config["conductivity"], config["temRcoeff"], 0, 0
             )
         phases_material = [this_material] * number_of_phases
-            
+
         (
             resultsCurrentVector,
             powerResults,
@@ -544,7 +471,7 @@ def vectorizeTheArray(*arg):
             powerLossesSolution,
             complexCurrent,
             vPh,
-            mi_r_weighted
+            mi_r_weighted,
         ) = csds.solve_with_magnetic(
             XsecArr=XSecArray,
             phases_materials=phases_material,
@@ -558,8 +485,7 @@ def vectorizeTheArray(*arg):
         )
 
         powerLosses, powPh = powerResults
-        
-        # Recreating the solution to form of cross section array
+
         resultsArray = csd.n_recreateresultsArray(
             elementsVector=elementsVector,
             resultsVector=resultsCurrentVector,
@@ -570,8 +496,7 @@ def vectorizeTheArray(*arg):
             resultsVector=powerLossesSolution,
             initialGeometryArray=XSecArray,
         )
-        
-        # Showing the results
+
         showResults()
 
 
@@ -586,10 +511,7 @@ def drawGeometryArray(theArrayToDisplay):
 
     figGeom = plt.figure(1)
 
-    if np.sum(theArrayToDisplay) == 0:
-        vmin = 0
-    else:
-        vmin = 0.8
+    vmin = 0 if np.sum(theArrayToDisplay) == 0 else 0.8
 
     geomax = figGeom.add_subplot(1, 1, 1)
 
@@ -613,7 +535,6 @@ def drawGeometryArray(theArrayToDisplay):
     plt.ylabel("size [mm]", **axis_font)
     plt.axis("scaled")
     plt.tight_layout()
-
     plt.grid(True)
     plt.show()
 
@@ -623,19 +544,14 @@ def showResults():
     axis_font = {"size": "10"}
 
     if np.sum(resultsArray) != 0:
-        # Checking the area in array that is used by geometry to limit the display
         min_row = int(np.min(elementsVector[:, 0]))
         max_row = int(np.max(elementsVector[:, 0]) + 1)
 
         min_col = int(np.min(elementsVector[:, 1]))
         max_col = int(np.max(elementsVector[:, 1]) + 1)
 
-        # Cutting down results array to the area with geometry
         resultsArrayDisplay = resultsArray[min_row:max_row, min_col:max_col]
         resultsArrayDisplay2 = resultsArrayPower[min_row:max_row, min_col:max_col]
-
-        # Checking out what are the dimensions od the ploted area
-        # to make propper scaling
 
         plotWidth = (resultsArrayDisplay.shape[1]) * dXmm
         plotHeight = (resultsArrayDisplay.shape[0]) * dYmm
@@ -658,7 +574,7 @@ def showResults():
             ax=ax,
             orientation="vertical",
             label="Current Density [A/mm$^2$]",
-            alpha=0.5,
+            alpha=0.9,
             fraction=0.046,
         )
         plt.axis("scaled")
@@ -682,7 +598,6 @@ def showResults():
 
 
 def shiftL():
-    """This is just a zero argumet trigger for the geometry shift Button"""
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, -1, 0, XSecArray)
     print("Phase: {} shifed by {} x {}".format(actualPhase, dXmm, 0))
@@ -690,7 +605,6 @@ def shiftL():
 
 
 def shiftR():
-    """This is just a zero argumet trigger for the geometry shift Button"""
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, 1, 0, XSecArray)
     print("Phase: {} shifed by {} x {}".format(actualPhase, dXmm, 0))
@@ -698,7 +612,6 @@ def shiftR():
 
 
 def shiftU():
-    """This is just a zero argumet trigger for the geometry shift Button"""
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, 0, -1, XSecArray)
     print("Phase: {} shifed by {} x {}".format(actualPhase, dXmm, 0))
@@ -706,7 +619,6 @@ def shiftU():
 
 
 def shiftD():
-    """This is just a zero argumet trigger for the geometry shift Button"""
     actualPhase = phase.get()
     csd.n_shiftPhase(actualPhase, 0, 1, XSecArray)
     print("Phase: {} shifed by {} x {}".format(actualPhase, dXmm, 0))
@@ -714,9 +626,6 @@ def shiftD():
 
 
 def mainSetup(startSize=3):
-    """
-    This function set up (or reset) all the main elements
-    """
     global \
         temperature, \
         canvas_width, \
@@ -787,22 +696,11 @@ def setParameters(*arg):
 
 
 def printTheArray(dataArray, canvas):
-    """
-    This procedure draw the geometry contained array to given canvas.
-    usefull for redraw or draw loaded data
-    Inputs:
-    dataArray -  the array to display on canvas
-    canvas - tkinter canvas object
-
-    it's using global variable canvasElements.
-    """
     global canvasElements, selectShadowBox, selectEndPoint, selectStartPoint
 
-    # Let's check the size
     elementsInY = dataArray.shape[0]
     elementsInX = dataArray.shape[1]
 
-    # Now we calculate the propper dX and dY for this array
     canvasHeight = canvas.winfo_height()
     canvasWidth = canvas.winfo_width()
 
@@ -824,80 +722,66 @@ def printTheArray(dataArray, canvas):
         try:
             canvas.delete(anyDrawedElement)
         except:
-            print("Error in removing stuff")
             pass
     canvasElements = []
 
+    # Drawing-area background
     canvasElements.append(
         canvas.create_rectangle(
-            startX,
-            startY,
-            canvasWidth - startX,
-            canvasHeight - startY,
-            fill="white",
-            outline="gray",
+            startX, startY,
+            canvasWidth - startX, canvasHeight - startY,
+            fill=C_BG2, outline=GRID,
         )
     )
 
-    colorList = ["red", "green", "blue"]
+    colorList = [DRAW_A, DRAW_B, DRAW_C]
 
     for Row in range(elementsInY):
         for Col in range(elementsInX):
             theNumber = int(dataArray[Row][Col])
             if theNumber in [1, 2, 3]:
-                fillColor = colorList[theNumber - 1]
-
                 canvasElements.append(
                     canvas.create_rectangle(
-                        startX + (Col) * dXY,
-                        startY + (Row) * dXY,
-                        startX + (Col) * dXY + dXY,
-                        startY + (Row) * dXY + dXY,
-                        fill=fillColor,
+                        startX + Col * dXY,
+                        startY + Row * dXY,
+                        startX + Col * dXY + dXY,
+                        startY + Row * dXY + dXY,
+                        fill=colorList[theNumber - 1],
                         outline="",
                     )
                 )
 
-            # Handling the lines for the grid
             if Row == elementsInY - 1:
-                lineFillColor = "gray"
+                lineFillColor = GRID
                 lineWidth = 1
 
                 if (Col + globalX) % 5 == 0 and lineSkip == 1:
-                    lineFillColor = "dim gray"
+                    lineFillColor = GRID_MAJ
                     lineWidth = 2
 
                 if Col % lineSkip == 0:
                     canvasElements.append(
                         canvas.create_line(
-                            startX + Col * dXY,
-                            startY,
-                            startX + Col * dXY,
-                            canvasHeight - startY,
-                            fill=lineFillColor,
-                            width=lineWidth,
+                            startX + Col * dXY, startY,
+                            startX + Col * dXY, canvasHeight - startY,
+                            fill=lineFillColor, width=lineWidth,
                         )
                     )
 
-        lineFillColor = "gray"
+        lineFillColor = GRID
         lineWidth = 1
         if (Row + globalY) % 5 == 0 and lineSkip == 1:
-            lineFillColor = "dim gray"
+            lineFillColor = GRID_MAJ
             lineWidth = 2
 
         if Row % lineSkip == 0:
             canvasElements.append(
                 canvas.create_line(
-                    startX,
-                    startY + Row * dXY,
-                    canvasWidth - startX,
-                    startY + Row * dXY,
-                    fill=lineFillColor,
-                    width=lineWidth,
+                    startX, startY + Row * dXY,
+                    canvasWidth - startX, startY + Row * dXY,
+                    fill=lineFillColor, width=lineWidth,
                 )
             )
-
-    # selection rectangle visualisation
 
     if selectionArray is not None and len(selectionArray) > 0:
         R1 = min(selectEndPoint[0], selectStartPoint[0]) - globalY
@@ -912,18 +796,15 @@ def printTheArray(dataArray, canvas):
             pass
 
         selectShadowBox = canvas.create_rectangle(
-            startX + (C1) * dXY,
-            startY + (R1) * dXY,
-            startX + (C2) * dXY,
-            startY + (R2) * dXY,
-            fill="",
-            outline="yellow",
-            width=3,
+            startX + C1 * dXY,
+            startY + R1 * dXY,
+            startX + C2 * dXY,
+            startY + R2 * dXY,
+            fill="", outline="#ffd700", width=3,
         )
 
 
 def setPoint(event):
-    """Trigger procesdure for GUI action"""
     actualPhase = phase.get()
 
     if actualPhase < 4:
@@ -936,12 +817,7 @@ def setPoint(event):
         pasteSelectionAtPoint(
             event, zoomInArray(XSecArray, globalZoom, globalX, globalY), w
         )
-    # elif 20 < actualPhase < 24:
-    #     # we are in circle mode
 
-    #     placeCircle(event,zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
-
-    #  Plotting on CAD view if exist
     try:
         geomim.set_data(XSecArray)
         plt.draw()
@@ -950,8 +826,6 @@ def setPoint(event):
 
 
 def resetPoint(event):
-    """Trigger procesdure for GUI action"""
-    # csd.n_setUpPoint(event, Set=0, dataArray=zoomInArray(XSecArray,globalZoom,globalX,globalY), canvas=w)
     setUpPoint(
         event,
         Set=0,
@@ -959,7 +833,6 @@ def resetPoint(event):
         canvas=w,
     )
 
-    #  Plotting on CAD view if exist
     try:
         geomim.set_data(XSecArray)
         plt.draw()
@@ -968,16 +841,6 @@ def resetPoint(event):
 
 
 def setUpPoint(event, Set, dataArray, canvas):
-    """
-    This procedure track the mouse position from event ad setup or reset propper element
-    in the cross section array
-    Inputs
-    event - the event object from tkinter that create the point (or reset)
-    Set - Number of phase to set or 0 to reset
-    dataArray -  the array that keeps the cross section design data
-    canvas - tk inter canvas object
-    """
-    # gathering some current data
     elementsInY = dataArray.shape[0]
     elementsInX = dataArray.shape[1]
 
@@ -1008,16 +871,12 @@ def setUpPoint(event, Set, dataArray, canvas):
 
 
 def moveShadowPoint(event, dataArray, canvas):
-    """
-    This procedure make the gray box folloe the mause moves
-    """
     global shadowBox
     try:
         canvas.delete(shadowBox)
     except:
         pass
 
-    # gathering some current data
     elementsInY = dataArray.shape[0]
     elementsInX = dataArray.shape[1]
 
@@ -1042,28 +901,19 @@ def moveShadowPoint(event, dataArray, canvas):
         Row = int((event.y - startY) / dXY)
 
         shadowBox = canvas.create_rectangle(
-            startX + (Col) * dXY,
-            startY + (Row) * dXY,
-            startX + (Col) * dXY + dXY,
-            startY + (Row) * dXY + dXY,
-            fill="gray",
-            outline="yellow",
+            startX + Col * dXY,
+            startY + Row * dXY,
+            startX + Col * dXY + dXY,
+            startY + Row * dXY + dXY,
+            fill="#3a3a3a", outline="#ffd700",
         )
 
 
 def shadowPoint(event):
-    """
-    This is a trigger function for moveShadowPoint
-    """
-    # moveShadowPoint(event, XSecArray, w)
     moveShadowPoint(event, zoomInArray(XSecArray, globalZoom, globalX, globalY), w)
 
 
 def startSelection(event, dataArray, canvas):
-    """
-    Procedure to start selecting area in the canvas
-    and in the dataArray
-    """
     global inSelectMode, selectStartPoint, selectEndPoint, selectShadowBox
 
     elementsInY = dataArray.shape[0]
@@ -1108,23 +958,15 @@ def startSelection(event, dataArray, canvas):
                 pass
 
             selectShadowBox = canvas.create_rectangle(
-                startX + (C1) * dXY,
-                startY + (R1) * dXY,
-                startX + (C2) * dXY,
-                startY + (R2) * dXY,
-                fill="",
-                outline="yellow",
-                width=3,
+                startX + C1 * dXY,
+                startY + R1 * dXY,
+                startX + C2 * dXY,
+                startY + R2 * dXY,
+                fill="", outline="#ffd700", width=3,
             )
-            # temporary solution to visualise in developement
-            # dataArray[R1:R2, C1:C2] = 3
-            # printTheArray(dataArray, canvas)
 
 
 def endSelection(event):
-    """
-    procedutr to end the selection process
-    """
     global \
         inSelectMode, \
         selectStartPoint, \
@@ -1141,9 +983,6 @@ def endSelection(event):
         C1 = min(selectEndPoint[1], selectStartPoint[1])
         C2 = max(selectEndPoint[1], selectStartPoint[1])
 
-        # selectionArray = np.copy(XSecArray[R1:R2, C1:C2]) # this seems to work only if not zoomed
-        # selectionMaskArray = np.empty_like(XSecArray)
-
         selectionMaskArray = np.empty_like(
             zoomInArray(XSecArray, globalZoom, globalX, globalY)
         )
@@ -1151,23 +990,12 @@ def endSelection(event):
 
         selectionArray = np.copy(
             zoomInArray(XSecArray, globalZoom, globalX, globalY)[R1:R2, C1:C2]
-        )  # this makes it copy right data if in zoom mode.
+        )
 
-        # auto switch to paste mode after selection is done
         phase.set(5)
-
-        # development debug
-        # print(selectionArray)
-
-        # selectStartPoint = None
-        # selectEndPoint = None
 
 
 def pasteSelectionAtPoint(event, dataArray, canvas):
-    """
-    Procedure that paste the selectionArray into the
-    dataArray at the click position
-    """
     global selectionArray, XSecArray
 
     if selectionArray is not None and len(selectionArray) and not inSelectMode:
@@ -1198,17 +1026,14 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
             Row = int((event.y - startY) / dXY)
 
             R1 = Row + globalY
-            R2 = R1 + pasteRows
-            R2 = min(R2, XSecArray.shape[0])
+            R2 = min(R1 + pasteRows, XSecArray.shape[0])
 
             C1 = Col + globalX
-            C2 = C1 + pasteCols
-            C2 = min(C2, XSecArray.shape[1])
+            C2 = min(C1 + pasteCols, XSecArray.shape[1])
 
             selectedPasteMode = paste_mode.get()
 
             if selectedPasteMode == 1:
-                # take the clipboard if its > 0 else take oryginal data
                 XSecArray[R1:R2, C1:C2] = np.where(
                     selectionArray[: R2 - R1, : C2 - C1] > 0,
                     selectionArray[: R2 - R1, : C2 - C1],
@@ -1216,11 +1041,9 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
                 )
 
             elif selectedPasteMode == 2:
-                # overwite all data
                 XSecArray[R1:R2, C1:C2] = selectionArray[: R2 - R1, : C2 - C1]
 
             elif 10 < selectedPasteMode < 20:
-                # paste as target phase
                 targetPhase = selectedPasteMode - 10
                 XSecArray[R1:R2, C1:C2] = np.where(
                     selectionArray[: R2 - R1, : C2 - C1] > 0,
@@ -1230,18 +1053,8 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
 
             printTheArray(dataArray, canvas)
 
-            # if this is active we drop the clipboard data at paste.
-            # selectionArray = None
-
 
 def InterCode():
-    """This is internal sudo-code inerpreter for easier geometry creation
-    Available commands:
-    C(x,y,D1,Ph1) - circle at x,y with diameter D1, set as phase [mm]
-    C(x,y,D1,Ph1,D2,Ph2) - torus at x, y with up to D2 as Ph2 and above to D1 as ph1
-    R(x,y,W,H) - rectangle x,y left top, W width, H height - [mm]
-    """
-
     codeLines = text_input.get("1.0", END).split("\n")
     codeSteps, *_ = ic.textToCode(codeLines)
 
@@ -1253,9 +1066,6 @@ def InterCode():
 
 
 def getCanvas():
-    """This functoion is to determine the best parameters for the canvas
-    based on the given geometry steps defined by the inner code."""
-
     codeLines = text_input.get("1.0", END).split("\n")
     codeSteps, *_ = ic.textToCode(codeLines)
 
@@ -1280,8 +1090,6 @@ def getCanvas():
         size = (max(X) - min(X), max(Y) - min(Y))
         print(size)
 
-        # I have no good idea how to figure out the best cell size
-        # so for now it's just some stuff..
         if circles:
             sizes = [4, 2.5, 2, 1]
         else:
@@ -1310,23 +1118,64 @@ def getCanvas():
 if __name__ == "__main__":
     master = Tk()
     master.title("Cross Section Designer")
+    master.configure(bg=BG)
 
     img = PhotoImage(file="CSDico.gif")
     master.tk.call("wm", "iconphoto", master._w, img)
 
+    # ── Apply dark ttk theme ──────────────────────────────────────────────────
+    style = ttk.Style(master)
+    style.theme_use("clam")
+    style.configure(".",
+        background=BG_PANEL,
+        foreground=FG,
+        font=("Helvetica", 10),
+        troughcolor=BG_WIDGET,
+        selectbackground=ACCENT,
+        selectforeground="white",
+    )
+    style.configure("TFrame", background=BG_PANEL)
+    style.configure("TLabelframe",
+        background=BG_PANEL,
+        bordercolor="#3c3c3c",
+        relief="groove",
+    )
+    style.configure("TLabelframe.Label",
+        background=BG_PANEL,
+        foreground=FG2,
+        font=("Helvetica", 9, "bold"),
+    )
+    style.configure("TLabel", background=BG_PANEL, foreground=FG)
+    style.configure("TButton",
+        background=BG_WIDGET, foreground=FG,
+        relief="flat", borderwidth=1, padding=4,
+    )
+    style.map("TButton",
+        background=[("active", ACCENT), ("pressed", ACCENT)],
+        foreground=[("active", "white"), ("pressed", "white")],
+    )
+    style.configure("TEntry",
+        fieldbackground=BG_WIDGET, foreground=FG, insertcolor=FG,
+        bordercolor="#3c3c3c", lightcolor=BG_WIDGET, darkcolor=BG_WIDGET,
+    )
+    style.configure("Status.TFrame", background=BG_WIDGET)
+    style.configure("Status.TLabel",
+        background=BG_WIDGET, foreground=FG2,
+        font=("Helvetica", 9),
+    )
+    # ─────────────────────────────────────────────────────────────────────────
+
     canvas_width = 650
     canvas_height = 650
 
-    # master.resizable(width=False, height=False)
-    master.resizable(width=not False, height=not False)
+    master.resizable(width=True, height=True)
 
     mainSetup()
 
-    # bindind the resize event
     master.bind("<Configure>", redraw)
 
     w = Canvas(master, width=canvas_width, height=canvas_height)
-    w.configure(background="gray69")
+    w.configure(background=C_BG)
     w.grid(row=1, column=1, columnspan=5, rowspan=25, sticky=W + E + N + S, padx=1, pady=1)
 
     canvasElements = []
@@ -1340,11 +1189,17 @@ if __name__ == "__main__":
     selectionMaskArray = None
     selectionArray = None
 
+    # ── Menu bar ──────────────────────────────────────────────────────────────
+    menu_bar = Menu(master,
+        bg=BG_PANEL, fg=FG,
+        activebackground=ACCENT, activeforeground="white",
+        relief="flat", borderwidth=0,
+    )
 
-    # the menu bar stuff
-    menu_bar = Menu(master)
-
-    file_menu = Menu(menu_bar)
+    file_menu = Menu(menu_bar, tearoff=0,
+        bg=BG_PANEL, fg=FG,
+        activebackground=ACCENT, activeforeground="white",
+    )
     file_menu.add_command(label="New geometry", command=clearArrayAndDisplay)
     file_menu.add_separator()
     file_menu.add_command(label="Load from file", command=loadArrayFromFile)
@@ -1353,14 +1208,20 @@ if __name__ == "__main__":
     file_menu.add_command(label="Save to file", command=saveArrayToFile)
     menu_bar.add_cascade(label="File", menu=file_menu)
 
-    analyze_menu = Menu(menu_bar)
+    analyze_menu = Menu(menu_bar, tearoff=0,
+        bg=BG_PANEL, fg=FG,
+        activebackground=ACCENT, activeforeground="white",
+    )
     analyze_menu.add_command(label="Power Losses ProSolver", command=showMePro)
     analyze_menu.add_command(label="Electro Dynamic Forces", command=showMeForces)
     analyze_menu.add_command(label="Equivalent Impedance Model", command=showMeZ)
     analyze_menu.add_command(label="Equivalent Impedance Model 3f Shunt", command=showMeZ3f)
     menu_bar.add_cascade(label="Analyze...", menu=analyze_menu)
 
-    geometry_menu = Menu(menu_bar)
+    geometry_menu = Menu(menu_bar, tearoff=0,
+        bg=BG_PANEL, fg=FG,
+        activebackground=ACCENT, activeforeground="white",
+    )
     geometry_menu.add_command(label="Pattern", command=showMeGeom)
     geometry_menu.add_command(label="Swap", command=showReplacer)
     geometry_menu.add_separator()
@@ -1370,336 +1231,161 @@ if __name__ == "__main__":
     geometry_menu.add_command(label="Extend Canvas", command=extendArray)
     menu_bar.add_cascade(label="Geometry", menu=geometry_menu)
 
-    view_menu = Menu(menu_bar)
+    view_menu = Menu(menu_bar, tearoff=0,
+        bg=BG_PANEL, fg=FG,
+        activebackground=ACCENT, activeforeground="white",
+    )
     view_menu.add_command(label="Open CAD view window", command=displayArrayAsImage)
     menu_bar.add_cascade(label="View", menu=view_menu)
 
     master.config(menu=menu_bar)
 
-    # tools selector bar
-    # phase selection pane
-    A_icon_white = PhotoImage(file="csdicons/A_white.png")
-    B_icon_white = PhotoImage(file="csdicons/B_white.png")
-    C_icon_white = PhotoImage(file="csdicons/C_white.png")
-    cut_icon_white = PhotoImage(file="csdicons/cut_white.png")
+    # ── Tool selector panel ───────────────────────────────────────────────────
+    A_icon_white      = PhotoImage(file="csdicons/A_white.png")
+    B_icon_white      = PhotoImage(file="csdicons/B_white.png")
+    C_icon_white      = PhotoImage(file="csdicons/C_white.png")
+    cut_icon_white    = PhotoImage(file="csdicons/cut_white.png")
     select_icon_white = PhotoImage(file="csdicons/select_white.png")
-    paste_icon_white = PhotoImage(file="csdicons/paste_white.png")
-    paste_icon_all = PhotoImage(file="csdicons/paste_full.png")
-    paste_icon_A = PhotoImage(file="csdicons/paste_A.png")
-    paste_icon_B = PhotoImage(file="csdicons/paste_B.png")
-    paste_icon_C = PhotoImage(file="csdicons/paste_C.png")
+    paste_icon_white  = PhotoImage(file="csdicons/paste_white.png")
+    paste_icon_all    = PhotoImage(file="csdicons/paste_full.png")
+    paste_icon_A      = PhotoImage(file="csdicons/paste_A.png")
+    paste_icon_B      = PhotoImage(file="csdicons/paste_B.png")
+    paste_icon_C      = PhotoImage(file="csdicons/paste_C.png")
 
-
-    phase_frame = LabelFrame(master, text="Active operation")
-    phase_frame.grid(row=1, column=8, columnspan=3)
+    phase_frame = ttk.LabelFrame(master, text="Active operation")
+    phase_frame.grid(row=1, column=8, columnspan=3, padx=4, pady=4)
 
     phase = IntVar()
-    phase.set(1)  # initialize
+    phase.set(1)
 
-    Btn = Radiobutton(
-        phase_frame,
-        image=A_icon_white,
-        variable=phase,
-        value=1,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="red",
-        highlightbackground="red",
-    )
-    Btn.grid(row=0, column=0, padx=1, pady=2)
+    def _phase_btn(parent, image, value, bg_color):
+        return Radiobutton(
+            parent, image=image, variable=phase, value=value,
+            indicatoron=0, height=32, width=32,
+            bg=bg_color, activebackground=bg_color,
+            selectcolor=bg_color, highlightbackground=bg_color,
+            relief="flat", cursor="hand2",
+        )
 
-    Btn = Radiobutton(
-        phase_frame,
-        image=B_icon_white,
-        variable=phase,
-        value=2,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="green",
-        highlightbackground="green",
-    )
-    Btn.grid(row=0, column=1, padx=1, pady=2)
+    _phase_btn(phase_frame, A_icon_white,      1, PH_A).grid(row=0, column=0, padx=2, pady=2)
+    _phase_btn(phase_frame, B_icon_white,      2, PH_B).grid(row=0, column=1, padx=2, pady=2)
+    _phase_btn(phase_frame, C_icon_white,      3, PH_C).grid(row=0, column=2, padx=2, pady=2)
+    _phase_btn(phase_frame, cut_icon_white,    0, PH_X).grid(row=1, column=0, padx=2, pady=2)
+    _phase_btn(phase_frame, select_icon_white, 4, PH_X).grid(row=1, column=1, padx=2, pady=2)
+    _phase_btn(phase_frame, paste_icon_white,  5, PH_X).grid(row=1, column=2, padx=2, pady=2)
 
-    Btn = Radiobutton(
-        phase_frame,
-        image=C_icon_white,
-        variable=phase,
-        value=3,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="blue",
-        highlightbackground="blue",
-    )
-    Btn.grid(row=0, column=2, padx=1, pady=2)
-
-    Btn = Radiobutton(
-        phase_frame,
-        image=cut_icon_white,
-        variable=phase,
-        value=0,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="gray",
-        highlightbackground="gray",
-    )
-    Btn.grid(row=1, column=0, padx=1, pady=2)
-
-    Btn = Radiobutton(
-        phase_frame,
-        image=select_icon_white,
-        variable=phase,
-        value=4,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="gray",
-        highlightbackground="gray",
-    )
-    Btn.grid(row=1, column=1, padx=1, pady=2)
-
-    Btn = Radiobutton(
-        phase_frame,
-        image=paste_icon_white,
-        variable=phase,
-        value=5,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="gray",
-        highlightbackground="gray",
-    )
-    Btn.grid(row=1, column=2, padx=1, pady=2)
-
-    # paste mode frame
-    paste_frame = LabelFrame(master, text="Paste mode")
-    paste_frame.grid(row=3, column=8, columnspan=3)
+    # ── Paste mode panel ──────────────────────────────────────────────────────
+    paste_frame = ttk.LabelFrame(master, text="Paste mode")
+    paste_frame.grid(row=3, column=8, columnspan=3, padx=4, pady=4)
 
     paste_mode = IntVar()
     paste_mode.set(1)
 
-    Btn = Radiobutton(
-        paste_frame,
-        image=paste_icon_white,
-        variable=paste_mode,
-        value=1,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="gray",
-        highlightbackground="dark gray",
-    )
-    Btn.grid(row=0, column=0, padx=1, pady=1)
+    def _paste_btn(parent, image, value, bg_color=PH_X):
+        return Radiobutton(
+            parent, image=image, variable=paste_mode, value=value,
+            indicatoron=0, height=32, width=32,
+            bg=bg_color, activebackground=ACCENT,
+            selectcolor=ACCENT, highlightbackground=bg_color,
+            relief="flat", cursor="hand2",
+        )
 
-    Btn = Radiobutton(
-        paste_frame,
-        image=paste_icon_all,
-        variable=paste_mode,
-        value=2,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="gray",
-        highlightbackground="dark gray",
-    )
-    Btn.grid(row=0, column=1, padx=1, pady=1)
+    _paste_btn(paste_frame, paste_icon_white, 1      ).grid(row=0, column=0, padx=2, pady=2)
+    _paste_btn(paste_frame, paste_icon_all,   2      ).grid(row=0, column=1, padx=2, pady=2)
+    _paste_btn(paste_frame, paste_icon_A,    11, PH_A).grid(row=1, column=0, padx=2, pady=2)
+    _paste_btn(paste_frame, paste_icon_B,    12, PH_B).grid(row=1, column=1, padx=2, pady=2)
+    _paste_btn(paste_frame, paste_icon_C,    13, PH_C).grid(row=1, column=2, padx=2, pady=2)
 
-    Btn = Radiobutton(
-        paste_frame,
-        image=paste_icon_A,
-        variable=paste_mode,
-        value=11,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="red",
-        highlightbackground="red",
-    )
-    Btn.grid(row=1, column=0, padx=1, pady=2)
-
-    Btn = Radiobutton(
-        paste_frame,
-        image=paste_icon_B,
-        variable=paste_mode,
-        value=12,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="green",
-        highlightbackground="green",
-    )
-    Btn.grid(row=1, column=1, padx=1, pady=2)
-
-    Btn = Radiobutton(
-        paste_frame,
-        image=paste_icon_C,
-        variable=paste_mode,
-        value=13,
-        indicatoron=0,
-        height=32,
-        width=32,
-        bg="blue",
-        highlightbackground="blue",
-    )
-    Btn.grid(row=1, column=2, padx=1, pady=2)
-
-
-    # geometry modyfication pane
-    up_icon_white = PhotoImage(file="csdicons/up_white.png")
-    down_icon_white = PhotoImage(file="csdicons/down_white.png")
-    left_icon_white = PhotoImage(file="csdicons/left_white.png")
+    # ── Shift selected-phase panel ────────────────────────────────────────────
+    up_icon_white    = PhotoImage(file="csdicons/up_white.png")
+    down_icon_white  = PhotoImage(file="csdicons/down_white.png")
+    left_icon_white  = PhotoImage(file="csdicons/left_white.png")
     right_icon_white = PhotoImage(file="csdicons/right_white.png")
 
-    mod_frame = LabelFrame(master, text="Shift sel. phase")
-    mod_frame.grid(row=6, column=8, columnspan=3, sticky="S")
+    mod_frame = ttk.LabelFrame(master, text="Shift sel. phase")
+    mod_frame.grid(row=6, column=8, columnspan=3, sticky="S", padx=4, pady=4)
 
-    # geometry shift cross navi
-    print_button_zoom = Button(
-        mod_frame,
-        image=left_icon_white,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=shiftL,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=1, column=0, padx=5, pady=5)
-    print_button_zoom = Button(
-        mod_frame,
-        image=right_icon_white,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=shiftR,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=1, column=2, padx=5, pady=5)
-    print_button_zoom = Button(
-        mod_frame,
-        image=up_icon_white,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=shiftU,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
-    print_button_zoom = Button(
-        mod_frame,
-        image=down_icon_white,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=shiftD,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
+    def _shift_btn(parent, image, cmd):
+        return Button(
+            parent, image=image, width=24, height=24,
+            bg=BG_PANEL, activebackground=ACCENT,
+            relief="flat", cursor="hand2",
+            command=cmd, repeatdelay=100, repeatinterval=100,
+        )
 
+    _shift_btn(mod_frame, left_icon_white,  shiftL).grid(row=1, column=0, padx=5, pady=5)
+    _shift_btn(mod_frame, right_icon_white, shiftR).grid(row=1, column=2, padx=5, pady=5)
+    _shift_btn(mod_frame, up_icon_white,    shiftU).grid(row=0, column=1, padx=5, pady=5)
+    _shift_btn(mod_frame, down_icon_white,  shiftD).grid(row=1, column=1, padx=5, pady=5)
 
-    emptyOpis = Label(text="", height=3)
-    emptyOpis.grid(
-        row=5,
-        column=0,
+    # ── Grid-size entry row ───────────────────────────────────────────────────
+    Label(master, text="", height=3, bg=BG).grid(row=5, column=0)
+
+    analysisDX = Label(
+        master, text="dx:\n " + str(dXmm) + "[mm]",
+        height=2, bg=BG, fg=FG, font=("Helvetica", 9),
     )
-
-    analysisDX = Label(text="grid:", height=2)
     analysisDX.grid(row=5, column=8, columnspan=1)
-    analysisDY = Label(text="[mm]", height=2)
-    analysisDY.grid(row=5, column=10, columnspan=1)
 
-    myEntryDx = Entry(master, width=5)
+    myEntryDx = ttk.Entry(master, width=5)
     myEntryDx.insert(END, str(dXmm))
     myEntryDx.grid(row=5, column=9, columnspan=1, padx=1, pady=1)
     myEntryDx.bind("<Return>", setParameters)
     myEntryDx.bind("<FocusOut>", setParameters)
 
+    analysisDY = Label(
+        master, text="dy:\n " + str(dYmm) + "[mm]",
+        height=2, bg=BG, fg=FG, font=("Helvetica", 9),
+    )
+    analysisDY.grid(row=5, column=10, columnspan=1)
 
-    # Geometry navigation frame
-    zoom_in_icon = PhotoImage(file="csdicons/zoomin.png")
+    # ── View navigation panel ─────────────────────────────────────────────────
+    zoom_in_icon  = PhotoImage(file="csdicons/zoomin.png")
     zoom_out_icon = PhotoImage(file="csdicons/zoomout.png")
-    up_icon = PhotoImage(file="csdicons/up.png")
-    down_icon = PhotoImage(file="csdicons/down.png")
-    left_icon = PhotoImage(file="csdicons/left.png")
-    right_icon = PhotoImage(file="csdicons/right.png")
+    up_icon       = PhotoImage(file="csdicons/up.png")
+    down_icon     = PhotoImage(file="csdicons/down.png")
+    left_icon     = PhotoImage(file="csdicons/left.png")
+    right_icon    = PhotoImage(file="csdicons/right.png")
 
-    navi_frame = LabelFrame(master, text="View navi")
-    navi_frame.grid(row=21, column=8, columnspan=3, sticky="S")
+    navi_frame = ttk.LabelFrame(master, text="View navi")
+    navi_frame.grid(row=21, column=8, columnspan=3, sticky="S", padx=4, pady=4)
 
-    print_button_zoom = Button(
-        navi_frame, image=zoom_in_icon, width=32, height=32, relief=FLAT, command=zoomIn
-    )
-    print_button_zoom.grid(row=0, column=0, padx=5, pady=5, columnspan=1)
-    print_button_zoom = Button(
-        navi_frame, image=zoom_out_icon, width=32, height=32, relief=FLAT, command=zoomOut
-    )
-    print_button_zoom.grid(row=0, column=2, padx=5, pady=5, columnspan=1)
+    def _navi_btn(parent, image, cmd, bw=32, bh=32):
+        return Button(
+            parent, image=image, width=bw, height=bh,
+            bg=BG_PANEL, activebackground=ACCENT,
+            relief="flat", cursor="hand2",
+            command=cmd, repeatdelay=100, repeatinterval=100,
+        )
 
+    _navi_btn(navi_frame, zoom_in_icon,  zoomIn        ).grid(row=0, column=0, padx=5, pady=5)
+    _navi_btn(navi_frame, zoom_out_icon, zoomOut       ).grid(row=0, column=2, padx=5, pady=5)
+    _navi_btn(navi_frame, up_icon,   zoomU, 24, 24).grid(row=0, column=1, padx=5, pady=5)
+    _navi_btn(navi_frame, left_icon,  zoomL, 24, 24).grid(row=1, column=0, padx=5, pady=5)
+    _navi_btn(navi_frame, right_icon, zoomR, 24, 24).grid(row=1, column=2, padx=5, pady=5)
+    _navi_btn(navi_frame, down_icon,  zoomD, 24, 24).grid(row=1, column=1, padx=5, pady=5)
 
-    # first cross navi
-    print_button_zoom = Button(
-        navi_frame,
-        image=left_icon,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=zoomL,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=1, column=0, padx=5, pady=5)
-    print_button_zoom = Button(
-        navi_frame,
-        image=right_icon,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=zoomR,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=1, column=2, padx=5, pady=5)
-    print_button_zoom = Button(
-        navi_frame,
-        image=up_icon,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=zoomU,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=0, column=1, padx=5, pady=5)
-    print_button_zoom = Button(
-        navi_frame,
-        image=down_icon,
-        width=24,
-        height=24,
-        relief=FLAT,
-        command=zoomD,
-        repeatdelay=100,
-        repeatinterval=100,
-    )
-    print_button_zoom.grid(row=1, column=1, padx=5, pady=5)
-
-    # advanced geometry triggers
-    code_frame = LabelFrame(master, text="inner-code window")
+    # ── Inner-code panel ──────────────────────────────────────────────────────
+    code_frame = ttk.LabelFrame(master, text="inner-code window")
     code_frame.grid(row=1, column=11, rowspan=25, columnspan=3, sticky="N", padx=5, pady=0)
 
-    text_input = Text(code_frame, height=20, width=25)
-    text_input.grid(row=1, column=1, columnspan=3, padx=10, pady=10)
-    btn = Button(code_frame, text="Execute InnerCode as is", command=InterCode)
-    btn.grid(row=19, column=1, columnspan=3)
-    btn = Button(code_frame, text="Create new geometry", command=getCanvas)
-    btn.grid(row=20, column=1, columnspan=3)
+    text_input = Text(
+        code_frame, height=20, width=25,
+        bg=BG_WIDGET, fg=FG, insertbackground=FG,
+        font=("Courier New", 10), relief="flat", borderwidth=0,
+        selectbackground=ACCENT, selectforeground="white",
+        highlightbackground="#3c3c3c", highlightthickness=1,
+    )
+    text_input.grid(row=1, column=1, columnspan=3, padx=8, pady=8)
 
+    ttk.Button(code_frame, text="Execute InnerCode as is", command=InterCode).grid(
+        row=19, column=1, columnspan=3, padx=6, pady=3, sticky="EW",
+    )
+    ttk.Button(code_frame, text="Create new geometry", command=getCanvas).grid(
+        row=20, column=1, columnspan=3, padx=6, pady=3, sticky="EW",
+    )
 
+    # ── Canvas bindings ───────────────────────────────────────────────────────
     w.bind("<Button 1>", setPoint)
     w.bind("<Button 3>", resetPoint)
     w.bind("<B1-Motion>", setPoint)
@@ -1714,10 +1400,18 @@ if __name__ == "__main__":
     w.bind("<Up>", zoomU)
     w.bind("<Down>", zoomD)
 
-    message = Label(master, text="use: Left Mouse Button to Set conductor, Right to reset")
-    message.grid(row=26, column=1, columnspan=3)
+    # ── Status bar ────────────────────────────────────────────────────────────
+    status_frame = ttk.Frame(master, style="Status.TFrame", height=26)
+    status_frame.grid(row=27, column=0, columnspan=15, sticky="EW")
+    status_frame.grid_propagate(False)
 
-    # rescaling behaviour
+    ttk.Label(
+        status_frame,
+        text="  LMB: draw  •  RMB: erase  •  Arrow keys: pan  •  Analyze menu: run solver",
+        style="Status.TLabel",
+    ).grid(row=0, column=0, sticky="W", padx=8, pady=4)
+
+    # ── Grid resize weights ───────────────────────────────────────────────────
     master.grid_rowconfigure(0, weight=0)
     master.grid_rowconfigure(12, weight=1)
     master.grid_columnconfigure(0, weight=0)
@@ -1730,8 +1424,4 @@ if __name__ == "__main__":
 
     printTheArray(dataArray=XSecArray, canvas=w)
 
-
-    # print(phase)
-
     mainloop()
-

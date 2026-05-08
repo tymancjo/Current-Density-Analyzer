@@ -8,6 +8,8 @@ import matplotlib
 import math
 import numpy as np
 import tkinter as tk
+import customtkinter as ctk
+from tkinter import messagebox
 
 # Importing local library
 from csdlib import csdlib as csd
@@ -21,35 +23,39 @@ from csdlib import csdsolve as csds
 csdf.verbose = False
 
 
-class MyPtrn:
+class PatternWindow(ctk.CTkToplevel):
     def __init__(self, parent):
-        top = self.top = tk.Toplevel(parent)
+        super().__init__(parent)
+        self.title("Define Pattern")
 
-        back = tk.Frame(master=self.top, width=300, height=5, bg="gray")
-        back.pack()
+        self.grid_columnconfigure(0, weight=1)
 
-        self.myLabel = tk.Label(top, text="Define the pattern parameters ")
-        self.myLabel.pack()
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.main_frame.grid_columnconfigure(0, weight=1)
 
-        self.myLabel = tk.Label(top, text="Step in X (in cells): ")
-        self.myLabel.pack()
-        self.idX = tk.Entry(top, width=5)
-        self.idX.pack()
+        self.info_label = ctk.CTkLabel(self.main_frame, text="Define the pattern parameters")
+        self.info_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
 
-        self.myLabel = tk.Label(top, text="Step in Y (in cells): ")
-        self.myLabel.pack()
-        self.idY = tk.Entry(top, width=5)
-        self.idY.pack()
+        self.lab_dx = ctk.CTkLabel(self.main_frame, text="Step in X (in cells):")
+        self.lab_dx.grid(row=1, column=0, sticky="w", padx=10, pady=2)
+        self.idX = ctk.CTkEntry(self.main_frame, width=100)
+        self.idX.grid(row=1, column=1, padx=10, pady=2)
 
-        self.myLabel = tk.Label(top, text="Number of copies: ")
-        self.myLabel.pack()
-        self.iN = tk.Entry(top, width=5)
-        self.iN.pack()
+        self.lab_dy = ctk.CTkLabel(self.main_frame, text="Step in Y (in cells):")
+        self.lab_dy.grid(row=2, column=0, sticky="w", padx=10, pady=2)
+        self.idY = ctk.CTkEntry(self.main_frame, width=100)
+        self.idY.grid(row=2, column=1, padx=10, pady=2)
 
-        self.mySubmitButton = tk.Button(top, text="Submit", command=self.send)
-        self.mySubmitButton.pack()
+        self.lab_n = ctk.CTkLabel(self.main_frame, text="Number of copies:")
+        self.lab_n.grid(row=3, column=0, sticky="w", padx=10, pady=2)
+        self.iN = ctk.CTkEntry(self.main_frame, width=100)
+        self.iN.grid(row=3, column=1, padx=10, pady=2)
 
-    def send(self):
+        self.submitButton = ctk.CTkButton(self.main_frame, text="Submit", command=self.submit)
+        self.submitButton.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky="ew")
+
+    def submit(self):
         try:
             self.dX = int(self.idX.get())
         except ValueError:
@@ -63,78 +69,76 @@ class MyPtrn:
         except ValueError:
             self.N = 0
 
-        self.top.destroy()
+        self.destroy()
 
 
-class geometryModWindow:
+class GeometryModWindow(ctk.CTkToplevel):
     """
-    This is a class that will be used to generate \
-    the geometry modification Window
+    This is a class that will be used to generate
+    a new window for geometry modifications like
+    phase replacer or geometry cloning.
     """
 
-    def __init__(self, master, canvas):
-        self.master = master
-        self.canvas = canvas
-        self.frame = tk.Frame(self.master)
-        self.frame.pack(padx=10, pady=10)
+    def __init__(self, parent, x_sec_array):
+        super().__init__(parent)
+        self.title("Geometry Modification")
 
-        self.phase = tk.IntVar()
+        self.x_sec_array = x_sec_array
 
-        self.phase.set(1)  # initialize
+        self.grid_columnconfigure(0, weight=1)
 
-        tk.Radiobutton(
-            master,
-            text="Phase A",
-            variable=self.phase,
-            value=1,
-            indicatoron=0,
-            height=1,
-            width=16,
-            bg="red",
-            highlightbackground="red",
-        ).pack()
-        tk.Radiobutton(
-            master,
-            text="Phase B",
-            variable=self.phase,
-            value=2,
-            indicatoron=0,
-            height=1,
-            width=16,
-            bg="green",
-            highlightbackground="green",
-        ).pack()
-        tk.Radiobutton(
-            master,
-            text="Phase C",
-            variable=self.phase,
-            value=3,
-            indicatoron=0,
-            height=1,
-            width=16,
-            bg="blue",
-            highlightbackground="blue",
-        ).pack()
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.main_frame.grid_columnconfigure(0, weight=1)
 
-        self.aButton = tk.Button(self.frame, text="Click Me", command=self.shiftL)
-        self.aButton.pack()
-        self.XSecArray = super(geometryModWindow, self).XSecArray
+        self.info_label = ctk.CTkLabel(self.main_frame, text="Replace Phase")
+        self.info_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
 
-    def shiftL(self):
-        """This is just a zero argumet trigger for the geometry shift Button"""
-        actualPhase = self.phase.get()
-        csd.n_shiftPhase(actualPhase, -1, 0, XSecArray)
-        print("Phase: {} shifed by {} x {}".format(actualPhase, dXmm, 0))
-        csd.n_printTheArray(XSecArray, canvas=self.canvas)
+        self.source_phase_label = ctk.CTkLabel(self.main_frame, text="Source Phase:")
+        self.source_phase_label.grid(row=1, column=0, sticky="w", padx=10, pady=2)
+        self.source_phase_var = ctk.StringVar(value="Phase A")
+        self.source_phase_menu = ctk.CTkOptionMenu(self.main_frame,
+                                                   values=["Phase A", "Phase B", "Phase C"],
+                                                   variable=self.source_phase_var)
+        self.source_phase_menu.grid(row=1, column=1, padx=10, pady=2)
+
+        self.target_phase_label = ctk.CTkLabel(self.main_frame, text="Target Phase:")
+        self.target_phase_label.grid(row=2, column=0, sticky="w", padx=10, pady=2)
+        self.target_phase_var = ctk.StringVar(value="Phase B")
+        self.target_phase_menu = ctk.CTkOptionMenu(self.main_frame,
+                                                   values=["Phase A", "Phase B", "Phase C"],
+                                                   variable=self.target_phase_var)
+        self.target_phase_menu.grid(row=2, column=1, padx=10, pady=2)
+
+        self.replace_button = ctk.CTkButton(self.main_frame, text="Replace", command=self.replace_phase)
+        self.replace_button.grid(row=3, column=0, columnspan=2, pady=(10, 0), sticky="ew")
+
+    def replace_phase(self):
+        source_phase_str = self.source_phase_var.get()
+        target_phase_str = self.target_phase_var.get()
+
+        phase_mapping = {"Phase A": 1, "Phase B": 2, "Phase C": 3}
+        source_phase = phase_mapping[source_phase_str]
+        target_phase = phase_mapping[target_phase_str]
+
+        if source_phase != target_phase:
+            self.x_sec_array[self.x_sec_array == source_phase] = target_phase
+            print(f"Phase {source_phase_str} replaced with {target_phase_str}")
+            self.destroy()
+        else:
+            messagebox.showwarning("Warning", "Source and target phases cannot be the same.")
 
 
-class currentDensityWindowPro:
+class currentDensityWindowPro(ctk.CTkToplevel):
     """
     This class define the main control window for handling
     the analysis of current density of given geometry.
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+        super().__init__(master)
+        self.title("Pro Current Density Solver")
+
         self.getMaterials()
         print(self.Materials)
 
@@ -143,196 +147,152 @@ class currentDensityWindowPro:
         self.dYmm = dYmm
         self.lenght = 1000
         self.CuGamma = 391.1  # [W/mK]
-        self.master = master
-        self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0, column=0, ipadx=20, ipady=20)
-        self.bframe = tk.Frame(self.master)
-        self.bframe.grid(row=0, column=2, ipadx=20, ipady=20)
 
-        self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=0, column=3, ipadx=20, ipady=20)
+        # set grid layout
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
-        self.lab_I = tk.Label(self.frame, text="Current RMS [A]")
-        self.lab_I.pack()
-        self.Irms_txt = tk.Entry(self.frame, width=30)
-        self.Irms_txt.insert(4, "1000;000;1000;120;1000;240")
-        self.Irms_txt.pack()
+        # create main container frame
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(1, weight=1)
 
-        self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
-        self.lab_Freq.pack()
-        self.Freq_txt = tk.Entry(self.frame)
-        self.Freq_txt.insert(5, "50")
-        self.Freq_txt.pack()
+        # create tabs
+        self.tabview = ctk.CTkTabview(self.main_frame)
+        self.tabview.grid(row=0, column=0, columnspan=2, sticky="nsew")
+        self.tabview.add("Input")
+        self.tabview.add("Material")
+        self.tabview.add("Thermal")
+        
+        self.setup_input_tab()
+        self.setup_material_tab()
+        self.setup_thermal_tab()
 
-        self.lab_Temp = tk.Label(self.frame, text="Conductor temperature [degC]")
-        self.lab_Temp.pack()
-        self.Temp_txt = tk.Entry(self.frame)
-        self.Temp_txt.insert(5, "140")
-        self.Temp_txt.pack()
+        # Console and Buttons Frame
+        self.bottom_frame = ctk.CTkFrame(self)
+        self.bottom_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.bottom_frame.grid_columnconfigure(0, weight=1)
+        self.bottom_frame.grid_rowconfigure(0, weight=1)
 
-        self.lab_Sigma = tk.Label(
-            self.frame, text="Material conductivity at 20degC [S/m]"
-        )
-        self.lab_Sigma.pack()
-        self.Sigma_txt = tk.Entry(self.frame)
-        self.Sigma_txt.insert(5, "56e6")
-        self.Sigma_txt.pack()
+        self.tx1 = ctk.CTkTextbox(self.bottom_frame, height=120)
+        self.tx1.grid(row=0, column=0, columnspan=3, padx=10, pady=(10, 5), sticky="nsew")
 
-        self.lab_temCoRe = tk.Label(
-            self.frame, text="Material Temp coeff of resistance [1/K]"
-        )
-        self.lab_temCoRe.pack()
-        self.temCoRe_txt = tk.Entry(self.frame)
-        self.temCoRe_txt.insert(5, "3.9e-3")
-        self.temCoRe_txt.pack()
+        self.rButton = ctk.CTkButton(self.bottom_frame, text="Set Parameters", command=self.readSettings)
+        self.rButton.grid(row=1, column=0, padx=10, pady=(5, 10), sticky="ew")
 
-        self.lab_HTC = tk.Label(self.frame, text="HTC [W/m2K]")
-        self.lab_HTC.pack()
-        self.HTC_txt = tk.Entry(self.frame)
-        self.HTC_txt.insert(5, "7")
-        self.HTC_txt.pack()
+        self.openButton = ctk.CTkButton(self.bottom_frame, text="Calculate!", command=self.powerAnalysis)
+        self.openButton.grid(row=1, column=1, padx=10, pady=(5, 10), sticky="ew")
 
-        self.lab_ro = tk.Label(self.frame, text="material density [kg/3]")
-        self.lab_ro.pack()
-        self.ro_txt = tk.Entry(self.frame)
-        self.ro_txt.insert(5, "8960")
-        self.ro_txt.pack()
-
-        self.lab_cp = tk.Label(self.frame, text="material heat capacity [J/kg.K]")
-        self.lab_cp.pack()
-        self.cp_txt = tk.Entry(self.frame)
-        self.cp_txt.insert(5, "385")
-        self.cp_txt.pack()
-
-        self.lab_Gcon = tk.Label(self.frame, text="Thermal Conductivity [W/mK]")
-        self.lab_Gcon.pack()
-        self.Gcon_txt = tk.Entry(self.frame)
-        self.Gcon_txt.insert(5, "0.25")
-        self.Gcon_txt.pack()
-
-        self.lab_Gmx = tk.Label(self.frame, text="Thermal Conductance Coef. Matrix")
-        self.lab_Gmx.pack()
-        self.Gmx_txt = tk.Entry(self.frame)
-        self.Gmx_txt.insert(5, "0;0;0|0;0;0|0;0;0")
-        self.Gmx_txt.pack()
-        self.lab_Gmx = tk.Label(self.frame, text="Fa;Fab;Fac|Fba;Fb;Fbc|Fca;Fcb;Fc")
-        self.lab_Gmx.pack()
-
-        self.lab_lenght = tk.Label(self.frame, text="lenght [mm]")
-        self.lab_lenght.pack()
-        self.lenght_txt = tk.Entry(self.frame)
-        self.lenght_txt.insert(5, "1000")
-        self.lenght_txt.pack()
-
-        self.rButton = tk.Button(
-            self.frame, text="Set Parameters", command=self.readSettings
-        )
-        self.rButton.pack()
-
-        #  reading the above entered stuff to variables
-
-        self.I = self.Irms_txt.get().split(";")  # reading I as array
-        self.f = float(self.Freq_txt.get())
-        self.t = float(self.Temp_txt.get())
-        self.HTC = float(self.HTC_txt.get())
-        self.Gcon = float(self.Gcon_txt.get())
-        self.sigma20C = float(self.Sigma_txt.get())
-        self.temCoRe = float(self.temCoRe_txt.get())
-        self.ro = float(self.ro_txt.get())
-        self.cp = float(self.cp_txt.get())
-
-        self.Gmx = np.asarray(
-            [gx.split(";") for gx in (self.Gmx_txt.get().split("|"))], dtype=float
-        )
-
-        self.desc_Ia = tk.Label(self.bframe, text=f"Ia: {self.I[0]} [A]")
-        self.desc_Ia.pack()
-        self.desc_Ib = tk.Label(self.bframe, text=f"Ib: {self.I[2]} [A]")
-        self.desc_Ib.pack()
-        self.desc_Ic = tk.Label(self.bframe, text=f"Ic: {self.I[4]} [A]")
-        self.desc_Ic.pack()
-
-        self.desc_f = tk.Label(
-            self.bframe, text="Frequency: {:.2f} [Hz]".format(self.f)
-        )
-        self.desc_f.pack()
-        self.desc_t = tk.Label(
-            self.bframe, text="Temperature: {:.2f} [degC]".format(self.t)
-        )
-        self.desc_t.pack()
-
-        self.desc_Sigma = tk.Label(
-            self.bframe, text="Sigma: {:.2f} [MS/m]".format(self.sigma20C / 1000000)
-        )
-        self.desc_Sigma.pack()
-
-        self.desc_temCoRe = tk.Label(
-            self.bframe, text="alpha: {:.2f}e-3 [1/K]".format(self.temCoRe * 1000)
-        )
-        self.desc_temCoRe.pack()
-
-        self.desc_ro = tk.Label(self.bframe, text="ro: {:.2f} [kg/m3]".format(self.ro))
-        self.desc_ro.pack()
-
-        self.desc_cp = tk.Label(self.bframe, text="cp: {:.2f} [J/kg.K]".format(self.cp))
-        self.desc_cp.pack()
-
-        self.desc_htc = tk.Label(
-            self.bframe, text="HTC: {:.2f} [W/m2K]".format(self.HTC)
-        )
-        self.desc_htc.pack()
-        self.desc_Gcon = tk.Label(
-            self.bframe, text="Thermal Cond.: {:.2f} [W/mK]".format(self.Gcon)
-        )
-        self.desc_Gcon.pack()
-
-        self.desc_lenght = tk.Label(
-            self.bframe, text="lenght: {:.2f} [mm]".format(self.lenght)
-        )
-        self.desc_lenght.pack()
-
-        self.tx1 = tk.Text(self.bframe, height=10, width=45)
-        self.tx1.pack()
-
-        self.openButton = tk.Button(
-            self.bframe, text="Calculate!", command=self.powerAnalysis
-        )
-        self.openButton.pack()
-        self.resultsButton = tk.Button(
-            self.bframe, text="Recalulate Temp Rises", command=self.calcTempRise
-        )
-        self.resultsButton.pack()
-
-        self.resultsButton = tk.Button(
-            self.bframe, text="Show Results", command=self.showResults
-        )
-        self.resultsButton.pack()
+        self.resultsButton = ctk.CTkButton(self.bottom_frame, text="Show Results", command=self.showResults)
+        self.resultsButton.grid(row=1, column=2, padx=10, pady=(5, 10), sticky="ew")
 
         self.isSolved = False
-
-        if self.Materials:
-            self.material_buttons = []
-            for M in self.Materials:
-                self.material_buttons.append(
-                    tk.Button(
-                        self.cframe, text=M.name, command=partial(self.setMaterial, M)
-                    )
-                )
-                self.material_buttons[-1].pack()
-
         self.readSettings()
 
+    def setup_input_tab(self):
+        tab = self.tabview.tab("Input")
+        tab.grid_columnconfigure(0, weight=1)
+        
+        self.lab_I = ctk.CTkLabel(tab, text="Current RMS [A; deg]")
+        self.lab_I.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Irms_txt = ctk.CTkEntry(tab)
+        self.Irms_txt.insert(0, "1000;0;1000;120;1000;240")
+        self.Irms_txt.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_Freq = ctk.CTkLabel(tab, text="Frequency [Hz]")
+        self.lab_Freq.grid(row=2, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Freq_txt = ctk.CTkEntry(tab)
+        self.Freq_txt.insert(0, "50")
+        self.Freq_txt.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_lenght = ctk.CTkLabel(tab, text="Analysis Length [mm]")
+        self.lab_lenght.grid(row=4, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.lenght_txt = ctk.CTkEntry(tab)
+        self.lenght_txt.insert(0, "1000")
+        self.lenght_txt.grid(row=5, column=0, padx=10, pady=(0, 10), sticky="ew")
+        
+    def setup_material_tab(self):
+        tab = self.tabview.tab("Material")
+        tab.grid_columnconfigure(0, weight=1)
+
+        if self.Materials:
+            self.material_buttons_frame = ctk.CTkFrame(tab, fg_color="transparent")
+            self.material_buttons_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=(0, 10))
+            self.material_buttons = []
+            for i, M in enumerate(self.Materials):
+                self.material_buttons_frame.grid_columnconfigure(i, weight=1)
+                button = ctk.CTkButton(
+                    self.material_buttons_frame, text=M.name, command=partial(self.setMaterial, M)
+                )
+                button.grid(row=0, column=i, padx=2, pady=2, sticky="ew")
+                self.material_buttons.append(button)
+
+        self.lab_Sigma = ctk.CTkLabel(tab, text="Material conductivity at 20degC [S/m]")
+        self.lab_Sigma.grid(row=1, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Sigma_txt = ctk.CTkEntry(tab)
+        self.Sigma_txt.insert(0, "56e6")
+        self.Sigma_txt.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_temCoRe = ctk.CTkLabel(tab, text="Material Temp coeff of resistance [1/K]")
+        self.lab_temCoRe.grid(row=3, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.temCoRe_txt = ctk.CTkEntry(tab)
+        self.temCoRe_txt.insert(0, "3.9e-3")
+        self.temCoRe_txt.grid(row=4, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_ro = ctk.CTkLabel(tab, text="material density [kg/m3]")
+        self.lab_ro.grid(row=5, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.ro_txt = ctk.CTkEntry(tab)
+        self.ro_txt.insert(0, "8960")
+        self.ro_txt.grid(row=6, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_cp = ctk.CTkLabel(tab, text="material heat capacity [J/kg.K]")
+        self.lab_cp.grid(row=7, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.cp_txt = ctk.CTkEntry(tab)
+        self.cp_txt.insert(0, "385")
+        self.cp_txt.grid(row=8, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+    def setup_thermal_tab(self):
+        tab = self.tabview.tab("Thermal")
+        tab.grid_columnconfigure(0, weight=1)
+
+        self.lab_Temp = ctk.CTkLabel(tab, text="Conductor temperature [degC]")
+        self.lab_Temp.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Temp_txt = ctk.CTkEntry(tab)
+        self.Temp_txt.insert(0, "140")
+        self.Temp_txt.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
+        
+        self.lab_HTC = ctk.CTkLabel(tab, text="HTC [W/m2K]")
+        self.lab_HTC.grid(row=2, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.HTC_txt = ctk.CTkEntry(tab)
+        self.HTC_txt.insert(0, "7")
+        self.HTC_txt.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_Gcon = ctk.CTkLabel(tab, text="Thermal Conductivity [W/mK]")
+        self.lab_Gcon.grid(row=4, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Gcon_txt = ctk.CTkEntry(tab)
+        self.Gcon_txt.insert(0, "0.25")
+        self.Gcon_txt.grid(row=5, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_Gmx = ctk.CTkLabel(tab, text="Thermal Conductance Coef. Matrix")
+        self.lab_Gmx.grid(row=6, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Gmx_txt = ctk.CTkEntry(tab)
+        self.Gmx_txt.insert(0, "0;0;0|0;0;0|0;0;0")
+        self.Gmx_txt.grid(row=7, column=0, padx=10, pady=(0, 10), sticky="ew")
+        self.lab_Gmx_info = ctk.CTkLabel(tab, text="Fa;Fab;Fac|Fba;Fb;Fbc|Fca;Fcb;Fc")
+        self.lab_Gmx_info.grid(row=8, column=0, padx=10, pady=(0, 10), sticky="w")
+
     def setMaterial(self, M):
-        self.Sigma_txt.delete(0, tk.END)
+        self.Sigma_txt.delete(0, "end")
         self.Sigma_txt.insert(0, M.sigma)
 
-        self.temCoRe_txt.delete(0, tk.END)
+        self.temCoRe_txt.delete(0, "end")
         self.temCoRe_txt.insert(0, M.alpha)
 
-        self.ro_txt.delete(0, tk.END)
+        self.ro_txt.delete(0, "end")
         self.ro_txt.insert(0, M.ro)
 
-        self.cp_txt.delete(0, tk.END)
+        self.cp_txt.delete(0, "end")
         self.cp_txt.insert(0, M.cp)
 
         self.readSettings()
@@ -357,28 +317,6 @@ class currentDensityWindowPro:
         )
         self.console("Thermal Conductance Coef. Matrix")
         self.console(self.Gmx)
-
-        self.desc_Ia.config(text=f"Ia: {self.I[0]} [A] at {self.I[1]} deg")
-        self.desc_Ib.config(text=f"Ib: {self.I[2]} [A] at {self.I[3]} deg")
-        self.desc_Ic.config(text=f"Ic: {self.I[4]} [A] at {self.I[5]} deg")
-
-        self.desc_f.config(text="Frequency: {:.2f} [Hz]".format(self.f))
-        self.desc_t.config(text="Temperature: {:.2f} [degC]".format(self.t))
-
-        self.desc_Sigma.config(
-            text="Sigma: {:.2f} [MS/m]".format(self.sigma20C / 1000000)
-        )
-
-        self.desc_temCoRe.config(
-            text="alpha: {:.2f}e-3 [1/K]".format(self.temCoRe * 1000)
-        )
-        self.desc_ro.config(text="ro: {:.2f} [kg/m3]".format(self.ro))
-
-        self.desc_cp.config(text="cp: {:.2f} [J/kg.K]".format(self.cp))
-
-        self.desc_htc.config(text="HTC: {:.2f} [W/m2K]".format(self.HTC))
-        self.desc_Gcon.config(text="Thermal Cond.: {:.5f} [W/mK]".format(self.Gcon))
-        self.desc_lenght.config(text="lenght: {:.2f} [mm]".format(self.lenght))
 
         # lets workout the  current in phases as is defined
         self.in_Ia = (
@@ -438,9 +376,9 @@ class currentDensityWindowPro:
                 self.elementsVector = np.concatenate((self.vPhA, self.vPhC), axis=0)
 
     def console(self, string):
-        self.tx1.insert(tk.END, str(string))
-        self.tx1.insert(tk.END, "\n")
-        self.tx1.see(tk.END)
+        self.tx1.insert(ctk.END, str(string))
+        self.tx1.insert(ctk.END, "\n")
+        self.tx1.see(ctk.END)
 
     def getMaterials(self):
         self.Materials = False
@@ -773,8 +711,7 @@ class currentDensityWindowPro:
                 thQ[i] = fromBar[4]
 
             # Solving for the T vector solutions
-            thGinv = np.linalg.inv(thG)
-            thT = np.matmul(thGinv, thQ)
+            thT, _, _, _ = np.linalg.lstsq(thG, thQ, rcond=None)
 
             # cuts out the Tx joints
             self.Tout = thT[: len(self.barsData)]  # putting result to vector
@@ -1055,8 +992,7 @@ class currentDensityWindowPro:
                 thQ[i] = fromBar[4]
 
             # Solving for thT vector solutions
-            thGinv = np.linalg.inv(thG)
-            thT = np.matmul(thGinv, thQ)
+            thT, _, _, _ = np.linalg.lstsq(thG, thQ, rcond=None)
 
             #  DEBUG
             # print('The G array')
@@ -1328,13 +1264,16 @@ class currentDensityWindowPro:
             # plt.show()
 
 
-class zWindow:
+class zWindow(ctk.CTkToplevel):
     """
     This class define the main control window for handling
     the analysis of equivalent phase impedance of given geometry.
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+        super().__init__(master)
+        self.title("Impedance Calculator")
+
         self.getMaterials()
         print(self.Materials)
 
@@ -1342,71 +1281,93 @@ class zWindow:
         self.dXmm = dXmm
         self.dYmm = dYmm
 
-        self.master = master
-        self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0, column=0)
+        # set grid layout
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
-        self.bframe = tk.Frame(self.master)
-        self.bframe.grid(row=0, column=1)
+        # create main container frame
+        self.container_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.container_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.container_frame.grid_columnconfigure(0, weight=1)
+        self.container_frame.grid_columnconfigure(1, weight=2)
+        
+        # Input Frame
+        self.input_frame = ctk.CTkFrame(self.container_frame)
+        self.input_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        self.input_frame.grid_columnconfigure(0, weight=1)
 
-        self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=1, column=1)
+        self.lab_Freq = ctk.CTkLabel(self.input_frame, text="Frequency [Hz]")
+        self.lab_Freq.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Freq_txt = ctk.CTkEntry(self.input_frame)
+        self.Freq_txt.insert(0, "50")
+        self.Freq_txt.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
 
-        self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
-        self.lab_Freq.pack()
-        self.Freq_txt = tk.Entry(self.frame)
-        self.Freq_txt.insert(5, "50")
-        self.Freq_txt.pack()
+        self.lab_Temp = ctk.CTkLabel(self.input_frame, text="Conductor temperature [degC]")
+        self.lab_Temp.grid(row=2, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Temp_txt = ctk.CTkEntry(self.input_frame)
+        self.Temp_txt.insert(0, "140")
+        self.Temp_txt.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
 
-        self.lab_Temp = tk.Label(self.frame, text="Conductor temperature [degC]")
-        self.lab_Temp.pack()
-        self.Temp_txt = tk.Entry(self.frame)
-        self.Temp_txt.insert(5, "140")
-        self.Temp_txt.pack()
+        # Summary Frame
+        self.summary_frame = ctk.CTkFrame(self.container_frame)
+        self.summary_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.summary_frame.grid_columnconfigure(0, weight=1)
 
-        self.rButton = tk.Button(
-            self.frame, text="Set Parameters", command=self.readSettings
-        )
-        self.rButton.pack()
+        self.desc_f = ctk.CTkLabel(self.summary_frame, text="Frequency: 50.00 [Hz]")
+        self.desc_f.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.desc_t = ctk.CTkLabel(self.summary_frame, text="Temperature: 140.00 [degC]")
+        self.desc_t.grid(row=1, column=0, padx=10, pady=(2, 10), sticky="w")
 
-        self.f = float(self.Freq_txt.get())
-        self.t = float(self.Temp_txt.get())
-
-        self.desc_f = tk.Label(
-            self.bframe, text="Frequency: {:.2f} [Hz]".format(self.f)
-        )
-        self.desc_f.pack()
-        self.desc_t = tk.Label(
-            self.bframe, text="Temperature: {:.2f} [degC]".format(self.t)
-        )
-        self.desc_t.pack()
-
-        self.tx1 = tk.Text(self.cframe, height=10, width=45)
-        self.tx1.pack()
-
-        self.openButton = tk.Button(
-            self.cframe, text="Calculate!", command=self.powerAnalysis
-        )
-        self.openButton.pack()
+        # Materials Frame
+        self.materials_frame = ctk.CTkFrame(self.container_frame)
+        self.materials_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=0, pady=5)
+        self.materials_frame.grid_columnconfigure(0, weight=1)
+        
+        self.materials_label = ctk.CTkLabel(self.materials_frame, text="Materials")
+        self.materials_label.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
 
         if self.Materials:
+            self.material_buttons_frame = ctk.CTkFrame(self.materials_frame, fg_color="transparent")
+            self.material_buttons_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
             self.material_buttons = []
-            for M in self.Materials:
-                self.material_buttons.append(
-                    tk.Button(
-                        self.frame, text=M.name, command=partial(self.setMaterial, M)
-                    )
+            for i, M in enumerate(self.Materials):
+                self.material_buttons_frame.grid_columnconfigure(i, weight=1)
+                button = ctk.CTkButton(
+                    self.material_buttons_frame, text=M.name, command=partial(self.setMaterial, M)
                 )
-                self.material_buttons[-1].pack()
+                button.grid(row=0, column=i, padx=2, pady=2, sticky="ew")
+                self.material_buttons.append(button)
 
             self.M = self.Materials[0]
+
+        # Console and Buttons Frame
+        self.bottom_frame = ctk.CTkFrame(self)
+        self.bottom_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.bottom_frame.grid_columnconfigure(0, weight=1)
+        self.bottom_frame.grid_rowconfigure(0, weight=1)
+
+        self.tx1 = ctk.CTkTextbox(self.bottom_frame, height=120)
+        self.tx1.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 5), sticky="nsew")
+
+        self.rButton = ctk.CTkButton(
+            self.bottom_frame, text="Set Parameters", command=self.readSettings
+        )
+        self.rButton.grid(row=1, column=0, padx=10, pady=(5, 10), sticky="ew")
+
+        self.openButton = ctk.CTkButton(
+            self.bottom_frame, text="Calculate!", command=self.powerAnalysis
+        )
+        self.openButton.grid(row=1, column=1, padx=10, pady=(5, 10), sticky="ew")
+        
+        # Set initial values
+        self.readSettings()
 
     def readSettings(self):
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
 
-        self.desc_f.config(text="Frequency: {:.2f} [Hz]".format(self.f))
-        self.desc_t.config(text="Temperature: {:.2f} [degC]".format(self.t))
+        self.desc_f.configure(text="Frequency: {:.2f} [Hz]".format(self.f))
+        self.desc_t.configure(text="Temperature: {:.2f} [degC]".format(self.t))
 
         self.vPhA = csd.n_arrayVectorize(
             inputArray=self.XsecArr, phaseNumber=1, dXmm=self.dXmm, dYmm=self.dYmm
@@ -1457,9 +1418,9 @@ class zWindow:
         self.console(f"Set to use: {M.name} as material")
 
     def console(self, string):
-        self.tx1.insert(tk.END, str(string))
-        self.tx1.insert(tk.END, "\n")
-        self.tx1.see(tk.END)
+        self.tx1.insert(ctk.END, str(string))
+        self.tx1.insert(ctk.END, "\n")
+        self.tx1.see(ctk.END)
 
     def powerAnalysis(self):
         self.readSettings()
@@ -1565,13 +1526,16 @@ class zWindow:
         self.console("Lc: {:.3f} [uH]".format(Lc * 1e6))
 
 
-class zWindow3f:
+class zWindow3f(ctk.CTkToplevel):
     """
     This class define the main control window for handling
     the analysis of equivalent phase impedance of given geometry in case of 3f shunted scenario.
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+        super().__init__(master)
+        self.title("3-Phase Impedance Calculator")
+
         self.getMaterials()
         print(self.Materials)
 
@@ -1579,71 +1543,93 @@ class zWindow3f:
         self.dXmm = dXmm
         self.dYmm = dYmm
 
-        self.master = master
-        self.frame = tk.Frame(self.master)
-        self.frame.grid(row=0, column=0)
+        # set grid layout
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
-        self.bframe = tk.Frame(self.master)
-        self.bframe.grid(row=0, column=1)
+        # create main container frame
+        self.container_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.container_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.container_frame.grid_columnconfigure(0, weight=1)
+        self.container_frame.grid_columnconfigure(1, weight=2)
+        
+        # Input Frame
+        self.input_frame = ctk.CTkFrame(self.container_frame)
+        self.input_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        self.input_frame.grid_columnconfigure(0, weight=1)
 
-        self.cframe = tk.Frame(self.master)
-        self.cframe.grid(row=1, column=1)
+        self.lab_Freq = ctk.CTkLabel(self.input_frame, text="Frequency [Hz]")
+        self.lab_Freq.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Freq_txt = ctk.CTkEntry(self.input_frame)
+        self.Freq_txt.insert(0, "50")
+        self.Freq_txt.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
 
-        self.lab_Freq = tk.Label(self.frame, text="Frequency [Hz]")
-        self.lab_Freq.pack()
-        self.Freq_txt = tk.Entry(self.frame)
-        self.Freq_txt.insert(5, "50")
-        self.Freq_txt.pack()
+        self.lab_Temp = ctk.CTkLabel(self.input_frame, text="Conductor temperature [degC]")
+        self.lab_Temp.grid(row=2, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Temp_txt = ctk.CTkEntry(self.input_frame)
+        self.Temp_txt.insert(0, "140")
+        self.Temp_txt.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
 
-        self.lab_Temp = tk.Label(self.frame, text="Conductor temperature [degC]")
-        self.lab_Temp.pack()
-        self.Temp_txt = tk.Entry(self.frame)
-        self.Temp_txt.insert(5, "140")
-        self.Temp_txt.pack()
+        # Summary Frame
+        self.summary_frame = ctk.CTkFrame(self.container_frame)
+        self.summary_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.summary_frame.grid_columnconfigure(0, weight=1)
 
-        self.rButton = tk.Button(
-            self.frame, text="Set Parameters", command=self.readSettings
-        )
-        self.rButton.pack()
+        self.desc_f = ctk.CTkLabel(self.summary_frame, text="Frequency: 50.00 [Hz]")
+        self.desc_f.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.desc_t = ctk.CTkLabel(self.summary_frame, text="Temperature: 140.00 [degC]")
+        self.desc_t.grid(row=1, column=0, padx=10, pady=(2, 10), sticky="w")
 
-        self.f = float(self.Freq_txt.get())
-        self.t = float(self.Temp_txt.get())
-
-        self.desc_f = tk.Label(
-            self.bframe, text="Frequency: {:.2f} [Hz]".format(self.f)
-        )
-        self.desc_f.pack()
-        self.desc_t = tk.Label(
-            self.bframe, text="Temperature: {:.2f} [degC]".format(self.t)
-        )
-        self.desc_t.pack()
-
-        self.tx1 = tk.Text(self.cframe, height=10, width=45)
-        self.tx1.pack()
-
-        self.openButton = tk.Button(
-            self.cframe, text="Calculate!", command=self.powerAnalysis
-        )
-        self.openButton.pack()
+        # Materials Frame
+        self.materials_frame = ctk.CTkFrame(self.container_frame)
+        self.materials_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=0, pady=5)
+        self.materials_frame.grid_columnconfigure(0, weight=1)
+        
+        self.materials_label = ctk.CTkLabel(self.materials_frame, text="Materials")
+        self.materials_label.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
 
         if self.Materials:
+            self.material_buttons_frame = ctk.CTkFrame(self.materials_frame, fg_color="transparent")
+            self.material_buttons_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
             self.material_buttons = []
-            for M in self.Materials:
-                self.material_buttons.append(
-                    tk.Button(
-                        self.frame, text=M.name, command=partial(self.setMaterial, M)
-                    )
+            for i, M in enumerate(self.Materials):
+                self.material_buttons_frame.grid_columnconfigure(i, weight=1)
+                button = ctk.CTkButton(
+                    self.material_buttons_frame, text=M.name, command=partial(self.setMaterial, M)
                 )
-                self.material_buttons[-1].pack()
+                button.grid(row=0, column=i, padx=2, pady=2, sticky="ew")
+                self.material_buttons.append(button)
 
             self.M = self.Materials[0]
+
+        # Console and Buttons Frame
+        self.bottom_frame = ctk.CTkFrame(self)
+        self.bottom_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.bottom_frame.grid_columnconfigure(0, weight=1)
+        self.bottom_frame.grid_rowconfigure(0, weight=1)
+
+        self.tx1 = ctk.CTkTextbox(self.bottom_frame, height=120)
+        self.tx1.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 5), sticky="nsew")
+
+        self.rButton = ctk.CTkButton(
+            self.bottom_frame, text="Set Parameters", command=self.readSettings
+        )
+        self.rButton.grid(row=1, column=0, padx=10, pady=(5, 10), sticky="ew")
+
+        self.openButton = ctk.CTkButton(
+            self.bottom_frame, text="Calculate!", command=self.powerAnalysis
+        )
+        self.openButton.grid(row=1, column=1, padx=10, pady=(5, 10), sticky="ew")
+        
+        # Set initial values
+        self.readSettings()
 
     def readSettings(self):
         self.f = float(self.Freq_txt.get())
         self.t = float(self.Temp_txt.get())
 
-        self.desc_f.config(text="Frequency: {:.2f} [Hz]".format(self.f))
-        self.desc_t.config(text="Temperature: {:.2f} [degC]".format(self.t))
+        self.desc_f.configure(text="Frequency: {:.2f} [Hz]".format(self.f))
+        self.desc_t.configure(text="Temperature: {:.2f} [degC]".format(self.t))
 
         self.vPhA = csd.n_arrayVectorize(
             inputArray=self.XsecArr, phaseNumber=1, dXmm=self.dXmm, dYmm=self.dYmm
@@ -1683,9 +1669,9 @@ class zWindow3f:
                 self.elementsVector = np.concatenate((self.vPhA, self.vPhC), axis=0)
 
     def console(self, string):
-        self.tx1.insert(tk.END, str(string))
-        self.tx1.insert(tk.END, "\n")
-        self.tx1.see(tk.END)
+        self.tx1.insert(ctk.END, str(string))
+        self.tx1.insert(ctk.END, "\n")
+        self.tx1.see(ctk.END)
 
     def getMaterials(self):
         self.Materials = False
@@ -1780,79 +1766,91 @@ class zWindow3f:
         self.console("Lc: {:.3f} [uH]".format(Lc * 1e6))
 
 
-class forceWindow:
+class forceWindow(ctk.CTkToplevel):
     """
     This class define the main control window for the
     electrodynamic forces analysis.
     """
 
     def __init__(self, master, XsecArr, dXmm, dYmm):
+        super().__init__(master)
+        self.title("Forces calculator")
+
         self.XsecArr = XsecArr
         self.dXmm = dXmm
         self.dYmm = dYmm
 
-        self.master = master
-        self.frame = tk.Frame(self.master)
-        self.frame.pack(padx=10, pady=10)
+        # set grid layout
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
 
-        self.lab_l = tk.Label(self.frame, text="Analysis lenght [mm]")
-        self.lab_l.pack()
-        self.lenght = tk.Entry(self.frame)
-        self.lenght.insert(4, 1000)
-        self.lenght.pack()
+        # create main container frame
+        self.container_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.container_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.container_frame.grid_columnconfigure((0, 1), weight=1)
 
-        self.lab_Icw = tk.Label(self.frame, text="Ia; Ib; Ic [kA]")
-        self.lab_Icw.pack()
-        self.Icw_txt = tk.Entry(self.frame)
-        self.Icw_txt.insert(5, "187; -90; -90")
-        self.Icw_txt.pack()
+        # Input Frame
+        self.input_frame = ctk.CTkFrame(self.container_frame)
+        self.input_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        self.input_frame.grid_columnconfigure(0, weight=1)
 
-        self.rButton = tk.Button(
-            self.frame, text="Set Parameters", command=self.readSettings
+        self.lab_l = ctk.CTkLabel(self.input_frame, text="Analysis length [mm]")
+        self.lab_l.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.lenght = ctk.CTkEntry(self.input_frame)
+        self.lenght.insert(0, "1000")
+        self.lenght.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        self.lab_Icw = ctk.CTkLabel(self.input_frame, text="Ia; Ib; Ic [kA]")
+        self.lab_Icw.grid(row=2, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.Icw_txt = ctk.CTkEntry(self.input_frame)
+        self.Icw_txt.insert(0, "187; -90; -90")
+        self.Icw_txt.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+
+        # Summary Frame
+        self.summary_frame = ctk.CTkFrame(self.container_frame)
+        self.summary_frame.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.summary_frame.grid_columnconfigure(0, weight=1)
+
+        self.desc_L = ctk.CTkLabel(self.summary_frame, text="length: 1000 [mm]")
+        self.desc_L.grid(row=0, column=0, padx=10, pady=(10, 2), sticky="w")
+        self.desc_IcwA = ctk.CTkLabel(self.summary_frame, text="Ia: 187.00 [kA]")
+        self.desc_IcwA.grid(row=1, column=0, padx=10, pady=2, sticky="w")
+        self.desc_IcwB = ctk.CTkLabel(self.summary_frame, text="Ib: -90.00 [kA]")
+        self.desc_IcwB.grid(row=2, column=0, padx=10, pady=2, sticky="w")
+        self.desc_IcwC = ctk.CTkLabel(self.summary_frame, text="Ic: -90.00 [kA]")
+        self.desc_IcwC.grid(row=3, column=0, padx=10, pady=(2, 10), sticky="w")
+        
+        # Console and Buttons Frame
+        self.bottom_frame = ctk.CTkFrame(self)
+        self.bottom_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.bottom_frame.grid_columnconfigure(0, weight=1)
+        self.bottom_frame.grid_rowconfigure(0, weight=1)
+
+        self.tx1 = ctk.CTkTextbox(self.bottom_frame, height=120)
+        self.tx1.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 5), sticky="nsew")
+
+        self.rButton = ctk.CTkButton(
+            self.bottom_frame, text="Set Parameters", command=self.readSettings
         )
-        self.rButton.pack()
+        self.rButton.grid(row=1, column=0, padx=10, pady=(5, 10), sticky="ew")
 
-        self.Icw = self.Icw_txt.get().split(";")
-        self.Icw = [float(x) for x in self.Icw]
-
-        self.bframe = tk.Frame(self.master)
-        self.bframe.pack(padx=10, pady=10)
-
-        self.L = float(self.lenght.get())
-
-        self.IcwA = "Ia: {0[0]:.2f} [kA]".format(self.Icw)
-        self.IcwB = "Ia: {0[1]:.2f} [kA]".format(self.Icw)
-        self.IcwC = "Ia: {0[2]:.2f} [kA]".format(self.Icw)
-
-        self.desc_L = tk.Label(self.bframe, text="lenght: {:.0f} [mm]".format(self.L))
-        self.desc_L.pack()
-        self.desc_IcwA = tk.Label(self.bframe, text=self.IcwA)
-        self.desc_IcwA.pack()
-        self.desc_IcwB = tk.Label(self.bframe, text=self.IcwB)
-        self.desc_IcwB.pack()
-        self.desc_IcwC = tk.Label(self.bframe, text=self.IcwC)
-        self.desc_IcwC.pack()
-
-        self.cframe = tk.Frame(self.master)
-        self.cframe.pack(padx=10, pady=10)
-
-        self.tx1 = tk.Text(self.cframe, height=5, width=35)
-        self.tx1.pack()
-
-        self.openButton = tk.Button(
-            self.cframe, text="Calculate Force Vectors", command=self.forcesAnalysis
+        self.openButton = ctk.CTkButton(
+            self.bottom_frame, text="Calculate Force Vectors", command=self.forcesAnalysis
         )
-        self.openButton.pack()
+        self.openButton.grid(row=1, column=1, padx=10, pady=(5, 10), sticky="ew")
+
+        # Set initial values
+        self.readSettings()
 
     def readSettings(self):
         self.L = float(self.lenght.get())
         self.Icw = self.Icw_txt.get().split(";")
         self.Icw = [float(x) for x in self.Icw]
 
-        self.desc_L.config(text="lenght: {:.0f} [mm]".format(self.L))
-        self.desc_IcwA.config(text="Ia: {0[0]:.2f} [kA]".format(self.Icw))
-        self.desc_IcwB.config(text="Ib: {0[1]:.2f} [kA]".format(self.Icw))
-        self.desc_IcwC.config(text="Ic: {0[2]:.2f} [kA]".format(self.Icw))
+        self.desc_L.configure(text="length: {:.0f} [mm]".format(self.L))
+        self.desc_IcwA.configure(text="Ia: {0[0]:.2f} [kA]".format(self.Icw))
+        self.desc_IcwB.configure(text="Ib: {0[1]:.2f} [kA]".format(self.Icw))
+        self.desc_IcwC.configure(text="Ic: {0[2]:.2f} [kA]".format(self.Icw))
 
         self.vPhA = csd.n_arrayVectorize(
             inputArray=self.XsecArr, phaseNumber=1, dXmm=self.dXmm, dYmm=self.dYmm
@@ -1867,7 +1865,7 @@ class forceWindow:
         self.elementsVector = np.concatenate((self.vPhA, self.vPhB, self.vPhC), axis=0)
 
     def console(self, string):
-        self.tx1.insert(tk.END, str(string))
+        self.tx1.insert(ctk.END, str(string))
         self.tx1.insert(tk.END, "\n")
         self.tx1.see(tk.END)
 

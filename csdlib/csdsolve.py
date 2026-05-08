@@ -168,10 +168,7 @@ def solve_system(
     csdf.myLog(f"Sum: {Ia+Ib+Ic}")
 
     # Data postprocessing
-    getMod = np.vectorize(csdm.getComplexModule)
-
-    resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
-    resultsCurrentVector = getMod(resultsCurrentVector)
+    resultsCurrentVector = np.abs(np.concatenate((currentPhA, currentPhB, currentPhC), axis=0))
 
     resistanceVector = csdm.getResistanceArray(
         elementsVector,
@@ -203,6 +200,32 @@ def solve_system(
     )
 
 
+def solve_gui_3f(XsecArray, dXmm, dYmm, frequency=50, curentRMS=1000, temperature=35, length=1000,
+                 conductivity=56e6, alpha=3.9e-3, density=8960, cp=385, mi_r=1, thermal_conductivity=400):
+    """
+    This is a helper function to provide the same results as the GUI's 
+    original solver but using the modern optimized engine.
+    """
+    # Setup the 3 phase symmetrical currents as (rms, phase_deg)
+    # Phase A: 0 deg, Phase B: 120 deg, Phase C: 240 deg
+    I = [(curentRMS, 0), (curentRMS, 120), (curentRMS, 240)]
+    
+    # Create material objects for each phase using the passed global properties
+    # Assuming all phases use the same material for symmetrical 3-phase analysis
+    material_obj = csdos.Material(
+        name="Selected Material", # A generic name, actual name can be passed from GUI
+        sigma=conductivity,
+        alpha=alpha,
+        ro=density,
+        cp=cp,
+        mi_r=mi_r,
+        thermal_conductivity=thermal_conductivity
+    )
+    phases_material = [material_obj, material_obj, material_obj] # For 3 phases
+
+    return solve_multi_system(XsecArray, dXmm, dYmm, I, frequency, length, temperature, phases_material=phases_material)
+
+
 def solve_multi_system(
     XsecArray,
     dXmm,
@@ -219,7 +242,8 @@ def solve_multi_system(
 
     # Figuring out phases material
     if len(phases_material) == 0:
-        phases_material.append(csdos.Material("Cu", sigma, temCoRe))
+        # Default material (Copper) if none provided
+        phases_material.append(csdos.Material("Cu", 58e6, 3.9e-3))
 
     # Determining the number of phases
     list_of_phases = np.unique(XsecArray).astype(int)
@@ -266,15 +290,17 @@ def solve_multi_system(
     elementsVector = np.concatenate(vPh)
 
     # we need to prepare the vector versions of the material properties and temperatures
-    sigma_array = []
-    alpha_array = []
-    for element in elementsVector:
-        index = phase_index[int(element[4])] - 1
-        sigma_array.append(phases_material[index].sigma)
-        alpha_array.append(phases_material[index].alpha)
-
-    sigma_array = np.array(sigma_array)
-    alpha_array = np.array(alpha_array)
+    max_p = int(max(list_of_phases))
+    sigma_lookup = np.zeros(max_p + 1)
+    alpha_lookup = np.zeros(max_p + 1)
+    for p in list_of_phases:
+        if p != 0:
+            mat_idx = phase_index[p] - 1
+            sigma_lookup[p] = phases_material[mat_idx].sigma
+            alpha_lookup[p] = phases_material[mat_idx].alpha
+    phase_nums = elementsVector[:, 4].astype(int)
+    sigma_array = sigma_lookup[phase_nums]
+    alpha_array = alpha_lookup[phase_nums]
 
     csdf.myLog(f"{elementsPhase=}")
 
@@ -310,10 +336,7 @@ def solve_multi_system(
         this_u = np.cos(i[1] * np.pi / 180) + np.sin(i[1] * np.pi / 180) * 1j
         U.append(this_u)
 
-    voltageVector = np.array([])
-    for elements, u in zip(elementsPhase, U):
-        this_v = np.ones(elements) * u
-        voltageVector = np.concatenate((voltageVector, this_v), axis=0)
+    voltageVector = np.concatenate([np.ones(n, dtype=complex) * u for n, u in zip(elementsPhase, U)])
 
     currentVector = csdm.solveTheEquation(admitanceMatrix, voltageVector)
 
@@ -339,10 +362,7 @@ def solve_multi_system(
     csdf.myLog(f"Modified Voltages {U=}")
 
     # Setting up the voltage vector for final solve
-    voltageVector = np.array([])
-    for elements, u in zip(elementsPhase, U):
-        this_v = np.ones(elements) * u
-        voltageVector = np.concatenate((voltageVector, this_v), axis=0)
+    voltageVector = np.concatenate([np.ones(n, dtype=complex) * u for n, u in zip(elementsPhase, U)])
 
     # Final solve
     # Main equation solve
@@ -387,11 +407,7 @@ def solve_multi_system(
 
     currentVector = np.concatenate(currentsPh)
 
-    # Data postprocessing
-    getMod = np.vectorize(csdm.getComplexModule)
-
-    # resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
-    resultsCurrentVector = getMod(currentVector)
+    resultsCurrentVector = np.abs(currentVector)
 
     resistanceVector = csdm.getResistanceArray(
         elementsVector,
@@ -523,19 +539,15 @@ def solve_with_magnetic(
 
     csdf.myLog("...")
 
-    # gathering all material and domain data to one matrix
     materials_Xsec_array = np.ones((Rows, Cols, 4))
-    for R in range(Rows):
-        for C in range(Cols):
-            phase = int(XsecArr[R, C])
-            if phase != 0:
-                phase_index = phase_index_dict[phase]
-                material = phases_materials[phase_index]
-
-                materials_Xsec_array[R, C, idx_sigma] = material.sigma
-                materials_Xsec_array[R, C, idx_alpha] = material.alpha
-                materials_Xsec_array[R, C, idx_m_r] = mi_r_array[R, C]
-                materials_Xsec_array[R, C, idx_m_r_w] = mi_r_weighted_array[R, C]
+    for phase in list_of_phases:
+        mask = XsecArr == phase
+        p_idx = phase_index_dict[phase]
+        material = phases_materials[p_idx]
+        materials_Xsec_array[mask, idx_sigma] = material.sigma
+        materials_Xsec_array[mask, idx_alpha] = material.alpha
+        materials_Xsec_array[mask, idx_m_r] = mi_r_array[mask]
+        materials_Xsec_array[mask, idx_m_r_w] = mi_r_weighted_array[mask]
 
     # Let's work out the phases elements vectors
     vPh = []
@@ -549,23 +561,12 @@ def solve_with_magnetic(
             elementsPhase.append(len(this_vPh))
 
     elementsVector = np.concatenate(vPh)
-    sigma_array = []
-    alpha_array = []
-    mi_r_array = []
-    mi_r_w_array = []
-
-    for element in elementsVector:
-        r = int(element[0])
-        c = int(element[1])
-        sigma_array.append(materials_Xsec_array[r, c, idx_sigma])
-        alpha_array.append(materials_Xsec_array[r, c, idx_alpha])
-        mi_r_array.append(materials_Xsec_array[r, c, idx_m_r])
-        mi_r_w_array.append(materials_Xsec_array[r, c, idx_m_r_w])
-
-    sigma_array = np.array(sigma_array)
-    alpha_array = np.array(alpha_array)
-    mi_r_array = np.array(mi_r_array)
-    mi_r_w_array = np.array(mi_r_w_array)
+    rows_ev = elementsVector[:, 0].astype(int)
+    cols_ev = elementsVector[:, 1].astype(int)
+    sigma_array = materials_Xsec_array[rows_ev, cols_ev, idx_sigma]
+    alpha_array = materials_Xsec_array[rows_ev, cols_ev, idx_alpha]
+    mi_r_array = materials_Xsec_array[rows_ev, cols_ev, idx_m_r]
+    mi_r_w_array = materials_Xsec_array[rows_ev, cols_ev, idx_m_r_w]
 
     csdf.myLog("Finished Pre Process...")
     csdf.myLog(f"Prepared {I=}")
@@ -611,10 +612,7 @@ def solve_with_magnetic(
         Phi = float(i[1]) * np.pi / 180
         U.append(np.cos(Phi) + np.sin(Phi) * 1j)
 
-    voltageVector = np.array([])
-    for elements, u in zip(elementsPhase, U):
-        this_v = np.ones(elements) * u
-        voltageVector = np.concatenate((voltageVector, this_v), axis=0)
+    voltageVector = np.concatenate([np.ones(n, dtype=complex) * u for n, u in zip(elementsPhase, U)])
 
     # SOLVE #
     currentVector = csdm.solveTheEquation(admitanceMatrix, voltageVector)
@@ -641,10 +639,7 @@ def solve_with_magnetic(
     csdf.myLog(f"Modified Voltages {U=}")
 
     # Setting up the voltage vector for final solve
-    voltageVector = np.array([])
-    for elements, u in zip(elementsPhase, U):
-        this_v = np.ones(elements) * u
-        voltageVector = np.concatenate((voltageVector, this_v), axis=0)
+    voltageVector = np.concatenate([np.ones(n, dtype=complex) * u for n, u in zip(elementsPhase, U)])
 
     # Final solve
     # Main equation solve
@@ -689,11 +684,7 @@ def solve_with_magnetic(
 
     currentVector = np.concatenate(currentsPh)
 
-    # Data postprocessing
-    getMod = np.vectorize(csdm.getComplexModule)
-
-    # resultsCurrentVector = np.concatenate((currentPhA, currentPhB, currentPhC), axis=0)
-    resultsCurrentVector = getMod(currentVector)
+    resultsCurrentVector = np.abs(currentVector)
 
     resistanceVector = csdm.getResistanceArray(
         elementsVector,

@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSD Geometry Editor</title>
+<style>
+:root {
+  --bg:       #f0f2f5;
+  --panel:    #ffffff;
+  --panel2:   #f5f7fa;
+  --border:   #d1d5db;
+  --accent:   #0078d4;
+  --accent2:  #106ebe;
+  --danger:   #dc2626;
+  --success:  #27ae60;
+  --text:     #111827;
+  --text2:    #6b7280;
+  --text3:    #9ca3af;
+  --input:    #f5f7fa;
+  --hover:    #e4e7ec;
+  --sel:      #dce8f5;
+  --radius:   6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 46px 1fr 180px;
+  grid-template-columns: 210px 1fr 270px;
+  grid-template-areas:
+    "tb  tb  tb"
+    "lp  cv  rp"
+    "pv  pv  pv";
+  overflow: hidden;
+}
+
+/* ── Toolbar ─────────────────────────────────────── */
+#toolbar {
+  grid-area: tb;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.app-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--accent);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.tb-sep { width:1px; height:22px; background:var(--border); margin:0 4px; flex-shrink:0; }
+.tb-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tb-btn:hover { background:var(--hover); color:var(--text); border-color:var(--accent); }
+.tb-btn.active { background:var(--accent); border-color:var(--accent2); color:#fff; }
+.tb-btn.danger:hover { border-color:var(--danger); color:var(--danger); }
+.tb-select {
+  background: var(--input); color: var(--text2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 4px 6px; font-size: 12px; cursor:pointer;
+}
+.tb-select:focus { outline:none; border-color:var(--accent); }
+.tb-label { font-size:11px; color:var(--text3); white-space:nowrap; }
+#cursor-info {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* ── Left panel ──────────────────────────────────── */
+#left-panel {
+  grid-area: lp;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.panel-hdr {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text3);
+  padding: 10px 12px 6px;
+  flex-shrink: 0;
+}
+#phase-list { flex:1; overflow-y:auto; }
+.phase-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background .12s, border-color .12s;
+  position: relative;
+}
+.phase-row:hover { background: var(--hover); }
+.phase-row.active { background: var(--sel); border-left-color: var(--accent); }
+.phase-swatch {
+  width:13px; height:13px; border-radius:50%; flex-shrink:0;
+  border: 1px solid rgba(0,0,0,.15);
+  cursor: pointer; position:relative;
+}
+.phase-swatch input[type=color] {
+  position:absolute; inset:0; opacity:0; width:100%; height:100%;
+  cursor:pointer; border:none; padding:0;
+}
+.phase-name { flex:1; font-size:12px; color:var(--text); }
+.phase-id-badge {
+  font-size:10px; color:var(--text3);
+  background:var(--panel2); border-radius:3px;
+  padding:1px 5px;
+}
+.phase-del {
+  background:none; border:none; color:var(--text3);
+  cursor:pointer; font-size:14px; line-height:1;
+  padding:0 2px; opacity:0; transition:opacity .12s;
+}
+.phase-row:hover .phase-del { opacity:1; }
+.phase-del:hover { color:var(--danger); }
+#add-phase-btn {
+  margin: 8px 10px;
+  padding: 6px; flex-shrink:0;
+  background: none; border: 1px dashed var(--border);
+  border-radius: var(--radius); color:var(--text3);
+  cursor:pointer; font-size:12px; text-align:center;
+  transition:all .15s;
+}
+#add-phase-btn:hover { border-color:var(--accent); color:var(--text); }
+
+/* ── Canvas ──────────────────────────────────────── */
+#canvas-wrap {
+  grid-area: cv;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+#editor-canvas { display:block; cursor:crosshair; }
+#canvas-wrap.tool-select #editor-canvas { cursor:default; }
+#canvas-wrap.tool-pan    #editor-canvas { cursor:grab; }
+#canvas-wrap.tool-pan.panning #editor-canvas { cursor:grabbing; }
+#coord-overlay {
+  position:absolute; bottom:8px; left:8px;
+  font-size:11px; font-family:monospace; color:var(--text2);
+  background:rgba(240,242,245,.85); padding:3px 8px; border-radius:4px;
+  pointer-events:none; backdrop-filter:blur(4px);
+  border: 1px solid var(--border);
+}
+
+/* ── Right panel ─────────────────────────────────── */
+#right-panel {
+  grid-area: rp;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto; display:flex; flex-direction:column;
+}
+.prop-block { padding:12px; border-bottom:1px solid var(--border); }
+.prop-title { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+.prop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.prop-grid.cols1 { grid-template-columns:1fr; }
+.prop-field { display:flex; flex-direction:column; gap:3px; }
+.prop-lbl { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.4px; }
+.prop-inp, .prop-sel {
+  background:var(--input); border:1px solid var(--border);
+  border-radius:4px; color:var(--text);
+  padding:5px 7px; font-size:12px; width:100%;
+}
+.prop-inp:focus, .prop-sel:focus { outline:none; border-color:var(--accent); }
+.prop-actions { display:flex; gap:6px; margin-top:10px; }
+.prop-btn {
+  flex:1; padding:6px; border:1px solid var(--border);
+  border-radius:var(--radius); background:var(--input);
+  color:var(--text2); cursor:pointer; font-size:11px; transition:all .15s;
+}
+.prop-btn:hover { background:var(--hover); color:var(--text); }
+.prop-btn.danger:hover { border-color:var(--danger); color:var(--danger); }
+.empty-state { padding:20px 12px; font-size:12px; color:var(--text3); line-height:1.7; }
+
+/* ── Preview panel ───────────────────────────────── */
+#preview-panel {
+  grid-area: pv;
+  display:flex; flex-direction:column;
+  background:var(--panel); border-top:1px solid var(--border);
+}
+#preview-hdr {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 12px; border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+#preview-hdr .pv-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text3); flex:1; }
+.pv-btn {
+  padding:4px 10px; border:1px solid var(--border);
+  border-radius:4px; background:var(--input);
+  color:var(--text2); cursor:pointer; font-size:11px; transition:all .15s;
+}
+.pv-btn:hover { border-color:var(--accent); color:var(--text); }
+.pv-btn.primary { background:var(--accent); border-color:var(--accent2); color:#fff; }
+.pv-btn.primary:hover { opacity:.85; }
+#ic-preview {
+  flex:1; font-family:'Consolas','Courier New',monospace;
+  font-size:11px; color:#0369a1;
+  background:var(--panel2); border:none; resize:none;
+  padding:8px 12px; overflow:auto; white-space:pre; outline:none;
+  border-top: 1px solid var(--border);
+}
+#ic-preview:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Scrollbars ──────────────────────────────────── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* ── Tooltip helper ──────────────────────────────── */
+[title] { position:relative; }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ──────────────────────────────────── -->
+<div id="toolbar">
+  <span class="app-title">⚡ CSD Editor</span>
+  <div class="tb-sep"></div>
+
+  <button class="tb-btn active" data-tool="select" title="Select &amp; move (V)">▲ Select</button>
+  <button class="tb-btn" data-tool="rect"   title="Rectangle (R)">▭ Rect</button>
+  <button class="tb-btn" data-tool="circle" title="Circle / Annulus (C)">● Circle</button>
+
+  <div class="tb-sep"></div>
+
+  <span class="tb-label">Snap</span>
+  <select id="snap-sel" class="tb-select">
+    <option value="0">None</option>
+    <option value="1">1 mm</option>
+    <option value="2">2 mm</option>
+    <option value="5" selected>5 mm</option>
+    <option value="10">10 mm</option>
+  </select>
+
+  <div class="tb-sep"></div>
+
+  <button class="tb-btn" id="fit-btn" title="Fit content (F)">⊡ Fit</button>
+  <button class="tb-btn" id="reset-btn" title="Reset view">↺ Reset</button>
+
+  <div class="tb-sep"></div>
+
+  <button class="tb-btn" id="import-btn" title="Import .ic file">⤵ Import</button>
+  <input type="file" id="import-file" accept=".ic,.txt" style="display:none">
+
+  <span id="cursor-info">x: —  y: — mm</span>
+</div>
+
+<!-- ── Left panel (phases) ──────────────────────── -->
+<div id="left-panel">
+  <div class="panel-hdr">Phases</div>
+  <div id="phase-list"></div>
+  <button id="add-phase-btn">＋ Add Phase</button>
+</div>
+
+<!-- ── Canvas ───────────────────────────────────── -->
+<div id="canvas-wrap">
+  <canvas id="editor-canvas"></canvas>
+  <div id="coord-overlay">x: 0.0  y: 0.0 mm</div>
+</div>
+
+<!-- ── Right panel (properties) ─────────────────── -->
+<div id="right-panel">
+  <div id="props-content">
+    <div class="empty-state">
+      Select a shape to edit its properties,<br>or choose a drawing tool and click on the canvas.<br><br>
+      <b>Shortcuts:</b><br>
+      V — Select &nbsp; R — Rect &nbsp; C — Circle<br>
+      F — Fit view &nbsp; Del — Delete<br>
+      Ctrl+D — Duplicate<br>
+      Scroll — Zoom &nbsp; Mid‑drag — Pan
+    </div>
+  </div>
+</div>
+
+<!-- ── Preview panel ────────────────────────────── -->
+<div id="preview-panel">
+  <div id="preview-hdr">
+    <span class="pv-title">.ic Code</span>
+    <span class="pv-hint" id="pv-hint" style="font-size:10px;color:var(--text3);flex:1;margin-left:8px;">Edit or paste .ic code, then click Load ↑</span>
+    <button class="pv-btn" id="parse-btn" title="Parse the text below and recreate shapes on canvas">↑ Load</button>
+    <button class="pv-btn" id="copy-btn">⎘ Copy</button>
+    <button class="pv-btn primary" id="download-btn">⬇ Download .ic</button>
+  </div>
+  <textarea id="ic-preview" spellcheck="false"></textarea>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const MATERIALS = [
+  'Copper (56e6 S/m)',
+  'FakeAl (31e6 S/m)',
+  'Aluminium (31e6 S/m)',
+  'Carbon Steel (6.99e6 S/m)',
+  'Stainless Steel (1.45e6 S/m)',
+  'Fake Carbon Steel (6.99e6 S/m)',
+];
+
+const PALETTE = [
+  '#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6',
+  '#1abc9c','#e67e22','#e91e63','#00bcd4','#8bc34a',
+  '#ff5722','#607d8b','#795548','#cddc39','#ff9800',
+];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let shapes        = [];   // { id, type, phaseId, ... }
+let phases        = {};   // id → { label, color, Irms, phi, shift, material }
+let nShapeId      = 1;
+let nPhaseId      = 1;
+let selectedIds   = new Set();   // Set of selected shape IDs
+let activePhaseId = null;
+let currentTool   = 'select';
+let snapVal       = 5;
+let clipboard     = [];          // copied shapes (deep copies)
+
+// Camera — cam.ox/oy are canvas-px position of mm(0,0)
+// canvas_x = ox + mm_x * scale
+// canvas_y = oy - mm_y * scale  (Y flipped)
+const cam = { ox: 0, oy: 0, scale: 2 };
+
+// Interaction state
+let drawing  = null;   // ghost shape being drawn
+let dragging = null;   // { startMm, origPositions: Map<id,pos> }
+let marquee  = null;   // { x1,y1,x2,y2 } in mm — rubber-band selection
+let panning  = null;   // { startPx, origCam }
+let spaceDown = false;
+
+// ── Selection helpers ─────────────────────────────────
+function getSelected()      { return shapes.filter(s => selectedIds.has(s.id)); }
+function clearSelection()   { selectedIds = new Set(); }
+function selectOnly(id)     { selectedIds = id !== null ? new Set([id]) : new Set(); }
+function toggleSel(id)      { selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id); }
+
+function shapeIntersectsRect(s, x1, y1, x2, y2) {
+  // x1≤x2, y1≤y2 in mm
+  if (s.type === 'rect')
+    return !(s.x+s.w < x1 || s.x > x2 || s.y+s.h < y1 || s.y > y2);
+  if (s.type === 'circle') {
+    const r = s.d/2;
+    return !(s.cx+r < x1 || s.cx-r > x2 || s.cy+r < y1 || s.cy-r > y2);
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════
+// DOM REFS
+// ═══════════════════════════════════════════════════════
+const canvas    = document.getElementById('editor-canvas');
+const ctx       = canvas.getContext('2d');
+const wrap      = document.getElementById('canvas-wrap');
+const coordOvl  = document.getElementById('coord-overlay');
+const cursorInfo = document.getElementById('cursor-info');
+const preview   = document.getElementById('ic-preview');
+const propsDiv  = document.getElementById('props-content');
+const phaseList = document.getElementById('phase-list');
+
+// ═══════════════════════════════════════════════════════
+// COORDINATE HELPERS
+// ═══════════════════════════════════════════════════════
+function toCanvas(mx, my) {
+  return [cam.ox + mx * cam.scale, cam.oy - my * cam.scale];
+}
+function toMm(px, py) {
+  return [(px - cam.ox) / cam.scale, (cam.oy - py) / cam.scale];
+}
+function snapN(v) {
+  if (!snapVal) return v;
+  return Math.round(v / snapVal) * snapVal;
+}
+function fmtMm(v) {
+  return parseFloat(v.toFixed(3)).toString();
+}
+
+// ═══════════════════════════════════════════════════════
+// CANVAS RESIZE
+// ═══════════════════════════════════════════════════════
+function resizeCanvas() {
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  canvas.width  = W;
+  canvas.height = H;
+}
+new ResizeObserver(resizeCanvas).observe(wrap);
+
+// ═══════════════════════════════════════════════════════
+// GRID RENDERING
+// ═══════════════════════════════════════════════════════
+function drawGrid() {
+  const W = canvas.width, H = canvas.height;
+  let minor, major;
+  if      (cam.scale < 0.3) { minor=100; major=500; }
+  else if (cam.scale < 0.8) { minor=10;  major=100; }
+  else if (cam.scale < 2.5) { minor=5;   major=50;  }
+  else if (cam.scale < 8)   { minor=1;   major=10;  }
+  else                       { minor=1;   major=5;   }
+
+  const [mxL, myB] = toMm(0, H);
+  const [mxR, myT] = toMm(W, 0);
+
+  // minor grid
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = Math.floor(mxL/minor)*minor; x <= mxR + minor; x += minor) {
+    const px = cam.ox + x * cam.scale;
+    ctx.moveTo(px, 0); ctx.lineTo(px, H);
+  }
+  for (let y = Math.floor(myB/minor)*minor; y <= myT + minor; y += minor) {
+    const py = cam.oy - y * cam.scale;
+    ctx.moveTo(0, py); ctx.lineTo(W, py);
+  }
+  ctx.stroke();
+
+  // major grid
+  ctx.strokeStyle = 'rgba(0,0,0,0.13)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = Math.floor(mxL/major)*major; x <= mxR + major; x += major) {
+    const px = cam.ox + x * cam.scale;
+    ctx.moveTo(px, 0); ctx.lineTo(px, H);
+  }
+  for (let y = Math.floor(myB/major)*major; y <= myT + major; y += major) {
+    const py = cam.oy - y * cam.scale;
+    ctx.moveTo(0, py); ctx.lineTo(W, py);
+  }
+  ctx.stroke();
+
+  // axes
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cam.ox, 0); ctx.lineTo(cam.ox, H);
+  ctx.moveTo(0, cam.oy); ctx.lineTo(W, cam.oy);
+  ctx.stroke();
+
+  // axis labels
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.font = '10px monospace';
+  const labelY = Math.min(H - 4, Math.max(14, cam.oy + 14));
+  const labelX = Math.min(W - 4, Math.max(30, cam.ox - 4));
+  ctx.textAlign = 'center';
+  for (let x = Math.floor(mxL/major)*major; x <= mxR + major; x += major) {
+    if (x === 0) continue;
+    ctx.fillText(x, cam.ox + x * cam.scale, labelY);
+  }
+  ctx.textAlign = 'right';
+  for (let y = Math.floor(myB/major)*major; y <= myT + major; y += major) {
+    if (y === 0) continue;
+    ctx.fillText(y, labelX, cam.oy - y * cam.scale + 4);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SHAPE RENDERING
+// ═══════════════════════════════════════════════════════
+function phaseColor(id) {
+  if (!id || id === 0) return null;
+  return phases[id] ? phases[id].color : '#666';
+}
+
+function renderShape(s, ghost) {
+  const alpha = ghost ? 0.45 : 0.85;
+
+  if (s.type === 'rect') {
+    // Normalise negative dimensions so ghost works in all drag directions
+    let { x, y, w, h } = s;
+    if (w < 0) { x += w; w = -w; }
+    if (h < 0) { y += h; h = -h; }
+    const [px, py] = toCanvas(x, y + h);
+    const pw = w * cam.scale;
+    const ph = h * cam.scale;
+    if (pw < 1 || ph < 1) return;
+
+    if (!s.phaseId || s.phaseId === 0) {
+      ctx.fillStyle = '#f0f2f5';
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.setLineDash([4,3]);
+      ctx.fillRect(px, py, pw, ph);
+      ctx.strokeRect(px, py, pw, ph);
+      ctx.setLineDash([]);
+    } else {
+      const c = phaseColor(s.phaseId);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = c;
+      ctx.fillRect(px, py, pw, ph);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(px, py, pw, ph);
+    }
+
+    // dimension label when large enough
+    if (!ghost && pw > 40 && ph > 18) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.font = `${Math.max(9, Math.min(12, pw/8))}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${fmtMm(w)}×${fmtMm(h)}`, px + pw/2, py + ph/2 + 4);
+    }
+
+  } else if (s.type === 'circle') {
+    const [pcx, pcy] = toCanvas(s.cx, s.cy);
+    const pr = (s.d / 2) * cam.scale;
+    if (pr < 1) return;
+
+    if (!s.phaseId || s.phaseId === 0) {
+      ctx.beginPath(); ctx.arc(pcx, pcy, pr, 0, 2*Math.PI);
+      ctx.fillStyle = '#f0f2f5';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.setLineDash([4,3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      const c = phaseColor(s.phaseId);
+      ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.arc(pcx, pcy, pr, 0, 2*Math.PI);
+      ctx.fillStyle = c; ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = c; ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // inner ring (annulus)
+      if (s.dInner > 0 && s.dInner < s.d) {
+        const pri = (s.dInner / 2) * cam.scale;
+        const ci = phaseColor(s.phaseInner);
+        ctx.beginPath(); ctx.arc(pcx, pcy, pri, 0, 2*Math.PI);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = ci || '#f0f2f5'; ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+
+      // diameter label
+      if (!ghost && pr > 14) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.font = `${Math.max(9, Math.min(12, pr/4))}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`Ø${fmtMm(s.d)}`, pcx, pcy + 4);
+      }
+    }
+  }
+}
+
+function renderSelection(s) {
+  const pad = 5;
+  ctx.strokeStyle = '#0078d4';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5,4]);
+
+  if (s.type === 'rect') {
+    const [px, py] = toCanvas(s.x, s.y + s.h);
+    const pw = s.w * cam.scale, ph = s.h * cam.scale;
+    ctx.strokeRect(px - pad, py - pad, pw + 2*pad, ph + 2*pad);
+    // corner handles
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#0078d4';
+    for (const [hx, hy] of [[px,py],[px+pw,py],[px,py+ph],[px+pw,py+ph]]) {
+      ctx.fillRect(hx-3, hy-3, 6, 6);
+    }
+  } else if (s.type === 'circle') {
+    const [pcx, pcy] = toCanvas(s.cx, s.cy);
+    const pr = (s.d / 2) * cam.scale + pad;
+    ctx.beginPath(); ctx.arc(pcx, pcy, pr, 0, 2*Math.PI); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#0078d4';
+    ctx.fillRect(pcx - pr - 3, pcy - 3, 6, 6);
+    ctx.fillRect(pcx + pr - 3, pcy - 3, 6, 6);
+    ctx.fillRect(pcx - 3, pcy - pr - 3, 6, 6);
+    ctx.fillRect(pcx - 3, pcy + pr - 3, 6, 6);
+  }
+  ctx.setLineDash([]);
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN RENDER LOOP
+// ═══════════════════════════════════════════════════════
+function render() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f9fa';
+  ctx.fillRect(0, 0, W, H);
+
+  drawGrid();
+
+  // Draw non-zero phases, then zero (overlay/erase)
+  for (const s of shapes) {
+    if ((s.phaseId ?? 1) !== 0) {
+      renderShape(s, false);
+      if (selectedIds.has(s.id)) renderSelection(s);
+    }
+  }
+  for (const s of shapes) {
+    if ((s.phaseId ?? 1) === 0) {
+      renderShape(s, false);
+      if (selectedIds.has(s.id)) renderSelection(s);
+    }
+  }
+
+  // Ghost shape while drawing
+  if (drawing) renderShape(drawing, true);
+
+  // Marquee selection rectangle
+  if (marquee) {
+    const [px1,py1] = toCanvas(Math.min(marquee.x1,marquee.x2), Math.max(marquee.y1,marquee.y2));
+    const [px2,py2] = toCanvas(Math.max(marquee.x1,marquee.x2), Math.min(marquee.y1,marquee.y2));
+    ctx.strokeStyle = '#0078d4';
+    ctx.fillStyle   = 'rgba(0,120,212,0.07)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([5,4]);
+    ctx.fillRect(px1, py1, px2-px1, py2-py1);
+    ctx.strokeRect(px1, py1, px2-px1, py2-py1);
+    ctx.setLineDash([]);
+  }
+
+  requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════════════════
+// HIT TEST
+// ═══════════════════════════════════════════════════════
+function hitTest(mx, my) {
+  for (let i = shapes.length - 1; i >= 0; i--) {
+    const s = shapes[i];
+    if (s.type === 'rect') {
+      if (mx >= s.x && mx <= s.x + s.w && my >= s.y && my <= s.y + s.h) return s;
+    } else if (s.type === 'circle') {
+      const dx = mx - s.cx, dy = my - s.cy;
+      if (Math.sqrt(dx*dx+dy*dy) <= s.d/2) return s;
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+// MOUSE EVENTS
+// ═══════════════════════════════════════════════════════
+function evMm(e) {
+  const r = canvas.getBoundingClientRect();
+  return toMm(e.clientX - r.left, e.clientY - r.top);
+}
+function evPx(e) {
+  const r = canvas.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+
+canvas.addEventListener('mousedown', e => {
+  const [mx, my] = evMm(e);
+  const [px, py] = evPx(e);
+
+  if (e.button === 1 || spaceDown) {
+    panning = { startPx: [px, py], origCam: { ox: cam.ox, oy: cam.oy } };
+    wrap.classList.add('panning');
+    e.preventDefault(); return;
+  }
+  if (e.button !== 0) return;
+
+  if (currentTool === 'select') {
+    const hit = hitTest(mx, my);
+
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl+click: toggle this shape in/out of selection
+      if (hit) { toggleSel(hit.id); renderPropsPanel(); }
+      return;
+    }
+
+    if (hit) {
+      // If the clicked shape isn't already selected, start a fresh single selection
+      if (!selectedIds.has(hit.id)) selectOnly(hit.id);
+
+      // Build per-shape original positions for multi-drag
+      const origPositions = new Map();
+      for (const s of getSelected()) {
+        origPositions.set(s.id,
+          s.type === 'rect' ? { x: s.x, y: s.y } : { cx: s.cx, cy: s.cy });
+      }
+      dragging = { startMm: [mx, my], origPositions };
+      renderPropsPanel();
+    } else {
+      // Click on empty canvas: clear selection and start marquee
+      clearSelection();
+      marquee = { x1: mx, y1: my, x2: mx, y2: my };
+      renderPropsPanel();
+    }
+  } else {
+    // need an active phase
+    if (activePhaseId === null && Object.keys(phases).length === 0) {
+      alert('Add a phase first.'); return;
+    }
+    const phId = activePhaseId ?? parseInt(Object.keys(phases)[0]);
+    const sx = snapN(mx), sy = snapN(my);
+
+    if (currentTool === 'rect') {
+      drawing = { type:'rect', x:sx, y:sy, w:0, h:0, phaseId:phId };
+    } else if (currentTool === 'circle') {
+      drawing = { type:'circle', cx:sx, cy:sy, d:0, dInner:0, phaseId:phId, phaseInner:0 };
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const [mx, my] = evMm(e);
+  const [px, py] = evPx(e);
+
+  coordOvl.textContent  = `x: ${mx.toFixed(1)}  y: ${my.toFixed(1)} mm`;
+  cursorInfo.textContent = `x: ${mx.toFixed(1)}  y: ${my.toFixed(1)} mm`;
+
+  if (panning) {
+    const dx = px - panning.startPx[0];
+    const dy = py - panning.startPx[1];
+    cam.ox = panning.origCam.ox + dx;
+    cam.oy = panning.origCam.oy + dy;
+    return;
+  }
+
+  if (dragging) {
+    const dmx = mx - dragging.startMm[0], dmy = my - dragging.startMm[1];
+    for (const s of getSelected()) {
+      const orig = dragging.origPositions.get(s.id);
+      if (!orig) continue;
+      if (s.type === 'rect')   { s.x  = snapN(orig.x  + dmx); s.y  = snapN(orig.y  + dmy); }
+      else                     { s.cx = snapN(orig.cx + dmx); s.cy = snapN(orig.cy + dmy); }
+    }
+    if (selectedIds.size === 1) renderPropsPanel();
+    return;
+  }
+
+  if (marquee) {
+    marquee.x2 = mx;
+    marquee.y2 = my;
+    return;
+  }
+
+  if (!drawing) return;
+  const sx = snapN(mx), sy = snapN(my);
+
+  if (drawing.type === 'rect') {
+    drawing.w = sx - drawing.x;
+    drawing.h = sy - drawing.y;
+  } else if (drawing.type === 'circle') {
+    const dx = sx - drawing.cx, dy = sy - drawing.cy;
+    drawing.d = Math.max(0, 2 * Math.sqrt(dx*dx + dy*dy));
+    // snap diameter too
+    drawing.d = snapN(drawing.d) || drawing.d;
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (panning) {
+    panning = null;
+    wrap.classList.remove('panning');
+    return;
+  }
+
+  if (dragging) {
+    dragging = null;
+    updatePreview();
+    return;
+  }
+
+  if (marquee) {
+    const x1 = Math.min(marquee.x1, marquee.x2), x2 = Math.max(marquee.x1, marquee.x2);
+    const y1 = Math.min(marquee.y1, marquee.y2), y2 = Math.max(marquee.y1, marquee.y2);
+    const hit = shapes.filter(s => shapeIntersectsRect(s, x1, y1, x2, y2));
+    if (hit.length) selectedIds = new Set(hit.map(s => s.id));
+    marquee = null;
+    renderPropsPanel();
+    return;
+  }
+
+  if (!drawing) return;
+
+  // Normalise rect
+  if (drawing.type === 'rect') {
+    if (drawing.w < 0) { drawing.x += drawing.w; drawing.w = -drawing.w; }
+    if (drawing.h < 0) { drawing.y += drawing.h; drawing.h = -drawing.h; }
+    if (drawing.w > 0 && drawing.h > 0) {
+      const s = { id: nShapeId++, ...drawing };
+      shapes.push(s);
+      selectOnly(s.id);
+    }
+  } else if (drawing.type === 'circle') {
+    if (drawing.d > 0) {
+      const s = { id: nShapeId++, ...drawing };
+      shapes.push(s);
+      selectOnly(s.id);
+    }
+  }
+  drawing = null;
+  renderPropsPanel();
+  updatePreview();
+});
+
+canvas.addEventListener('mouseleave', () => {
+  coordOvl.textContent  = 'x: —  y: — mm';
+  cursorInfo.textContent = 'x: —  y: — mm';
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [px, py] = evPx(e);
+  const [mmX, mmY] = toMm(px, py);
+  const factor = e.deltaY < 0 ? 1.15 : 1/1.15;
+  cam.scale = Math.min(50, Math.max(0.05, cam.scale * factor));
+  cam.ox = px - mmX * cam.scale;
+  cam.oy = py + mmY * cam.scale;
+}, { passive: false });
+
+// ═══════════════════════════════════════════════════════
+// KEYBOARD
+// ═══════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  if (e.key === ' ') { spaceDown = true; wrap.classList.add('tool-pan'); e.preventDefault(); }
+
+  if (e.key === 'Escape') { setTool('select'); clearSelection(); renderPropsPanel(); }
+  if (e.key === 'v' || e.key === 'V') setTool('select');
+  if (e.key === 'r' || e.key === 'R') setTool('rect');
+  if (e.key === 'c' || e.key === 'C') setTool('circle');
+  if (e.key === 'f' || e.key === 'F') fitContent();
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
+    deleteSelected();
+  }
+  if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault(); duplicateSelected();
+  }
+  if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    clipboard = getSelected().map(s => JSON.parse(JSON.stringify(s)));
+  }
+  if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault(); pasteClipboard();
+  }
+  if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault(); selectedIds = new Set(shapes.map(s => s.id)); renderPropsPanel();
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.key === ' ') { spaceDown = false; wrap.classList.remove('tool-pan'); }
+});
+
+// ═══════════════════════════════════════════════════════
+// TOOL SELECTION
+// ═══════════════════════════════════════════════════════
+function setTool(t) {
+  currentTool = t;
+  drawing = null;
+  wrap.classList.toggle('tool-select', t === 'select');
+  document.querySelectorAll('.tb-btn[data-tool]').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === t);
+  });
+}
+document.querySelectorAll('.tb-btn[data-tool]').forEach(b => {
+  b.addEventListener('click', () => setTool(b.dataset.tool));
+});
+
+// ═══════════════════════════════════════════════════════
+// PHASE MANAGEMENT
+// ═══════════════════════════════════════════════════════
+function addPhase() {
+  const id = nPhaseId++;
+  phases[id] = {
+    label: `L${id}`,
+    color: PALETTE[(id - 1) % PALETTE.length],
+    Irms: 1000, phi: (id - 1) * 120, shift: 0, material: 0,
+  };
+  if (activePhaseId === null) activePhaseId = id;
+  renderPhasePanel();
+  updatePreview();
+}
+
+function deletePhase(id) {
+  if (shapes.some(s => s.phaseId === id || s.phaseInner === id)) {
+    if (!confirm(`Phase ${id} is used by shapes. Delete anyway?`)) return;
+  }
+  delete phases[id];
+  if (activePhaseId === id) {
+    const ids = Object.keys(phases);
+    activePhaseId = ids.length ? parseInt(ids[0]) : null;
+  }
+  renderPhasePanel();
+  updatePreview();
+}
+
+function renderPhasePanel() {
+  phaseList.innerHTML = '';
+  for (const [id, ph] of Object.entries(phases)) {
+    const pid = parseInt(id);
+    const row = document.createElement('div');
+    row.className = 'phase-row' + (pid === activePhaseId ? ' active' : '');
+    row.dataset.id = id;
+    row.innerHTML = `
+      <div class="phase-swatch" style="background:${ph.color}">
+        <input type="color" value="${ph.color}" title="Pick color">
+      </div>
+      <span class="phase-name">${ph.label}</span>
+      <span class="phase-id-badge">#${id}</span>
+      <button class="phase-del" title="Delete phase">×</button>`;
+    row.querySelector('input[type=color]').addEventListener('input', ev => {
+      phases[pid].color = ev.target.value;
+      row.querySelector('.phase-swatch').style.background = ev.target.value;
+      updatePreview();
+    });
+    row.querySelector('.phase-del').addEventListener('click', ev => {
+      ev.stopPropagation(); deletePhase(pid);
+    });
+    row.addEventListener('click', () => {
+      activePhaseId = pid;
+      document.querySelectorAll('.phase-row').forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+    });
+    phaseList.appendChild(row);
+  }
+}
+document.getElementById('add-phase-btn').addEventListener('click', addPhase);
+
+// ═══════════════════════════════════════════════════════
+// PROPERTIES PANEL
+// ═══════════════════════════════════════════════════════
+function renderPropsPanel() {
+  const selected = getSelected();
+
+  // ── Empty state ──────────────────────────────────────
+  if (selected.length === 0) {
+    propsDiv.innerHTML = `<div class="empty-state">No shape selected.<br><br>
+      <b>Shortcuts:</b><br>V — Select &nbsp; R — Rect &nbsp; C — Circle<br>
+      F — Fit &nbsp; Del — Delete &nbsp; Ctrl+D — Duplicate<br>
+      Ctrl+C/V — Copy/Paste &nbsp; Ctrl+A — Select All<br>
+      Scroll — Zoom &nbsp; Mid‑drag / Space+drag — Pan</div>`;
+    return;
+  }
+
+  // ── Multi-select panel ───────────────────────────────
+  if (selected.length > 1) {
+    const phaseOptions = [0, ...Object.keys(phases).map(Number)].map(pid =>
+      `<option value="${pid}">${pid === 0 ? '0 — Erase' : `${pid} — ${phases[pid]?.label || '?'}`}</option>`
+    ).join('');
+    propsDiv.innerHTML = `
+      <div class="prop-block">
+        <div class="prop-title">${selected.length} shapes selected</div>
+        <div class="prop-grid cols1">
+          <div class="prop-field">
+            <span class="prop-lbl">Set Phase for All</span>
+            <select class="prop-sel" id="multi-phase">
+              <option value="">— choose —</option>${phaseOptions}
+            </select>
+          </div>
+        </div>
+        <div class="prop-actions">
+          <button class="prop-btn" id="dup-btn">⎘ Duplicate</button>
+          <button class="prop-btn danger" id="del-btn">🗑 Delete All</button>
+        </div>
+      </div>`;
+    document.getElementById('multi-phase').addEventListener('change', e => {
+      if (!e.target.value) return;
+      const phId = parseInt(e.target.value);
+      for (const s of selected) s.phaseId = phId;
+      updatePreview();
+    });
+    document.getElementById('dup-btn').addEventListener('click', duplicateSelected);
+    document.getElementById('del-btn').addEventListener('click', deleteSelected);
+    return;
+  }
+
+  // ── Single-shape panel ───────────────────────────────
+  const s = selected[0];
+
+  const ph = phases[s.phaseId] || {};
+  const matOptions = MATERIALS.map((m, i) =>
+    `<option value="${i}" ${i === (ph.material ?? 0) ? 'selected' : ''}>${i}: ${m}</option>`
+  ).join('');
+  const phaseOptions = [0, ...Object.keys(phases).map(Number)].map(pid =>
+    `<option value="${pid}" ${pid === s.phaseId ? 'selected' : ''}>${pid === 0 ? '0 — Erase' : `${pid} — ${phases[pid]?.label || '?'}`}</option>`
+  ).join('');
+
+  let shapeFields = '';
+  if (s.type === 'rect') {
+    shapeFields = `
+      <div class="prop-grid">
+        <div class="prop-field"><span class="prop-lbl">X (mm)</span>
+          <input class="prop-inp" id="p-x" type="number" step="${snapVal||1}" value="${fmtMm(s.x)}"></div>
+        <div class="prop-field"><span class="prop-lbl">Y (mm)</span>
+          <input class="prop-inp" id="p-y" type="number" step="${snapVal||1}" value="${fmtMm(s.y)}"></div>
+        <div class="prop-field"><span class="prop-lbl">Width (mm)</span>
+          <input class="prop-inp" id="p-w" type="number" step="${snapVal||1}" min="0" value="${fmtMm(s.w)}"></div>
+        <div class="prop-field"><span class="prop-lbl">Height (mm)</span>
+          <input class="prop-inp" id="p-h" type="number" step="${snapVal||1}" min="0" value="${fmtMm(s.h)}"></div>
+      </div>`;
+  } else if (s.type === 'circle') {
+    const innerPhOpts = [0, ...Object.keys(phases).map(Number)].map(pid =>
+      `<option value="${pid}" ${pid === (s.phaseInner||0) ? 'selected' : ''}>${pid === 0 ? '0 — Air' : `${pid} — ${phases[pid]?.label || '?'}`}</option>`
+    ).join('');
+    shapeFields = `
+      <div class="prop-grid">
+        <div class="prop-field"><span class="prop-lbl">Center X (mm)</span>
+          <input class="prop-inp" id="p-cx" type="number" step="${snapVal||1}" value="${fmtMm(s.cx)}"></div>
+        <div class="prop-field"><span class="prop-lbl">Center Y (mm)</span>
+          <input class="prop-inp" id="p-cy" type="number" step="${snapVal||1}" value="${fmtMm(s.cy)}"></div>
+        <div class="prop-field"><span class="prop-lbl">Outer Ø (mm)</span>
+          <input class="prop-inp" id="p-d" type="number" step="${snapVal||1}" min="0" value="${fmtMm(s.d)}"></div>
+        <div class="prop-field"><span class="prop-lbl">Inner Ø (mm) <span style="color:var(--text3)">(annulus)</span></span>
+          <input class="prop-inp" id="p-di" type="number" step="${snapVal||1}" min="0" value="${fmtMm(s.dInner||0)}"></div>
+      </div>
+      <div class="prop-grid cols1" id="inner-phase-row" style="${s.dInner > 0 ? '' : 'display:none'}">
+        <div class="prop-field"><span class="prop-lbl">Inner Phase</span>
+          <select class="prop-sel" id="p-phasein">${innerPhOpts}</select></div>
+      </div>`;
+  }
+
+  const phaseBlock = s.phaseId && phases[s.phaseId] ? `
+    <div class="prop-block">
+      <div class="prop-title">Phase ${s.phaseId} — ${ph.label || ''}</div>
+      <div class="prop-grid">
+        <div class="prop-field"><span class="prop-lbl">I rms (A)</span>
+          <input class="prop-inp" id="ph-irms" type="number" min="0" value="${ph.Irms}"></div>
+        <div class="prop-field"><span class="prop-lbl">Phase φ (°)</span>
+          <input class="prop-inp" id="ph-phi" type="number" value="${ph.phi}"></div>
+        <div class="prop-field"><span class="prop-lbl">Extra Shift (°)</span>
+          <input class="prop-inp" id="ph-shift" type="number" value="${ph.shift}"></div>
+      </div>
+      <div class="prop-grid cols1" style="margin-top:8px">
+        <div class="prop-field"><span class="prop-lbl">Material</span>
+          <select class="prop-sel" id="ph-mat">${matOptions}</select></div>
+        <div class="prop-field"><span class="prop-lbl">Label</span>
+          <input class="prop-inp" id="ph-lbl" type="text" value="${ph.label}"></div>
+      </div>
+    </div>` : '';
+
+  propsDiv.innerHTML = `
+    <div class="prop-block">
+      <div class="prop-title">${s.type === 'rect' ? '▭ Rectangle' : '● Circle'} #${s.id}</div>
+      ${shapeFields}
+      <div class="prop-grid" style="margin-top:8px">
+        <div class="prop-field cols1"><span class="prop-lbl">Phase</span>
+          <select class="prop-sel" id="p-phase">${phaseOptions}</select></div>
+      </div>
+      <div class="prop-actions">
+        <button class="prop-btn" id="dup-btn">⎘ Duplicate</button>
+        <button class="prop-btn danger" id="del-btn">🗑 Delete</button>
+      </div>
+    </div>
+    ${phaseBlock}`;
+
+  // Bind inputs
+  const bind = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('input', fn); };
+
+  if (s.type === 'rect') {
+    bind('p-x', ev => { s.x = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('p-y', ev => { s.y = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('p-w', ev => { s.w = Math.max(0,parseFloat(ev.target.value)||0); updatePreview(); });
+    bind('p-h', ev => { s.h = Math.max(0,parseFloat(ev.target.value)||0); updatePreview(); });
+  } else if (s.type === 'circle') {
+    bind('p-cx', ev => { s.cx = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('p-cy', ev => { s.cy = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('p-d',  ev => { s.d  = Math.max(0,parseFloat(ev.target.value)||0); updatePreview(); });
+    bind('p-di', ev => {
+      s.dInner = Math.max(0, parseFloat(ev.target.value)||0);
+      const row = document.getElementById('inner-phase-row');
+      if (row) row.style.display = s.dInner > 0 ? '' : 'none';
+      updatePreview();
+    });
+    bind('p-phasein', ev => { s.phaseInner = parseInt(ev.target.value)||0; updatePreview(); });
+  }
+
+  bind('p-phase', ev => {
+    s.phaseId = parseInt(ev.target.value)||0;
+    renderPropsPanel(); updatePreview();
+  });
+
+  if (s.phaseId && phases[s.phaseId]) {
+    bind('ph-irms',  ev => { phases[s.phaseId].Irms  = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('ph-phi',   ev => { phases[s.phaseId].phi   = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('ph-shift', ev => { phases[s.phaseId].shift = parseFloat(ev.target.value)||0; updatePreview(); });
+    bind('ph-mat',   ev => { phases[s.phaseId].material = parseInt(ev.target.value)||0; updatePreview(); });
+    bind('ph-lbl',   ev => { phases[s.phaseId].label = ev.target.value; renderPhasePanel(); updatePreview(); });
+  }
+
+  document.getElementById('dup-btn')?.addEventListener('click', duplicateSelected);
+  document.getElementById('del-btn')?.addEventListener('click', deleteSelected);
+}
+
+// ═══════════════════════════════════════════════════════
+// SHAPE ACTIONS
+// ═══════════════════════════════════════════════════════
+function deleteSelected() {
+  if (!selectedIds.size) return;
+  shapes = shapes.filter(s => !selectedIds.has(s.id));
+  clearSelection();
+  renderPropsPanel();
+  updatePreview();
+}
+
+function duplicateSelected() {
+  const sel = getSelected();
+  if (!sel.length) return;
+  const off = snapVal || 10;
+  const newIds = new Set();
+  for (const s of sel) {
+    const copy = JSON.parse(JSON.stringify(s));
+    copy.id = nShapeId++;
+    if (copy.type === 'rect') { copy.x += off; copy.y += off; }
+    else                      { copy.cx += off; copy.cy += off; }
+    shapes.push(copy);
+    newIds.add(copy.id);
+  }
+  selectedIds = newIds;
+  renderPropsPanel();
+  updatePreview();
+}
+
+function pasteClipboard() {
+  if (!clipboard.length) return;
+  const off = snapVal || 10;
+  const newIds = new Set();
+  for (const s of clipboard) {
+    const copy = JSON.parse(JSON.stringify(s));
+    copy.id = nShapeId++;
+    if (copy.type === 'rect') { copy.x += off; copy.y += off; }
+    else                      { copy.cx += off; copy.cy += off; }
+    shapes.push(copy);
+    newIds.add(copy.id);
+  }
+  selectedIds = newIds;
+  renderPropsPanel();
+  updatePreview();
+}
+
+// ═══════════════════════════════════════════════════════
+// FIT / RESET VIEW
+// ═══════════════════════════════════════════════════════
+function fitContent() {
+  if (!shapes.length) { resetView(); return; }
+  let x0=Infinity, x1=-Infinity, y0=Infinity, y1=-Infinity;
+  for (const s of shapes) {
+    if (s.type === 'rect') {
+      x0=Math.min(x0,s.x); x1=Math.max(x1,s.x+s.w);
+      y0=Math.min(y0,s.y); y1=Math.max(y1,s.y+s.h);
+    } else if (s.type === 'circle') {
+      x0=Math.min(x0,s.cx-s.d/2); x1=Math.max(x1,s.cx+s.d/2);
+      y0=Math.min(y0,s.cy-s.d/2); y1=Math.max(y1,s.cy+s.d/2);
+    }
+  }
+  const W = canvas.width, H = canvas.height, pad = 40;
+  const mmW = x1-x0, mmH = y1-y0;
+  if (mmW <= 0 || mmH <= 0) return;
+  cam.scale = Math.min((W-2*pad)/mmW, (H-2*pad)/mmH);
+  const cw = mmW * cam.scale, ch = mmH * cam.scale;
+  cam.ox = (W - cw) / 2 - x0 * cam.scale;
+  cam.oy = (H - ch) / 2 + y1 * cam.scale;
+}
+
+function resetView() {
+  cam.scale = 2;
+  cam.ox = canvas.width * 0.12;
+  cam.oy = canvas.height * 0.88;
+}
+
+document.getElementById('fit-btn').addEventListener('click', fitContent);
+document.getElementById('reset-btn').addEventListener('click', resetView);
+
+// ═══════════════════════════════════════════════════════
+// SNAP SELECTOR
+// ═══════════════════════════════════════════════════════
+document.getElementById('snap-sel').addEventListener('change', e => {
+  snapVal = parseFloat(e.target.value) || 0;
+});
+
+// ═══════════════════════════════════════════════════════
+// .ic GENERATION
+// ═══════════════════════════════════════════════════════
+function generateIC() {
+  const lines = ['# Generated by CSD Geometry Editor', ''];
+
+  const usedIds = new Set();
+  for (const s of shapes) {
+    if (s.phaseId && s.phaseId !== 0) usedIds.add(s.phaseId);
+    if (s.type === 'circle' && s.phaseInner && s.phaseInner !== 0) usedIds.add(s.phaseInner);
+  }
+  const sorted = [...usedIds].sort((a,b) => a-b);
+
+  if (sorted.length) {
+    for (const id of sorted) {
+      const ph = phases[id];
+      if (ph) lines.push(`material(${id},${ph.material})`);
+    }
+    lines.push('');
+    for (const id of sorted) {
+      const ph = phases[id];
+      if (ph) lines.push(`current(${id},${ph.Irms},${ph.phi},${ph.shift})`);
+    }
+    lines.push('');
+  }
+
+  for (const s of shapes) {
+    if (s.type === 'rect') {
+      if (s.w > 0 && s.h > 0)
+        lines.push(`r(${fmtMm(s.x)},${fmtMm(s.y)},${fmtMm(s.w)},${fmtMm(s.h)},${s.phaseId})`);
+    } else if (s.type === 'circle') {
+      if (s.d > 0) {
+        if (!s.dInner || s.dInner <= 0)
+          lines.push(`c(${fmtMm(s.cx)},${fmtMm(s.cy)},${fmtMm(s.d)},${s.phaseId})`);
+        else
+          lines.push(`c(${fmtMm(s.cx)},${fmtMm(s.cy)},${fmtMm(s.d)},${s.phaseId},${fmtMm(s.dInner)},${s.phaseInner||0})`);
+      }
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function updatePreview() {
+  if (document.activeElement === preview) return;  // don't overwrite mid-edit
+  preview.value = generateIC();
+}
+
+document.getElementById('copy-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(preview.value).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+});
+
+document.getElementById('download-btn').addEventListener('click', () => {
+  const blob = new Blob([preview.value], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.download = 'geometry.ic';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ═══════════════════════════════════════════════════════
+// .ic IMPORT
+// ═══════════════════════════════════════════════════════
+function importIC(text, noConfirm = false) {
+  const newShapes  = [];
+  const newPhases  = {};
+  const vars       = {};
+  let   pid        = 1;
+  let   sid        = nShapeId;
+
+  // minimal variable evaluator (literals + simple var refs)
+  function evalArg(a) {
+    a = a.trim();
+    if (vars[a] !== undefined) return vars[a];
+    const n = parseFloat(a);
+    return isNaN(n) ? 0 : n;
+  }
+
+  const lines = text.split('\n');
+
+  // First pass: collect variable, current, material declarations
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const m = line.match(/^([a-z]+)\((.+)\)/i);
+    if (!m) continue;
+    const cmd = m[1].toLowerCase();
+    const args = m[2].split(',').map(a => a.trim());
+
+    if (cmd === 'v' && args.length === 2) {
+      vars[args[0]] = parseFloat(args[1]) || 0;
+    } else if (cmd === 'current' && args.length === 4) {
+      const id = Math.round(evalArg(args[0]));
+      if (!newPhases[id]) newPhases[id] = { label:`L${id}`, color:PALETTE[(pid-1)%PALETTE.length], Irms:0, phi:0, shift:0, material:0 };
+      newPhases[id].Irms  = evalArg(args[1]);
+      newPhases[id].phi   = evalArg(args[2]);
+      newPhases[id].shift = evalArg(args[3]);
+      pid++;
+    } else if (cmd === 'material' && args.length === 2) {
+      const id = Math.round(evalArg(args[0]));
+      if (!newPhases[id]) newPhases[id] = { label:`L${id}`, color:PALETTE[(pid-1)%PALETTE.length], Irms:0, phi:0, shift:0, material:0 };
+      newPhases[id].material = Math.round(evalArg(args[1]));
+    }
+  }
+
+  // Assign colours to phases that got one from current/material
+  let ci = 0;
+  for (const id of Object.keys(newPhases).map(Number).sort((a,b)=>a-b)) {
+    newPhases[id].color = PALETTE[ci++ % PALETTE.length];
+  }
+
+  // Second pass: geometry only (no loop expansion — flat files only)
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const m = line.match(/^([a-z]+)\((.+)\)/i);
+    if (!m) continue;
+    const cmd = m[1].toLowerCase();
+    const args = m[2].split(',').map(evalArg);
+
+    if (cmd === 'r' && args.length === 5) {
+      newShapes.push({ id:sid++, type:'rect', x:args[0], y:args[1], w:args[2], h:args[3], phaseId:Math.round(args[4]) });
+    } else if (cmd === 'c') {
+      if (args.length === 4) {
+        newShapes.push({ id:sid++, type:'circle', cx:args[0], cy:args[1], d:args[2], dInner:0, phaseId:Math.round(args[3]), phaseInner:0 });
+      } else if (args.length === 6) {
+        newShapes.push({ id:sid++, type:'circle', cx:args[0], cy:args[1], d:args[2], phaseId:Math.round(args[3]), dInner:args[4], phaseInner:Math.round(args[5]) });
+      }
+    }
+  }
+
+  if (!newShapes.length && !Object.keys(newPhases).length) {
+    alert('No geometry or phase definitions found.\nNote: files with loops (l(...)/break) are not supported — use the flat generated output.'); return;
+  }
+
+  if (!noConfirm && !confirm(`Load ${newShapes.length} shape(s) and ${Object.keys(newPhases).length} phase(s)?\n(This will replace the current canvas.)`)) return;
+
+  shapes = newShapes;
+  phases = newPhases;
+  nShapeId = sid;
+  nPhaseId = Math.max(...Object.keys(newPhases).map(Number), 0) + 1;
+  clearSelection();
+  activePhaseId = Object.keys(newPhases).length ? parseInt(Object.keys(newPhases)[0]) : null;
+
+  renderPhasePanel();
+  renderPropsPanel();
+  updatePreview();
+  setTimeout(fitContent, 50);
+}
+
+// Parse button: load shapes from the textarea content
+document.getElementById('parse-btn').addEventListener('click', () => {
+  importIC(preview.value, true);
+});
+
+// Ctrl+Enter in the textarea also triggers load
+preview.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    importIC(preview.value, true);
+  }
+});
+
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+document.getElementById('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => importIC(ev.target.result);
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// Also allow drag-and-drop onto canvas
+wrap.addEventListener('dragover', e => e.preventDefault());
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => importIC(ev.target.result);
+  reader.readAsText(file);
+});
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function init() {
+  resizeCanvas();
+  resetView();
+  // Default 3-phase setup
+  for (let i = 0; i < 3; i++) addPhase();
+  phases[1].phi = 0;   phases[1].label = 'L1';
+  phases[2].phi = 120; phases[2].label = 'L2';
+  phases[3].phi = 240; phases[3].label = 'L3';
+  activePhaseId = 1;
+  renderPhasePanel();
+  renderPropsPanel();
+  updatePreview();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

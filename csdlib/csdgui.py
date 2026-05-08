@@ -135,7 +135,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
     the analysis of current density of given geometry.
     """
 
-    def __init__(self, master, XsecArr, dXmm, dYmm):
+    def __init__(self, master, XsecArr, dXmm, dYmm, ic_currents=None, ic_materials=None):
         super().__init__(master)
         self.title("Pro Current Density Solver")
 
@@ -147,6 +147,8 @@ class currentDensityWindowPro(ctk.CTkToplevel):
         self.dYmm = dYmm
         self.lenght = 1000
         self.CuGamma = 391.1  # [W/mK]
+        self.ic_currents = ic_currents or []
+        self.ic_materials = ic_materials or []
 
         # set grid layout
         self.grid_columnconfigure(0, weight=1)
@@ -164,7 +166,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
         self.tabview.add("Input")
         self.tabview.add("Material")
         self.tabview.add("Thermal")
-        
+
         self.setup_input_tab()
         self.setup_material_tab()
         self.setup_thermal_tab()
@@ -188,6 +190,17 @@ class currentDensityWindowPro(ctk.CTkToplevel):
         self.resultsButton.grid(row=1, column=2, padx=10, pady=(5, 10), sticky="ew")
 
         self.isSolved = False
+
+        # Pre-fill current entry from .ic data if available
+        if self.ic_currents:
+            parts = []
+            for entry in self.ic_currents:
+                rms = float(entry[1])
+                deg = float(entry[2]) + float(entry[3])
+                parts += [f"{rms:.4g}", f"{deg:.4g}"]
+            self.Irms_txt.delete(0, "end")
+            self.Irms_txt.insert(0, ";".join(parts))
+
         self.readSettings()
 
     def setup_input_tab(self):

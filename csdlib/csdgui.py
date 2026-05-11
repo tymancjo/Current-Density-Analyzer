@@ -135,7 +135,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
     the analysis of current density of given geometry.
     """
 
-    def __init__(self, master, XsecArr, dXmm, dYmm, ic_currents=None, ic_materials=None):
+    def __init__(self, master, XsecArr, dXmm, dYmm, ic_currents=None, ic_materials=None, ic_custom_materials=None):
         super().__init__(master)
         self.title("Pro Current Density Solver")
 
@@ -147,8 +147,9 @@ class currentDensityWindowPro(ctk.CTkToplevel):
         self.dYmm = dYmm
         self.lenght = 1000
         self.CuGamma = 391.1  # [W/mK]
-        self.ic_currents = ic_currents or []
-        self.ic_materials = ic_materials or []
+        self.ic_currents         = ic_currents or []
+        self.ic_materials        = ic_materials or []
+        self.ic_custom_materials = ic_custom_materials or {}
 
         # set grid layout
         self.grid_columnconfigure(0, weight=1)
@@ -1116,7 +1117,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
             fig = plt.figure("Power Results Window")
             ax = fig.add_subplot(1, 1, 1)
 
-            my_cmap = matplotlib.cm.get_cmap("jet")
+            my_cmap = matplotlib.colormaps["jet"]
             my_cmap.set_under("w")
 
             im = ax.imshow(
@@ -1201,7 +1202,7 @@ class currentDensityWindowPro(ctk.CTkToplevel):
             fig = plt.figure("Temperature Results Window")
             ax = fig.add_subplot(1, 1, 1)
 
-            my_cmap = matplotlib.cm.get_cmap("jet")
+            my_cmap = matplotlib.colormaps["jet"]
             my_cmap.set_under("w")
 
             im = ax.imshow(
@@ -1933,7 +1934,7 @@ class forceWindow(ctk.CTkToplevel):
         fig.clear()
         ax = plt.axes()
 
-        my_cmap = matplotlib.cm.get_cmap("jet")
+        my_cmap = matplotlib.colormaps["jet"]
         my_cmap.set_under("w")
 
         im = ax.imshow(

@@ -345,6 +345,7 @@ def showMePro(*arg):
             root, XSecArray, dXmm, dYmm,
             ic_currents=ic_currents,
             ic_materials=ic_materials,
+            ic_custom_materials=ic_custom_materials,
         )
 
 
@@ -474,13 +475,39 @@ def vectorizeTheArray(*arg):
         M_list = csdos.read_file_to_list("setup/materials.txt")[1:]
         MaterialsDB = csdos.get_material_from_list(M_list) if M_list else []
 
-        if MaterialsDB:
-            this_material = MaterialsDB[0]
-        else:
-            this_material = csdos.Material(
-                "Cu", config["conductivity"], config["temRcoeff"], 0, 0
-            )
-        phases_material = [this_material] * number_of_phases
+        default_material = MaterialsDB[0] if MaterialsDB else csdos.Material(
+            "Cu", config["conductivity"], config["temRcoeff"], 0, 0
+        )
+
+        # Build a phase_id → Material mapping from ic_materials + ic_custom_materials.
+        # Entries where the material ref is an int use the library by index;
+        # entries where it is a string use a custom material defined via defmat().
+        phase_material_map = {}
+        for entry in ic_materials:
+            phase_id = int(entry[0])
+            mat_ref  = entry[1]
+            if isinstance(mat_ref, str):
+                if mat_ref in ic_custom_materials:
+                    m = ic_custom_materials[mat_ref]
+                    phase_material_map[phase_id] = csdos.Material(
+                        mat_ref,
+                        m['sigma'], m['alpha'],
+                        m['rho'],   m['cp'],
+                        m['mi_r'],  m['k'] if m['k'] else 400,
+                    )
+                else:
+                    print(f"[vectorize] Unknown material name '{mat_ref}' — using default")
+            else:
+                idx = int(mat_ref)
+                if 0 <= idx < len(MaterialsDB):
+                    phase_material_map[phase_id] = MaterialsDB[idx]
+                else:
+                    print(f"[vectorize] Material index {idx} out of range — using default")
+
+        phases_material = [
+            phase_material_map.get(int(phase_val), default_material)
+            for phase_val in list_of_phases
+        ]
 
         (
             resultsCurrentVector,
@@ -589,7 +616,7 @@ def drawGeometryArray(theArrayToDisplay):
     title_font = {"size": "11", "color": "black", "weight": "normal"}
     axis_font = {"size": "10"}
 
-    my_cmap = matplotlib.cm.get_cmap("jet")
+    my_cmap = matplotlib.colormaps["jet"]
     my_cmap.set_under("w")
 
     figGeom = plt.figure(1)
@@ -649,7 +676,7 @@ def showResults():
         ax_cd = fig.add_subplot(1, 1, 1)
 
     # ── Current density plot ──────────────────────────────────────────────────
-    my_cmap = matplotlib.cm.get_cmap("jet")
+    my_cmap = matplotlib.colormaps["jet"]
     my_cmap.set_under("w")
 
     im_cd = ax_cd.imshow(
@@ -677,7 +704,7 @@ def showResults():
     if has_temp:
         temp_display = temperatureArray[min_row:max_row, min_col:max_col]
 
-        temp_cmap = matplotlib.cm.get_cmap("YlOrRd")
+        temp_cmap = matplotlib.colormaps["YlOrRd"]
         temp_cmap.set_under("w")
 
         t_max = np.max(temp_display)
@@ -772,8 +799,9 @@ def mainSetup(startSize=3):
     temperature = 35
 
 
-ic_currents  = []   # populated by getCanvas / InterCode from .ic current() lines
-ic_materials = []   # populated by getCanvas / InterCode from .ic material() lines
+ic_currents        = []   # populated by getCanvas / InterCode from .ic current() lines
+ic_materials       = []   # populated by getCanvas / InterCode from .ic material() lines
+ic_custom_materials = {}  # populated from .ic defmat() lines
 
 
 def setParameters(*arg):
@@ -1113,9 +1141,9 @@ def pasteSelectionAtPoint(event, dataArray, canvas):
 
 
 def InterCode():
-    global ic_currents, ic_materials
+    global ic_currents, ic_materials, ic_custom_materials
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps, ic_currents, ic_materials = ic.textToCode(codeLines)
+    codeSteps, ic_currents, ic_materials, ic_custom_materials = ic.textToCode(codeLines)
 
     if codeSteps:
         for step in codeSteps:
@@ -1125,9 +1153,9 @@ def InterCode():
 
 
 def getCanvas():
-    global ic_currents, ic_materials
+    global ic_currents, ic_materials, ic_custom_materials
     codeLines = text_input.get("1.0", END).split("\n")
-    codeSteps, ic_currents, ic_materials = ic.textToCode(codeLines)
+    codeSteps, ic_currents, ic_materials, ic_custom_materials = ic.textToCode(codeLines)
 
     X = []
     Y = []

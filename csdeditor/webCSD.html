@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>webCSD — Python Solver (Pyodide)</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; font-size: 13px; background: #1a1a2e; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+#topbar { background: #16213e; padding: 8px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #0f3460; flex-shrink: 0; }
+#topbar h1 { font-size: 15px; color: #e94560; margin-right: 8px; }
+#status-badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; background: #0f3460; color: #aaa; }
+#status-badge.ok { background: #1a472a; color: #6fcf97; }
+#status-badge.err { background: #4a1a1a; color: #eb5757; }
+#status-badge.busy { background: #2d2a1a; color: #f2c94c; }
+#main { flex: 1; display: flex; overflow: hidden; }
+
+#left-panel { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid #0f3460; }
+#ic-header { padding: 6px 10px; background: #16213e; border-bottom: 1px solid #0f3460; display: flex; align-items: center; justify-content: space-between; }
+#ic-header span { font-size: 11px; color: #888; }
+#ic-code { flex: 1; font-family: 'Courier New', monospace; font-size: 12px; background: #0d1117; color: #c9d1d9; border: none; resize: none; padding: 10px; outline: none; line-height: 1.5; }
+#ic-code::placeholder { color: #444; }
+
+#controls { padding: 10px; background: #16213e; border-top: 1px solid #0f3460; display: flex; flex-direction: column; gap: 8px; }
+.ctrl-row { display: flex; align-items: center; gap: 6px; }
+.ctrl-row label { width: 90px; color: #888; font-size: 11px; }
+.ctrl-row input { flex: 1; background: #0d1117; border: 1px solid #0f3460; color: #e0e0e0; padding: 3px 6px; border-radius: 4px; font-size: 12px; }
+#solve-btn { width: 100%; padding: 8px; background: #e94560; border: none; color: #fff; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+#solve-btn:hover { background: #c73652; }
+#solve-btn:disabled { background: #555; cursor: default; }
+
+#right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#canvas-area { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #0d1117; }
+#heatmap-canvas { display: block; image-rendering: pixelated; }
+#canvas-hint { position: absolute; color: #444; font-size: 14px; pointer-events: none; }
+#heatmap-toggle-row { position: absolute; top: 8px; left: 8px; display: flex; align-items: center; gap: 6px; background: rgba(13,17,23,0.8); padding: 4px 8px; border-radius: 6px; }
+#heatmap-toggle-row label { font-size: 11px; color: #888; }
+#legend-bar { position: absolute; bottom: 8px; right: 8px; display: none; flex-direction: column; align-items: flex-end; gap: 2px; }
+#legend-bar.visible { display: flex; }
+#legend-gradient { width: 12px; height: 120px; border-radius: 4px; background: linear-gradient(to bottom, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff); }
+.legend-label { font-size: 10px; color: #aaa; }
+
+#results-panel { height: 160px; flex-shrink: 0; border-top: 1px solid #0f3460; background: #16213e; padding: 8px 12px; overflow-y: auto; }
+#results-panel h3 { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 6px; }
+#results-table { display: flex; flex-direction: column; gap: 3px; }
+.res-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 4px; border-radius: 3px; }
+.res-row:hover { background: #1a2a3a; }
+.res-lbl { color: #aaa; }
+.res-val { color: #e0e0e0; font-family: monospace; }
+.res-total { color: #f2c94c; font-weight: bold; }
+#pyodide-log { font-size: 10px; color: #666; font-family: monospace; max-height: 40px; overflow-y: auto; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>webCSD</h1>
+  <span>Python solver via Pyodide</span>
+  <span id="status-badge">Loading Pyodide…</span>
+</div>
+
+<div id="main">
+  <div id="left-panel">
+    <div id="ic-header">
+      <span>Inner Code (.ic)</span>
+      <button id="load-example-btn" style="font-size:10px;padding:2px 6px;background:#0f3460;border:1px solid #2a4a7a;color:#aaa;border-radius:4px;cursor:pointer;">Load example</button>
+    </div>
+    <textarea id="ic-code" spellcheck="false" placeholder="# Paste .ic code here
+# Example:
+# material(1, 0)
+# current(1, 1000, 0, 0)
+# r(0, 0, 10, 60, 1)"></textarea>
+    <div id="controls">
+      <div class="ctrl-row"><label>Frequency (Hz)</label><input id="c-freq" type="number" value="50" min="0"></div>
+      <div class="ctrl-row"><label>Length (mm)</label><input id="c-len" type="number" value="1000" min="1"></div>
+      <div class="ctrl-row"><label>Temperature (°C)</label><input id="c-temp" type="number" value="20"></div>
+      <div class="ctrl-row"><label>Cell size (mm, 0=auto)</label><input id="c-cell" type="number" value="0" min="0" step="0.5"></div>
+      <button id="solve-btn" disabled>⚡ Solve (Python)</button>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div id="canvas-area">
+      <canvas id="heatmap-canvas"></canvas>
+      <div id="canvas-hint">Solve to see heatmap</div>
+      <div id="heatmap-toggle-row">
+        <input type="checkbox" id="heatmap-toggle" checked>
+        <label for="heatmap-toggle">Current density heatmap</label>
+      </div>
+      <div id="legend-bar">
+        <span class="legend-label" id="legend-max">—</span>
+        <div id="legend-gradient"></div>
+        <span class="legend-label">0</span>
+        <span class="legend-label" style="color:#555">A/mm²</span>
+      </div>
+    </div>
+    <div id="results-panel">
+      <h3>Results</h3>
+      <div id="results-table"><span style="color:#444;font-size:11px;">No results yet.</span></div>
+      <div id="pyodide-log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     INLINE PYTHON CODE — loaded into Pyodide
+     ═══════════════════════════════════════════ -->
+<script id="py-solver" type="text/python">
+import math as _math
+import json
+import numpy as np
+
+# ── Safe evaluator ────────────────────────────────
+_SAFE_G = {
+    "__builtins__": {},
+    "sin": _math.sin, "cos": _math.cos, "tan": _math.tan,
+    "asin": _math.asin, "acos": _math.acos, "atan": _math.atan, "atan2": _math.atan2,
+    "sqrt": _math.sqrt, "exp": _math.exp, "log": _math.log, "log10": _math.log10,
+    "abs": abs, "round": round, "int": int, "float": float,
+    "min": min, "max": max, "ceil": _math.ceil, "floor": _math.floor,
+    "pi": _math.pi, "e": _math.e, "math": _math,
+}
+
+def _eval(expr, variables):
+    return float(eval(str(expr).strip(), _SAFE_G, dict(variables)))
+
+def _resolve_args(ar, variables):
+    resolved = []
+    for arg in ar:
+        try:
+            resolved.append(_eval(arg, variables))
+        except Exception:
+            resolved.append(arg)
+    return resolved
+
+# ── Geometry primitives ───────────────────────────
+def addRect(x0, y0, W, H, Set, draw=True, shift=(0,0), XSecArray=None, dXmm=1):
+    xE, yE = x0+W, y0+H
+    if draw:
+        x0s, y0s = x0-shift[0], y0-shift[1]
+        xEs, yEs = x0s+W, y0s+H
+        rows, cols = XSecArray.shape
+        for x in range(cols):
+            for y in range(rows):
+                xmm = x*dXmm + dXmm/2
+                ymm = y*dXmm + dXmm/2
+                if x0s <= xmm <= xEs and y0s <= ymm <= yEs:
+                    XSecArray[y, x] = Set
+    return [x0, y0, xE, yE]
+
+def addCircle(x0, y0, D1, Set, D2=0, Set2=0, draw=True, shift=(0,0), XSecArray=None, dXmm=1):
+    if draw:
+        cx, cy = x0-shift[0], y0-shift[1]
+        r1sq, r2sq = (D1/2)**2, (D2/2)**2
+        rows, cols = XSecArray.shape
+        for x in range(cols):
+            for y in range(rows):
+                xmm = x*dXmm + dXmm/2
+                ymm = y*dXmm + dXmm/2
+                d2 = (xmm-cx)**2 + (ymm-cy)**2
+                if d2 < r2sq:
+                    XSecArray[y, x] = Set2
+                elif d2 <= r1sq:
+                    XSecArray[y, x] = Set
+    return [x0-D1/2, y0-D1/2, x0+D1/2, y0+D1/2]
+
+def _shift_phase(phaseId, dX, dY, arr, remain=0):
+    tmp = np.copy(arr)
+    tmp[tmp != phaseId] = 0
+    arr[arr == phaseId] = remain
+    oR, oC = arr.shape
+    for r in range(oR):
+        for c in range(oC):
+            if tmp[r, c] == phaseId:
+                nR, nC = (r+dY) % oR, (c+dX) % oC
+                arr[nR, nC] = tmp[r, c]
+
+def moveCells(phase, sx, sy, XSecArray=None, dXmm=1):
+    _shift_phase(int(phase), int(sx/dXmm), int(sy/dXmm), XSecArray)
+
+def copyCells(phase, sx, sy, XSecArray=None, dXmm=1):
+    _shift_phase(int(phase), int(sx/dXmm), int(sy/dXmm), XSecArray, remain=int(phase))
+
+# ── Loop unwinding ────────────────────────────────
+def codeLoops(input_text):
+    if 'break' in input_text:
+        bi = input_text.index('break')
+        rest = input_text[bi+1:]
+        input_text = input_text[:bi]
+    else:
+        rest = []
+    for line_nr, line in enumerate(reversed(input_text)):
+        idx = len(input_text) - line_nr
+        if len(line) > 3:
+            cmd = line[0].lower()
+            if cmd == 'l':
+                args = line[2:-1].split(',')
+                if len(args) == 1:
+                    loops = int(args[0]) - 1
+                    loop_code = input_text[idx:]
+                    input_text[idx-1] = "\n"
+                    for _ in range(loops):
+                        input_text.extend(loop_code)
+                    codeLoops(input_text)
+    return input_text + rest
+
+# ── IC parser ─────────────────────────────────────
+def textToCode(input_text):
+    commands = {
+        'c': [addCircle, [4,6]], 'r': [addRect, [5]],
+        'v': [None, [2]], 'a': [None, [2]], 'l': [None, [1]],
+        'mv': [moveCells, [3]], 'cp': [copyCells, [3]],
+        'current': [None, [4]], 'material': [None, [2]], 'defmat': [None, [4,7]],
+    }
+    innerCodeSteps, innerVariables, currents, materials, custom_materials = [], {}, [], [], {}
+    input_text = codeLoops(input_text)
+    for line_nr, line in enumerate(input_text):
+        line = line.strip()
+        if not line or line.startswith('#') or len(line) < 3:
+            continue
+        command = line.split('(')[0].lower().strip()
+        if command not in commands:
+            continue
+        try:
+            raw_args = line.split('(', 1)[1]
+            lp = raw_args.rfind(')')
+            if lp != -1:
+                raw_args = raw_args[:lp]
+        except IndexError:
+            continue
+
+        if command == 'v':
+            ar = [a.strip() for a in raw_args.split(',', 1)]
+            if len(ar) == 2:
+                try:
+                    innerVariables[ar[0]] = _eval(ar[1], innerVariables)
+                except Exception:
+                    pass
+        elif command == 'a':
+            ar = [a.strip() for a in raw_args.split(',', 1)]
+            if len(ar) == 2 and ar[0] in innerVariables:
+                try:
+                    innerVariables[ar[0]] += _eval(ar[1], innerVariables)
+                except Exception:
+                    pass
+        elif command == 'current':
+            ar = [a.strip() for a in raw_args.split(',')]
+            resolved = _resolve_args(ar, innerVariables)
+            if len(resolved) == 4:
+                currents.append(resolved)
+        elif command == 'material':
+            ar = [a.strip() for a in raw_args.split(',', 1)]
+            if len(ar) == 2:
+                ph = _resolve_args([ar[0]], innerVariables)
+                mat = _resolve_args([ar[1]], innerVariables)
+                materials.append([ph[0], mat[0]])
+        elif command == 'defmat':
+            parts = [a.strip() for a in raw_args.split(',', 1)]
+            if len(parts) == 2:
+                mat_name = parts[0]
+                num_parts = [a.strip() for a in parts[1].split(',')]
+                resolved = _resolve_args(num_parts, innerVariables)
+                if len(resolved) == 3:
+                    custom_materials[mat_name] = {'sigma': float(resolved[0]), 'alpha': float(resolved[1]), 'mi_r': float(resolved[2]), 'rho': 0.0, 'cp': 0.0, 'k': 0.0}
+                elif len(resolved) == 6:
+                    custom_materials[mat_name] = {'sigma': float(resolved[0]), 'alpha': float(resolved[1]), 'mi_r': float(resolved[2]), 'rho': float(resolved[3]), 'cp': float(resolved[4]), 'k': float(resolved[5])}
+        else:
+            ar = [a.strip() for a in raw_args.split(',')]
+            resolved = _resolve_args(ar, innerVariables)
+            if len(resolved) in commands[command][1]:
+                try:
+                    float_args = [float(a) for a in resolved]
+                    innerCodeSteps.append([commands[command][0], float_args, command])
+                except Exception:
+                    pass
+    return innerCodeSteps, currents, materials, custom_materials
+
+# ── Canvas builder ────────────────────────────────
+BUILTIN_MATERIALS = [
+    {'name':'Copper',          'sigma':56e6,   'alpha':3.9e-3, 'mi_r':1,   'rho':8960,  'cp':385,  'k':400},
+    {'name':'FakeAl',          'sigma':31e6,   'alpha':4.4e-3, 'mi_r':1,   'rho':2700,  'cp':900,  'k':237},
+    {'name':'Aluminium',       'sigma':31e6,   'alpha':4.4e-3, 'mi_r':1,   'rho':2700,  'cp':900,  'k':237},
+    {'name':'Carbon Steel',    'sigma':6.99e6, 'alpha':6.5e-3, 'mi_r':100, 'rho':7850,  'cp':490,  'k':50},
+    {'name':'Stainless Steel', 'sigma':1.45e6, 'alpha':1.0e-3, 'mi_r':1,   'rho':8000,  'cp':500,  'k':16},
+    {'name':'Fake C. Steel',   'sigma':6.99e6, 'alpha':6.5e-3, 'mi_r':10,  'rho':7850,  'cp':490,  'k':50},
+]
+
+def buildCanvas(codeSteps, dXmm_override=0):
+    X, Y = [], []
+    has_circle = False
+    for fn, args, cmd in codeSteps:
+        tmp = fn(*args, draw=False)
+        X += [tmp[0], tmp[2]]; Y += [tmp[1], tmp[3]]
+        if cmd == 'c':
+            has_circle = True
+    if not X:
+        return None, None, None
+    minX, maxX = min(X), max(X)
+    minY, maxY = min(Y), max(Y)
+    W, H = maxX-minX, maxY-minY
+    if dXmm_override > 0:
+        dXmm = dXmm_override
+    else:
+        if has_circle:
+            candidates = [2.5, 2, 1.5, 1]
+        else:
+            candidates = [10, 5, 4, 2.5, 2, 1]
+        dXmm = candidates[-1]
+        for c in candidates:
+            if abs(W % c) < 0.01 and abs(H % c) < 0.01:
+                dXmm = c; break
+    rows = int(H / dXmm)
+    cols = int(W / dXmm)
+    arr = np.zeros((rows, cols), dtype=int)
+    shift = (minX, minY)
+    for fn, args, cmd in codeSteps:
+        fn(*args, shift=shift, XSecArray=arr, dXmm=dXmm)
+    return arr, dXmm, dXmm
+
+# ── Math ──────────────────────────────────────────
+MU0 = 4 * np.pi * 1e-7
+
+def getSelfInductance(sizeX, sizeY, lenght, mi_r=1, mi_r_w=1):
+    srednica = (sizeX + sizeY) / 2
+    r = srednica / 2 * 1e-3
+    l = lenght * 1e-3
+    mu_o = MU0 * mi_r_w
+    return (mu_o / (2*np.pi)) * (np.log(2*l/r) - 1 + mi_r/4) * l
+
+def getResistance(sizeX, sizeY, lenght, temp, sigma20C, temCoRe):
+    return (lenght / (sizeX * sizeY * sigma20C)) * 1e3 * (1 + temCoRe * (temp - 20))
+
+def getMutualInductance(sizeX, sizeY, lenght, distance, mi_r_w=1):
+    l = lenght * 1e-3
+    d = distance * 1e-3
+    return (MU0 * mi_r_w * l / (2*np.pi)) * (
+        np.log((l + np.sqrt(l**2 + d**2)) / d) - np.sqrt(1 + (d/l)**2) + d/l
+    )
+
+def getDistancesArray(elementsVector):
+    # Avoid N×N×2 broadcast intermediate (OOM for large N).
+    # Compute dx and dy separately as N×N arrays, then combine in-place.
+    coords = elementsVector[:, 2:4]
+    x = coords[:, 0]
+    y = coords[:, 1]
+    dx = x[:, None] - x[None, :]   # N×N float64
+    dy = y[:, None] - y[None, :]   # N×N float64
+    dx **= 2
+    dy **= 2
+    dx += dy                        # reuse dx buffer: now holds dx²+dy²
+    np.sqrt(dx, out=dx)             # in-place sqrt
+    return dx
+
+def getImpedanceArray(distArr, freq, dXmm, dYmm, lenght, temperature,
+                      sigma_array, alpha_array, mi_r_array=None, mi_r_w_array=None):
+    omega = 2 * np.pi * freq
+    N = distArr.shape[0]
+
+    if mi_r_w_array is not None:
+        mi_r_w_m = (mi_r_w_array.reshape(-1,1) + mi_r_w_array.reshape(1,-1)) / 2
+    else:
+        mi_r_w_m = 1.0
+
+    dist_safe = distArr.copy()
+    np.fill_diagonal(dist_safe, 1.0)
+    M = getMutualInductance(dXmm, dYmm, lenght, dist_safe, mi_r_w_m)
+    Z = 1j * omega * M
+
+    if mi_r_array is not None:
+        L_diag = np.array([getSelfInductance(dXmm, dYmm, lenght, mi_r_array[i], (mi_r_w_array[i] if mi_r_w_array is not None else 1.0)) for i in range(N)])
+    else:
+        L_diag = np.full(N, getSelfInductance(dXmm, dYmm, lenght))
+
+    R_diag = (lenght / (dXmm * dYmm * sigma_array)) * 1e3 * (1 + alpha_array * (temperature - 20))
+    np.fill_diagonal(Z, R_diag + 1j * omega * L_diag)
+    return Z
+
+def arrayVectorize(arr, phaseNumber, dXmm, dYmm):
+    positions = np.argwhere(arr == phaseNumber)
+    if len(positions) == 0:
+        return np.empty((0, 5))
+    xc = (0.5 + positions[:, 1]) * dXmm
+    yc = (0.5 + positions[:, 0]) * dYmm
+    ph = np.full(len(positions), float(phaseNumber))
+    return np.column_stack([positions.astype(float), xc, yc, ph])
+
+# ── Solver ────────────────────────────────────────
+def solve_ic(ic_text, freq=50, length=1000, temperature=20, cell_mm=0):
+    """
+    Parse ic_text, build geometry, run multi-phase solver.
+    Returns a dict with heatmap (flat list), phaseResults, totalPower, maxDensity,
+    rows, cols, dXmm, and minX/minY for display.
+    """
+    lines = ic_text.splitlines()
+    codeSteps, currents, materials, custom_materials = textToCode(lines)
+
+    if not codeSteps:
+        return json.dumps({'error': 'No geometry found in IC code.'})
+
+    arr, dXmm, dYmm = buildCanvas(codeSteps, dXmm_override=cell_mm)
+    if arr is None:
+        return json.dumps({'error': 'Failed to build canvas from geometry.'})
+
+    list_of_phases = [int(p) for p in np.unique(arr) if p != 0]
+    number_of_phases = len(list_of_phases)
+    if number_of_phases == 0:
+        return json.dumps({'error': 'No conducting phases in geometry.'})
+
+    # Build current phasors from IC
+    # currents list: [phase_id, I_rms, phase_shift, extra_shift]
+    current_map = {}
+    for c in currents:
+        pid = int(c[0])
+        rms = float(c[1])
+        phi = float(c[2]) + float(c[3])
+        current_map[pid] = (rms, phi)
+
+    I = []
+    for pid in list_of_phases:
+        if pid in current_map:
+            rms, phi = current_map[pid]
+        else:
+            rms, phi = 0.0, 0.0
+        I.append((rms, phi))
+
+    # Build material lookup
+    mat_map = {}
+    for entry in materials:
+        pid = int(entry[0])
+        mat_ref = entry[1]
+        if isinstance(mat_ref, str):
+            if mat_ref in custom_materials:
+                m = custom_materials[mat_ref]
+                mat_map[pid] = m
+        else:
+            idx = int(mat_ref)
+            if 0 <= idx < len(BUILTIN_MATERIALS):
+                mat_map[pid] = BUILTIN_MATERIALS[idx]
+
+    default_mat = BUILTIN_MATERIALS[0]
+
+    # Build per-phase material list
+    phases_material = []
+    for pid in list_of_phases:
+        phases_material.append(mat_map.get(pid, default_mat))
+
+    # Vectorize
+    vPh = []
+    elementsPhase = []
+    for pid in list_of_phases:
+        vp = arrayVectorize(arr, pid, dXmm, dYmm)
+        vPh.append(vp)
+        elementsPhase.append(len(vp))
+
+    elementsVector = np.concatenate(vPh)
+    N = len(elementsVector)
+    if N == 0:
+        return json.dumps({'error': 'No elements after vectorization.'})
+
+    # Memory guard: the N×N admittance matrix needs ~N²×32 bytes.
+    # At N=2500 that is already ~200 MB; Pyodide's WASM heap is limited.
+    N_LIMIT = 2500
+    if N > N_LIMIT:
+        mem_mb = round(N * N * 32 / 1e6)
+        # Suggest a cell size that would bring N under the limit
+        current_cells = arr.shape[0] * arr.shape[1]
+        factor = (N / N_LIMIT) ** 0.5
+        suggested = round(dXmm * factor * 2) / 2   # round to nearest 0.5 mm
+        return json.dumps({
+            'error': (
+                f'Too many elements: N={N} (needs ~{mem_mb} MB — likely to crash the browser tab). '
+                f'Increase cell size to at least {suggested:.1f} mm, or set it manually in the field above.'
+            )
+        })
+
+    # Per-element material arrays
+    phase_nums = elementsVector[:, 4].astype(int)
+    max_p = int(np.max(phase_nums))
+    sigma_lut = np.ones(max_p+1) * default_mat['sigma']
+    alpha_lut = np.ones(max_p+1) * default_mat['alpha']
+    mi_r_lut  = np.ones(max_p+1)
+    for i, pid in enumerate(list_of_phases):
+        m = phases_material[i]
+        sigma_lut[pid] = m['sigma']
+        alpha_lut[pid] = m['alpha']
+        mi_r_lut[pid]  = m['mi_r']
+    sigma_array  = sigma_lut[phase_nums]
+    alpha_array  = alpha_lut[phase_nums]
+    mi_r_array   = mi_r_lut[phase_nums]
+
+    # Admittance matrix
+    distArr = getDistancesArray(elementsVector)
+    Z = getImpedanceArray(distArr, freq, dXmm, dYmm, length, temperature,
+                          sigma_array, alpha_array, mi_r_array, mi_r_array)
+    admittance = np.linalg.inv(Z)
+
+    # Target currents (complex phasors)
+    I_target = [rms * (np.cos(phi*np.pi/180) + 1j*np.sin(phi*np.pi/180)) for rms, phi in I]
+
+    # Trial voltage vector
+    U = [np.cos(phi*np.pi/180) + 1j*np.sin(phi*np.pi/180) for _, phi in I]
+    voltVec = np.concatenate([np.ones(n, dtype=complex)*u for n, u in zip(elementsPhase, U)])
+
+    # First solve
+    currVec = admittance @ voltVec
+    start = 0
+    for n_i, (u_i, it_i) in enumerate(zip(U, I_target)):
+        end = start + elementsPhase[n_i]
+        I_sum = np.sum(currVec[start:end])
+        if abs(I_sum) > 1e-30:
+            U[n_i] = u_i * (it_i / I_sum)
+        start = end
+
+    # Second solve with corrected voltages
+    voltVec = np.concatenate([np.ones(n, dtype=complex)*u for n, u in zip(elementsPhase, U)])
+    currVec = admittance @ voltVec
+
+    # Normalize magnitude per phase
+    start = 0
+    currentsPh = []
+    for n_i, it_i in enumerate(I_target):
+        end = start + elementsPhase[n_i]
+        cp = currVec[start:end]
+        mod_sum = abs(np.sum(cp))
+        rms = abs(it_i)
+        if mod_sum > 1e-30 and rms > 0:
+            cp = cp * (rms / mod_sum)
+        currentsPh.append(cp)
+        start = end
+
+    currentVector = np.concatenate(currentsPh)
+    results_I = np.abs(currentVector)
+
+    # Resistance and power
+    R_vec = (length / (dXmm * dYmm * sigma_array)) * 1e3 * (1 + alpha_array * (temperature - 20))
+    power_vec = R_vec * results_I**2
+    total_power = float(np.sum(power_vec))
+
+    # Per-phase power
+    phase_results = []
+    start = 0
+    for n_i, pid in enumerate(list_of_phases):
+        end = start + elementsPhase[n_i]
+        phase_results.append({
+            'pid': pid,
+            'label': f'Ph{pid}',
+            'power': float(np.sum(power_vec[start:end])),
+            'Irms': float(I[n_i][0]),
+        })
+        start = end
+
+    # Current density and heatmap
+    area_mm2 = dXmm * dYmm
+    dens_vec = results_I / area_mm2
+    max_dens = float(np.max(dens_vec)) if len(dens_vec) > 0 else 0.0
+
+    rows_a, cols_a = arr.shape
+    heatmap = np.zeros(rows_a * cols_a, dtype=np.float32)
+    elem_rows = elementsVector[:, 0].astype(int)
+    elem_cols = elementsVector[:, 1].astype(int)
+    heatmap[elem_rows * cols_a + elem_cols] = dens_vec.astype(np.float32)
+
+    return json.dumps({
+        'ok': True,
+        'N': N,
+        'rows': rows_a,
+        'cols': cols_a,
+        'dXmm': float(dXmm),
+        'heatmap': heatmap.tolist(),
+        'phaseResults': phase_results,
+        'totalPower': total_power,
+        'maxDensity': max_dens,
+    })
+</script>
+
+<script>
+// ═══════════════════════════════════════════════
+// PYODIDE INIT
+// ═══════════════════════════════════════════════
+let pyodide = null;
+let pyReady = false;
+
+const badge = document.getElementById('status-badge');
+const solveBtn = document.getElementById('solve-btn');
+const pyLog = document.getElementById('pyodide-log');
+
+function setBadge(text, cls='') {
+  badge.textContent = text;
+  badge.className = cls;
+}
+
+function logPy(msg) {
+  pyLog.textContent = msg;
+}
+
+async function initPyodide() {
+  setBadge('Loading Pyodide…', 'busy');
+  try {
+    pyodide = await loadPyodide();
+    setBadge('Loading numpy…', 'busy');
+    await pyodide.loadPackage(['numpy']);
+    setBadge('Initialising solver…', 'busy');
+    const pySrc = document.getElementById('py-solver').textContent;
+    await pyodide.runPythonAsync(pySrc);
+    pyReady = true;
+    setBadge('Ready', 'ok');
+    solveBtn.disabled = false;
+  } catch (err) {
+    setBadge('Load failed: ' + err.message, 'err');
+    console.error(err);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CANVAS RENDERING
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('heatmap-canvas');
+const ctx = canvas.getContext('2d');
+let solverResults = null;
+let showHeatmap = true;
+
+function jetColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  const r = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 3))));
+  const g = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 2))));
+  const b = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 1))));
+  return [r, g, b];
+}
+
+function drawHeatmap(result) {
+  const { rows, cols, heatmap, maxDensity } = result;
+  canvas.width  = cols;
+  canvas.height = rows;
+  const imageData = ctx.createImageData(cols, rows);
+  const data = imageData.data;
+
+  // draw bottom-up (Y-up in IC coords, row 0 = bottom)
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const val = heatmap[r * cols + c];
+      const t   = maxDensity > 0 ? val / maxDensity : 0;
+      // flip vertically
+      const destRow = rows - 1 - r;
+      const idx = (destRow * cols + c) * 4;
+      if (val === 0) {
+        data[idx] = 20; data[idx+1] = 20; data[idx+2] = 40; data[idx+3] = 255;
+      } else {
+        const [rr, gg, bb] = jetColor(t);
+        data[idx] = rr; data[idx+1] = gg; data[idx+2] = bb; data[idx+3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  // scale canvas to fit area
+  const area = document.getElementById('canvas-area');
+  const aW = area.clientWidth - 20, aH = area.clientHeight - 20;
+  const scale = Math.min(aW / cols, aH / rows, 8);
+  canvas.style.width  = Math.round(cols * scale) + 'px';
+  canvas.style.height = Math.round(rows * scale) + 'px';
+
+  document.getElementById('canvas-hint').style.display = 'none';
+
+  const legend = document.getElementById('legend-bar');
+  legend.classList.add('visible');
+  document.getElementById('legend-max').textContent = maxDensity.toFixed(2) + ' A/mm²';
+}
+
+function showResults(result) {
+  const table = document.getElementById('results-table');
+  const fmt = v => v < 1 ? v.toFixed(3) : v < 100 ? v.toFixed(2) : v.toFixed(1);
+  const rows = result.phaseResults.map(r =>
+    `<div class="res-row">
+      <span class="res-lbl">${r.label} — ${r.Irms} A</span>
+      <span class="res-val">${fmt(r.power)} W/m</span>
+    </div>`
+  ).join('');
+  table.innerHTML = rows +
+    `<div class="res-row" style="margin-top:4px">
+      <span class="res-lbl res-total">Total</span>
+      <span class="res-val res-total">${fmt(result.totalPower)} W/m</span>
+    </div>
+    <div class="res-row">
+      <span class="res-lbl">Max J</span>
+      <span class="res-val">${fmt(result.maxDensity)} A/mm²</span>
+    </div>
+    <div class="res-row">
+      <span class="res-lbl">Elements N</span>
+      <span class="res-val">${result.N}</span>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// SOLVER TRIGGER
+// ═══════════════════════════════════════════════
+async function triggerSolve() {
+  if (!pyReady) return;
+  const icText  = document.getElementById('ic-code').value.trim();
+  if (!icText)  { setBadge('No IC code entered', 'err'); return; }
+
+  const freq    = parseFloat(document.getElementById('c-freq').value)  || 50;
+  const length  = parseFloat(document.getElementById('c-len').value)   || 1000;
+  const temp    = parseFloat(document.getElementById('c-temp').value)  ?? 20;
+  let   cellMm  = parseFloat(document.getElementById('c-cell').value)  || 0;
+
+  solveBtn.disabled = true;
+  setBadge('Solving…', 'busy');
+  logPy('');
+
+  // Yield to browser so UI updates before blocking
+  await new Promise(r => setTimeout(r, 20));
+
+  try {
+    const t0 = performance.now();
+
+    // Pass IC text to Python (safe: no shell eval)
+    pyodide.globals.set('_ic_text', icText);
+    pyodide.globals.set('_freq',    freq);
+    pyodide.globals.set('_length',  length);
+    pyodide.globals.set('_temp',    temp);
+    pyodide.globals.set('_cell_mm', cellMm);
+
+    const result = await pyodide.runPythonAsync(`
+solve_ic(_ic_text, freq=_freq, length=_length, temperature=_temp, cell_mm=_cell_mm)
+`);
+
+    const dt = ((performance.now() - t0) / 1000).toFixed(2);
+    const res = JSON.parse(result);
+
+    if (res.error) {
+      setBadge(res.error, 'err');
+      logPy(res.error);
+    } else {
+      solverResults = res;
+      setBadge(`Done in ${dt}s — N=${res.N}`, 'ok');
+      if (showHeatmap) drawHeatmap(res);
+      showResults(res);
+    }
+  } catch (err) {
+    setBadge('Error: ' + err.message, 'err');
+    logPy(err.message);
+    console.error(err);
+  }
+  solveBtn.disabled = false;
+}
+
+document.getElementById('solve-btn').addEventListener('click', triggerSolve);
+
+document.getElementById('heatmap-toggle').addEventListener('change', e => {
+  showHeatmap = e.target.checked;
+  if (showHeatmap && solverResults?.ok) {
+    drawHeatmap(solverResults);
+  } else if (!showHeatmap) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+});
+
+// ═══════════════════════════════════════════════
+// EXAMPLE CODE
+// ═══════════════════════════════════════════════
+const EXAMPLE_IC = `# Three-phase flat busbar — aluminium, 10×60 mm
+
+material(1, 2)
+material(2, 2)
+material(3, 2)
+
+current(1, 2300, 0,   0)
+current(2, 2300, 120, 0)
+current(3, 2300, 240, 0)
+
+v(p, 1)
+v(x, 0)
+
+l(3)
+    r(x, 0, 10, 60, p)
+    a(x, 20)
+    a(p, 1)
+break
+`;
+
+document.getElementById('load-example-btn').addEventListener('click', () => {
+  document.getElementById('ic-code').value = EXAMPLE_IC;
+});
+
+// ═══════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════
+initPyodide();
+</script>
+</body>
+</html>

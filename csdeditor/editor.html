@@ -231,6 +231,169 @@ body {
 
 /* ── Tooltip helper ──────────────────────────────── */
 [title] { position:relative; }
+
+/* ── Solver section ──────────────────────────────── */
+#solver-section {
+  border-top: 2px solid var(--border);
+  flex-shrink: 0;
+}
+#solver-section .panel-hdr { padding: 10px 12px 4px; }
+.solve-btn-main {
+  flex: 2; padding: 7px; border: 1px solid var(--accent);
+  border-radius: var(--radius); background: var(--accent);
+  color: #fff; cursor: pointer; font-size: 12px; font-weight: 600;
+  transition: opacity .15s;
+}
+.solve-btn-main:hover { opacity: .85; }
+.solve-btn-main:disabled { opacity: .45; cursor: not-allowed; }
+#solver-status {
+  font-size: 11px; color: var(--text3); min-height: 16px;
+  margin-top: 5px; line-height: 1.4;
+}
+#solver-status.error { color: #dc2626; }
+#solver-status.ok    { color: #27ae60; }
+#results-table { font-size: 11px; }
+.res-row {
+  display: flex; justify-content: space-between;
+  padding: 3px 0; border-bottom: 1px solid var(--border);
+  gap: 6px;
+}
+.res-row:last-child { border-bottom: none; }
+.res-lbl { color: var(--text2); flex: 1; }
+.res-val { color: var(--text); font-weight: 600; font-family: monospace; text-align:right; }
+.res-total { font-weight: 700; color: var(--accent); }
+.custom-mat-block {
+  margin-top: 8px; padding: 8px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--panel2);
+}
+.custom-mat-block .prop-lbl { color: var(--accent); }
+
+/* ── Materials Manager modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-box {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; min-width: 560px; max-width: 90vw;
+  max-height: 80vh; display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+}
+.modal-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 13px;
+}
+.modal-hdr button {
+  background: none; border: none; color: var(--text2); cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 4px;
+}
+.modal-hdr button:hover { background: var(--panel2); color: var(--text); }
+.modal-body { flex: 1; overflow-y: auto; padding: 10px 14px; }
+.modal-footer {
+  padding: 8px 14px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+.mat-row {
+  display: grid; grid-template-columns: 1fr 110px 100px 80px 32px;
+  gap: 6px; align-items: center; padding: 4px 0;
+  border-bottom: 1px solid var(--panel2);
+}
+.mat-row:last-child { border-bottom: none; }
+.mat-col-hdr {
+  display: grid; grid-template-columns: 1fr 110px 100px 80px 32px;
+  gap: 6px; padding: 4px 0 6px; border-bottom: 1px solid var(--border);
+  font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px;
+}
+.mat-name { font-size: 12px; font-family: monospace; color: var(--text); word-break: break-all; }
+.mat-name-input { font-family: monospace; }
+.mat-del-btn {
+  background: none; border: 1px solid transparent; color: var(--text3);
+  cursor: pointer; border-radius: 4px; font-size: 13px; padding: 0;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+}
+.mat-del-btn:hover { background: rgba(235,87,87,.15); border-color: #eb5757; color: #eb5757; }
+.mat-empty { color: var(--text3); font-size: 12px; padding: 12px 0; text-align: center; }
+.modal-add-btn {
+  padding: 6px 14px; background: var(--accent); border: none; color: #fff;
+  font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer;
+}
+.modal-add-btn:hover { filter: brightness(1.1); }
+.modal-close-btn {
+  padding: 6px 14px; background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text); font-size: 12px; border-radius: 5px; cursor: pointer;
+}
+.modal-close-btn:hover { background: var(--panel); }
+#heatmap-legend {
+  display: none; flex-direction: column; gap: 2px;
+  position: absolute; bottom: 30px; right: 8px;
+  background: rgba(255,255,255,.88); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 8px; font-size: 10px;
+  font-family: monospace; pointer-events: none; backdrop-filter: blur(4px);
+}
+#heatmap-legend.visible { display: flex; }
+.legend-bar {
+  width: 90px; height: 10px; border-radius: 2px;
+  background: linear-gradient(to right, #00008b, #0000ff, #00ffff, #00ff00, #ffff00, #ff8000, #ff0000);
+}
+
+/* ── Report modal ── */
+#report-modal .modal-box {
+  min-width: min(820px, 96vw); max-width: min(900px, 98vw);
+  max-height: 92vh;
+}
+#report-modal .modal-body { padding: 24px 28px; background: #fff; color: #111; }
+.rpt-title {
+  font-size: 20px; font-weight: 700; color: #111; margin-bottom: 4px;
+}
+.rpt-subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+.rpt-section { margin-bottom: 22px; }
+.rpt-section h2 {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: #333; border-bottom: 1px solid #ddd;
+  padding-bottom: 4px; margin-bottom: 10px;
+}
+.rpt-intro { font-size: 13px; color: #444; line-height: 1.6; }
+.rpt-param-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rpt-param-table td { padding: 4px 8px; border-bottom: 1px solid #eee; }
+.rpt-param-table td:first-child { color: #666; width: 40%; }
+.rpt-param-table td:last-child { font-weight: 600; font-family: monospace; color: #111; }
+.rpt-heatmap-wrap {
+  display: flex; gap: 16px; align-items: flex-start;
+}
+.rpt-heatmap-wrap canvas {
+  border: 1px solid #ccc; border-radius: 4px;
+  image-rendering: pixelated; max-width: 100%; max-height: 320px;
+  flex-shrink: 0;
+}
+.rpt-heatmap-legend {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: 10px; color: #666; font-family: monospace;
+}
+.rpt-heatmap-legend .rpt-legend-bar {
+  width: 18px; height: 120px; border-radius: 3px;
+  background: linear-gradient(to top, #00008b, #0000ff, #00ffff, #00ff00, #ffff00, #ff8000, #ff0000);
+}
+.rpt-res-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rpt-res-table th {
+  background: #f4f4f4; color: #444; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .4px; padding: 5px 10px; text-align: left;
+  border-bottom: 2px solid #ddd;
+}
+.rpt-res-table td { padding: 5px 10px; border-bottom: 1px solid #eee; color: #222; }
+.rpt-res-table tr.rpt-total td { font-weight: 700; background: #f9f9f9; }
+.rpt-code {
+  background: #f6f8fa; border: 1px solid #ddd; border-radius: 6px;
+  padding: 12px 14px; font-family: 'Courier New', monospace; font-size: 11px;
+  color: #24292e; white-space: pre; overflow-x: auto; max-height: 280px; overflow-y: auto;
+  line-height: 1.5;
+}
+.rpt-print-btn {
+  padding: 6px 14px; background: #2c7be5; border: none; color: #fff;
+  font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer;
+}
+.rpt-print-btn:hover { background: #1a68d1; }
+
 </style>
 </head>
 <body>
@@ -265,7 +428,48 @@ body {
   <button class="tb-btn" id="import-btn" title="Import .ic file">⤵ Import</button>
   <input type="file" id="import-file" accept=".ic,.txt" style="display:none">
 
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="mat-mgr-btn" title="Manage custom materials">⚙ Materials</button>
+  <button class="tb-btn" id="tb-solve-btn" title="Run power loss solver (⚡)">⚡ Solve</button>
+
   <span id="cursor-info">x: —  y: — mm</span>
+</div>
+
+<!-- ── Report modal ─────────────────────────────────────── -->
+<div id="report-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span>📋 Analysis Report</span>
+      <button id="report-modal-close" title="Close">✕</button>
+    </div>
+    <div class="modal-body" id="report-body">
+      <!-- filled by JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="rpt-print-btn" id="report-print-btn">🖨 Print / Save PDF</button>
+      <button class="modal-close-btn" id="report-modal-close2">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Custom Materials Manager modal ──────────────────── -->
+<div id="mat-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span>⚙ Custom Materials</span>
+      <button id="mat-modal-close" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mat-col-hdr">
+        <span>Name</span><span>σ (S/m)</span><span>α (1/K)</span><span>μr</span><span></span>
+      </div>
+      <div id="mat-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-add-btn" id="mat-add-btn">＋ Add Material</button>
+      <button class="modal-close-btn" id="mat-modal-close2">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Left panel (phases) ──────────────────────── -->
@@ -279,9 +483,16 @@ body {
 <div id="canvas-wrap">
   <canvas id="editor-canvas"></canvas>
   <div id="coord-overlay">x: 0.0  y: 0.0 mm</div>
+  <div id="heatmap-legend">
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:2px">
+      <span>0</span><span id="legend-max">—</span>
+    </div>
+    <div class="legend-bar"></div>
+    <div style="font-size:9px;color:var(--text3);text-align:center;margin-top:2px">A/mm²</div>
+  </div>
 </div>
 
-<!-- ── Right panel (properties) ─────────────────── -->
+<!-- ── Right panel (properties + solver) ─────────── -->
 <div id="right-panel">
   <div id="props-content">
     <div class="empty-state">
@@ -291,6 +502,47 @@ body {
       F — Fit view &nbsp; Del — Delete<br>
       Ctrl+D — Duplicate<br>
       Scroll — Zoom &nbsp; Mid‑drag — Pan
+    </div>
+  </div>
+
+  <!-- ── Solver section ── -->
+  <div id="solver-section">
+    <div class="panel-hdr">Analysis</div>
+    <div class="prop-block">
+      <div class="prop-grid">
+        <div class="prop-field">
+          <span class="prop-lbl">Freq (Hz)</span>
+          <input class="prop-inp" id="s-freq" type="number" value="50" min="1" step="1">
+        </div>
+        <div class="prop-field">
+          <span class="prop-lbl">Length (mm)</span>
+          <input class="prop-inp" id="s-len" type="number" value="1000" min="1">
+        </div>
+        <div class="prop-field">
+          <span class="prop-lbl">Temp (°C)</span>
+          <input class="prop-inp" id="s-temp" type="number" value="20">
+        </div>
+        <div class="prop-field">
+          <span class="prop-lbl">Cell (mm)</span>
+          <input class="prop-inp" id="s-cell" type="number" value="2" min="0.5" step="0.5">
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+        <button class="solve-btn-main" id="solve-btn">⚡ Solve</button>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;white-space:nowrap">
+          <input type="checkbox" id="heatmap-toggle"> Heatmap
+        </label>
+      </div>
+      <div id="solver-status"></div>
+    </div>
+    <div id="solver-results" style="display:none">
+      <div class="prop-block" style="padding-top:6px">
+        <div class="prop-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Results  <span style="font-weight:400;text-transform:none;letter-spacing:0" id="res-cell-info"></span></span>
+          <button id="report-btn" title="Generate report" style="font-size:11px;padding:2px 7px;background:var(--accent);border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:600">📋 Report</button>
+        </div>
+        <div id="results-table"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -320,6 +572,16 @@ const MATERIALS = [
   'Fake Carbon Steel (6.99e6 S/m)',
 ];
 
+// Physical properties matching setup/materials.txt
+const MATERIAL_PROPS = [
+  { name:'Copper',            sigma:56e6,   alpha:3.9e-3, mi_r:1   },
+  { name:'FakeAl',            sigma:31e6,   alpha:4.4e-3, mi_r:1   },
+  { name:'Aluminium',         sigma:31e6,   alpha:4.4e-3, mi_r:1   },
+  { name:'Carbon Steel',      sigma:6.99e6, alpha:6.5e-3, mi_r:100 },
+  { name:'Stainless Steel',   sigma:1.45e6, alpha:1.0e-3, mi_r:1   },
+  { name:'Fake Carbon Steel', sigma:6.99e6, alpha:6.5e-3, mi_r:10  },
+];
+
 const PALETTE = [
   '#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6',
   '#1abc9c','#e67e22','#e91e63','#00bcd4','#8bc34a',
@@ -338,6 +600,11 @@ let activePhaseId = null;
 let currentTool   = 'select';
 let snapVal       = 5;
 let clipboard     = [];          // copied shapes (deep copies)
+
+// Solver state
+let customMaterials = {};   // name → {sigma, alpha, mi_r}  (from defmat() lines)
+let solverResults   = null; // last successful solve result
+let showHeatmap     = false;
 
 // Camera — cam.ox/oy are canvas-px position of mm(0,0)
 // canvas_x = ox + mm_x * scale
@@ -607,17 +874,40 @@ function render() {
 
   drawGrid();
 
-  // Draw non-zero phases, then zero (overlay/erase)
-  for (const s of shapes) {
-    if ((s.phaseId ?? 1) !== 0) {
-      renderShape(s, false);
-      if (selectedIds.has(s.id)) renderSelection(s);
+  const heatmapActive = showHeatmap && solverResults?.ok;
+
+  if (!heatmapActive) {
+    // Draw non-zero phases, then zero (overlay/erase)
+    for (const s of shapes) {
+      if ((s.phaseId ?? 1) !== 0) {
+        renderShape(s, false);
+        if (selectedIds.has(s.id)) renderSelection(s);
+      }
+    }
+    for (const s of shapes) {
+      if ((s.phaseId ?? 1) === 0) {
+        renderShape(s, false);
+        if (selectedIds.has(s.id)) renderSelection(s);
+      }
     }
   }
-  for (const s of shapes) {
-    if ((s.phaseId ?? 1) === 0) {
-      renderShape(s, false);
-      if (selectedIds.has(s.id)) renderSelection(s);
+
+  // Heatmap overlay (replaces geometry when active)
+  if (heatmapActive) {
+    const { heatmap, rows, cols, dXmm, minX, minY, maxDensity } = solverResults;
+    if (maxDensity > 0) {
+      const cellPx = dXmm * cam.scale;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const v = heatmap[r * cols + c];
+          if (v <= 0) continue;
+          const mmX = minX + c * dXmm;
+          const mmY = minY + r * dXmm;
+          const [px, py] = toCanvas(mmX, mmY + dXmm);
+          ctx.fillStyle = jetColor(v / maxDensity);
+          ctx.fillRect(px, py, cellPx, cellPx);
+        }
+      }
     }
   }
 
@@ -992,9 +1282,18 @@ function renderPropsPanel() {
   const s = selected[0];
 
   const ph = phases[s.phaseId] || {};
+  const isCustomNamed = !!(ph.customMatName && customMaterials[ph.customMatName]);
+  const isCustomAnon  = !!(ph.customMat && !ph.customMatName);
+  const isCustomMat   = isCustomNamed || isCustomAnon;
+  const custNames = Object.keys(customMaterials);
   const matOptions = MATERIALS.map((m, i) =>
-    `<option value="${i}" ${i === (ph.material ?? 0) ? 'selected' : ''}>${i}: ${m}</option>`
-  ).join('');
+    `<option value="${i}" ${!isCustomMat && i === (ph.material ?? 0) ? 'selected' : ''}>${i}: ${m}</option>`
+  ).join('')
+  + (custNames.length ? custNames.map(name => {
+      const m = customMaterials[name];
+      return `<option value="custom:${name}" ${ph.customMatName === name ? 'selected' : ''}>${name} (σ=${(m.sigma/1e6).toFixed(1)}M)</option>`;
+    }).join('') : '')
+  + `<option value="-1" ${isCustomAnon ? 'selected' : ''}>+ New anonymous…</option>`;
   const phaseOptions = [0, ...Object.keys(phases).map(Number)].map(pid =>
     `<option value="${pid}" ${pid === s.phaseId ? 'selected' : ''}>${pid === 0 ? '0 — Erase' : `${pid} — ${phases[pid]?.label || '?'}`}</option>`
   ).join('');
@@ -1033,6 +1332,28 @@ function renderPropsPanel() {
       </div>`;
   }
 
+  const cm = isCustomNamed ? customMaterials[ph.customMatName]
+                           : (ph.customMat || { sigma: 56e6, alpha: 3.9e-3, mi_r: 1 });
+  const cmTitle = isCustomNamed ? `Custom: <em>${ph.customMatName}</em>` : 'Custom (anonymous)';
+  const customMatFields = isCustomMat ? `
+    <div class="custom-mat-block prop-grid" id="custom-mat-block">
+      <div class="prop-field cols1">
+        <span class="prop-lbl" style="font-style:normal">${cmTitle}</span>
+      </div>
+      <div class="prop-field">
+        <span class="prop-lbl">σ (S/m)</span>
+        <input class="prop-inp" id="cm-sigma" type="number" value="${cm.sigma}" step="1e6" min="1">
+      </div>
+      <div class="prop-field">
+        <span class="prop-lbl">α (1/K)</span>
+        <input class="prop-inp" id="cm-alpha" type="number" value="${cm.alpha}" step="0.0001">
+      </div>
+      <div class="prop-field">
+        <span class="prop-lbl">μr (−)</span>
+        <input class="prop-inp" id="cm-mir" type="number" value="${cm.mi_r}" step="1" min="1">
+      </div>
+    </div>` : `<div id="custom-mat-block" style="display:none"></div>`;
+
   const phaseBlock = s.phaseId && phases[s.phaseId] ? `
     <div class="prop-block">
       <div class="prop-title">Phase ${s.phaseId} — ${ph.label || ''}</div>
@@ -1050,6 +1371,7 @@ function renderPropsPanel() {
         <div class="prop-field"><span class="prop-lbl">Label</span>
           <input class="prop-inp" id="ph-lbl" type="text" value="${ph.label}"></div>
       </div>
+      ${customMatFields}
     </div>` : '';
 
   propsDiv.innerHTML = `
@@ -1097,8 +1419,42 @@ function renderPropsPanel() {
     bind('ph-irms',  ev => { phases[s.phaseId].Irms  = parseFloat(ev.target.value)||0; updatePreview(); });
     bind('ph-phi',   ev => { phases[s.phaseId].phi   = parseFloat(ev.target.value)||0; updatePreview(); });
     bind('ph-shift', ev => { phases[s.phaseId].shift = parseFloat(ev.target.value)||0; updatePreview(); });
-    bind('ph-mat',   ev => { phases[s.phaseId].material = parseInt(ev.target.value)||0; updatePreview(); });
-    bind('ph-lbl',   ev => { phases[s.phaseId].label = ev.target.value; renderPhasePanel(); updatePreview(); });
+    bind('ph-mat', ev => {
+      const val = ev.target.value;
+      if (val.startsWith('custom:')) {
+        // named custom material from global dict
+        const name = val.slice(7);
+        phases[s.phaseId].customMatName = name;
+        delete phases[s.phaseId].customMat;
+        phases[s.phaseId].material = -1;
+        renderPropsPanel();
+      } else if (val === '-1') {
+        // new anonymous custom material (per-phase)
+        phases[s.phaseId].customMat = { sigma: 56e6, alpha: 3.9e-3, mi_r: 1 };
+        delete phases[s.phaseId].customMatName;
+        phases[s.phaseId].material  = -1;
+        renderPropsPanel();
+      } else {
+        delete phases[s.phaseId].customMat;
+        delete phases[s.phaseId].customMatName;
+        phases[s.phaseId].material = parseInt(val);
+      }
+      updatePreview();
+    });
+    bind('ph-lbl', ev => { phases[s.phaseId].label = ev.target.value; renderPhasePanel(); updatePreview(); });
+
+    // Custom material inline editing — updates named or anonymous target
+    function setCustomProp(key, value) {
+      const ph2 = phases[s.phaseId];
+      if (ph2.customMatName && customMaterials[ph2.customMatName]) {
+        customMaterials[ph2.customMatName][key] = value;
+      } else if (ph2.customMat) {
+        ph2.customMat[key] = value;
+      }
+    }
+    bind('cm-sigma', ev => { setCustomProp('sigma', parseFloat(ev.target.value) || 56e6);  updatePreview(); });
+    bind('cm-alpha', ev => { setCustomProp('alpha', parseFloat(ev.target.value) || 3.9e-3); updatePreview(); });
+    bind('cm-mir',   ev => { setCustomProp('mi_r',  parseFloat(ev.target.value) || 1);      updatePreview(); });
   }
 
   document.getElementById('dup-btn')?.addEventListener('click', duplicateSelected);
@@ -1205,9 +1561,38 @@ function generateIC() {
   const sorted = [...usedIds].sort((a,b) => a-b);
 
   if (sorted.length) {
+    // Build per-phase material name map and collect defmat entries to emit
+    const phaseMatName = {};   // id → name string (for custom mats)
+    const defsToEmit   = {};   // name → {sigma,alpha,mi_r}  (deduplicated)
+
     for (const id of sorted) {
       const ph = phases[id];
-      if (ph) lines.push(`material(${id},${ph.material})`);
+      if (!ph) continue;
+      if (ph.customMatName && customMaterials[ph.customMatName]) {
+        phaseMatName[id] = ph.customMatName;
+        defsToEmit[ph.customMatName] = customMaterials[ph.customMatName];
+      } else if (ph.customMat) {
+        const n = `${(ph.label||'L'+id).replace(/\s+/g,'_')}_mat`;
+        phaseMatName[id] = n;
+        defsToEmit[n] = ph.customMat;
+      }
+    }
+
+    if (Object.keys(defsToEmit).length) {
+      for (const [name, m] of Object.entries(defsToEmit)) {
+        lines.push(`defmat(${name},${m.sigma},${m.alpha},${m.mi_r})`);
+      }
+      lines.push('');
+    }
+
+    for (const id of sorted) {
+      const ph = phases[id];
+      if (!ph) continue;
+      if (phaseMatName[id]) {
+        lines.push(`material(${id},${phaseMatName[id]})`);
+      } else {
+        lines.push(`material(${id},${ph.material ?? 0})`);
+      }
     }
     lines.push('');
     for (const id of sorted) {
@@ -1264,6 +1649,7 @@ function importIC(text, noConfirm = false) {
   const newShapes  = [];
   const newPhases  = {};
   const vars       = {};
+  const localCustMats = {};  // defmat() definitions from this file
   let   pid        = 1;
   let   sid        = nShapeId;
 
@@ -1277,17 +1663,25 @@ function importIC(text, noConfirm = false) {
 
   const lines = text.split('\n');
 
-  // First pass: collect variable, current, material declarations
+  // First pass: collect variable, defmat, current, material declarations
   for (const raw of lines) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
-    const m = line.match(/^([a-z]+)\((.+)\)/i);
+    const m = line.match(/^([a-z_]+)\((.+)\)/i);
     if (!m) continue;
     const cmd = m[1].toLowerCase();
     const args = m[2].split(',').map(a => a.trim());
 
     if (cmd === 'v' && args.length === 2) {
       vars[args[0]] = parseFloat(args[1]) || 0;
+    } else if (cmd === 'defmat' && args.length >= 4) {
+      // defmat(name, sigma, alpha, mi_r [, rho, cp, k])
+      const matName = args[0];
+      localCustMats[matName] = {
+        sigma: evalArg(args[1]) || 56e6,
+        alpha: evalArg(args[2]) || 3.9e-3,
+        mi_r:  evalArg(args[3]) || 1,
+      };
     } else if (cmd === 'current' && args.length === 4) {
       const id = Math.round(evalArg(args[0]));
       if (!newPhases[id]) newPhases[id] = { label:`L${id}`, color:PALETTE[(pid-1)%PALETTE.length], Irms:0, phi:0, shift:0, material:0 };
@@ -1298,7 +1692,17 @@ function importIC(text, noConfirm = false) {
     } else if (cmd === 'material' && args.length === 2) {
       const id = Math.round(evalArg(args[0]));
       if (!newPhases[id]) newPhases[id] = { label:`L${id}`, color:PALETTE[(pid-1)%PALETTE.length], Irms:0, phi:0, shift:0, material:0 };
-      newPhases[id].material = Math.round(evalArg(args[1]));
+      const matRef = args[1];
+      const matIdx = parseFloat(matRef);
+      if (!isNaN(matIdx)) {
+        newPhases[id].material = Math.round(matIdx);
+        delete newPhases[id].customMat;
+        delete newPhases[id].customMatName;
+      } else if (localCustMats[matRef]) {
+        newPhases[id].customMatName = matRef;  // reference into global dict
+        delete newPhases[id].customMat;
+        newPhases[id].material = -1;
+      }
     }
   }
 
@@ -1336,10 +1740,12 @@ function importIC(text, noConfirm = false) {
 
   shapes = newShapes;
   phases = newPhases;
+  customMaterials = { ...localCustMats };
   nShapeId = sid;
   nPhaseId = Math.max(...Object.keys(newPhases).map(Number), 0) + 1;
   clearSelection();
   activePhaseId = Object.keys(newPhases).length ? parseInt(Object.keys(newPhases)[0]) : null;
+  solverResults = null;  // clear stale results
 
   renderPhasePanel();
   renderPropsPanel();
@@ -1402,6 +1808,1141 @@ function init() {
 }
 
 init();
+
+// ═══════════════════════════════════════════════════════
+// SOLVER — MATH HELPERS
+// ═══════════════════════════════════════════════════════
+const MU0 = 4 * Math.PI * 1e-7;
+
+function getResistanceEl(dXmm, dYmm, lenMm, tempC, sigma, alpha) {
+  return (lenMm / (dXmm * dYmm * sigma)) * 1e3 * (1 + alpha * (tempC - 20));
+}
+function getSelfInductance(dXmm, dYmm, lenMm, mi_r, mi_r_w) {
+  const srednica = (dXmm + dYmm) / 2;
+  const r = (srednica / 2) * 1e-3;
+  const l = lenMm * 1e-3;
+  const mu_o = MU0 * mi_r_w;
+  return (mu_o / (2 * Math.PI)) * (Math.log(2 * l / r) - 1 + mi_r / 4) * l;
+}
+function getMutualInductance(dXmm, dYmm, lenMm, distMm, mi_r_w) {
+  const l = lenMm * 1e-3;
+  const d = distMm * 1e-3;
+  return (MU0 * mi_r_w * l / (2 * Math.PI)) * (
+    Math.log((l + Math.sqrt(l*l + d*d)) / d) - Math.sqrt(1 + (d/l)**2) + d/l
+  );
+}
+
+// ─── Complex LU decomposition (in-place, partial pivoting) ───
+function complexLUDecomp(N, re, im) {
+  const piv = Array.from({length:N}, (_,i) => i);
+  for (let k = 0; k < N; k++) {
+    let maxAbs = -1, maxRow = k;
+    for (let i = k; i < N; i++) {
+      const a = Math.hypot(re[i*N+k], im[i*N+k]);
+      if (a > maxAbs) { maxAbs = a; maxRow = i; }
+    }
+    if (maxRow !== k) {
+      [piv[k], piv[maxRow]] = [piv[maxRow], piv[k]];
+      for (let j = 0; j < N; j++) {
+        [re[k*N+j], re[maxRow*N+j]] = [re[maxRow*N+j], re[k*N+j]];
+        [im[k*N+j], im[maxRow*N+j]] = [im[maxRow*N+j], im[k*N+j]];
+      }
+    }
+    const pkr = re[k*N+k], pki = im[k*N+k];
+    const pkM2 = pkr*pkr + pki*pki;
+    if (pkM2 < 1e-60) continue;
+    for (let i = k+1; i < N; i++) {
+      const air = re[i*N+k], aii = im[i*N+k];
+      const fr = (air*pkr + aii*pki) / pkM2;
+      const fi = (aii*pkr - air*pki) / pkM2;
+      re[i*N+k] = fr; im[i*N+k] = fi;
+      for (let j = k+1; j < N; j++) {
+        const akr = re[k*N+j], aki = im[k*N+j];
+        re[i*N+j] -= fr*akr - fi*aki;
+        im[i*N+j] -= fr*aki + fi*akr;
+      }
+    }
+  }
+  return piv;
+}
+
+function complexLUSolve(N, luRe, luIm, piv, bRe, bIm) {
+  const xr = new Float64Array(N), xi = new Float64Array(N);
+  for (let i = 0; i < N; i++) { xr[i] = bRe[piv[i]]; xi[i] = bIm[piv[i]]; }
+  // forward substitution (L has unit diagonal)
+  for (let i = 1; i < N; i++) {
+    for (let j = 0; j < i; j++) {
+      const lr = luRe[i*N+j], li = luIm[i*N+j];
+      xr[i] -= lr*xr[j] - li*xi[j];
+      xi[i] -= lr*xi[j] + li*xr[j];
+    }
+  }
+  // back substitution
+  for (let i = N-1; i >= 0; i--) {
+    for (let j = i+1; j < N; j++) {
+      const ur = luRe[i*N+j], ui = luIm[i*N+j];
+      xr[i] -= ur*xr[j] - ui*xi[j];
+      xi[i] -= ur*xi[j] + ui*xr[j];
+    }
+    const dr = luRe[i*N+i], di = luIm[i*N+i];
+    const dM2 = dr*dr + di*di;
+    const nr = (xr[i]*dr + xi[i]*di) / dM2;
+    const ni = (xi[i]*dr - xr[i]*di) / dM2;
+    xr[i] = nr; xi[i] = ni;
+  }
+  return [xr, xi];
+}
+
+// ═══════════════════════════════════════════════════════
+// SOLVER — RASTERIZER
+// ═══════════════════════════════════════════════════════
+function getBoundsOfShapes(shapeList) {
+  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  for (const s of shapeList) {
+    if ((s.phaseId||0) === 0 && !(s.type==='circle' && s.dInner>0)) continue;
+    if (s.type === 'rect') {
+      minX=Math.min(minX,s.x);    maxX=Math.max(maxX,s.x+s.w);
+      minY=Math.min(minY,s.y);    maxY=Math.max(maxY,s.y+s.h);
+    } else if (s.type === 'circle') {
+      minX=Math.min(minX,s.cx-s.d/2); maxX=Math.max(maxX,s.cx+s.d/2);
+      minY=Math.min(minY,s.cy-s.d/2); maxY=Math.max(maxY,s.cy+s.d/2);
+    }
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+function autoPickCellSize(shapeList) {
+  const hasCircle = shapeList.some(s => s.type==='circle');
+  const { minX, maxX, minY, maxY } = getBoundsOfShapes(shapeList);
+  const W = maxX - minX, H = maxY - minY;
+  const candidates = hasCircle ? [2.5, 2, 1.5, 1] : [10, 5, 4, 2.5, 2, 1];
+  for (const c of candidates) {
+    if (Math.abs(W % c) < 0.01 && Math.abs(H % c) < 0.01) return c;
+  }
+  return candidates[candidates.length - 1];
+}
+
+function rasterizeShapes(shapeList, dXmm) {
+  const { minX: rawMinX, maxX, minY: rawMinY, maxY } = getBoundsOfShapes(shapeList);
+  if (!isFinite(rawMinX)) return null;
+  const minX = Math.floor(rawMinX / dXmm) * dXmm;
+  const minY = Math.floor(rawMinY / dXmm) * dXmm;
+  const cols  = Math.ceil((maxX - minX) / dXmm);
+  const rows  = Math.ceil((maxY - minY) / dXmm);
+  if (rows <= 0 || cols <= 0 || rows * cols > 1e7) return null;
+
+  const grid = new Uint16Array(rows * cols);  // 0 = empty
+
+  for (const s of shapeList) {
+    if (s.type === 'rect') {
+      const phId = s.phaseId || 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cx = minX + (c + 0.5) * dXmm;
+          const cy = minY + (r + 0.5) * dXmm;
+          if (cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h)
+            grid[r * cols + c] = phId;
+        }
+      }
+    } else if (s.type === 'circle') {
+      const r2 = (s.d / 2) ** 2;
+      const ri2 = (s.dInner > 0) ? (s.dInner / 2) ** 2 : -1;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cx = minX + (c + 0.5) * dXmm;
+          const cy = minY + (r + 0.5) * dXmm;
+          const d2 = (cx - s.cx)**2 + (cy - s.cy)**2;
+          if (d2 <= r2) {
+            if (ri2 > 0 && d2 <= ri2)
+              grid[r * cols + c] = s.phaseInner || 0;
+            else
+              grid[r * cols + c] = s.phaseId || 0;
+          }
+        }
+      }
+    }
+  }
+  return { grid, rows, cols, dXmm, minX, minY };
+}
+
+// ═══════════════════════════════════════════════════════
+// MATERIAL RESOLVER
+// ═══════════════════════════════════════════════════════
+function getPhaseMatProps(ph) {
+  if (ph?.customMatName && customMaterials[ph.customMatName]) {
+    return customMaterials[ph.customMatName];
+  }
+  if (ph?.customMat) return ph.customMat;
+  return MATERIAL_PROPS[ph?.material ?? 0] || MATERIAL_PROPS[0];
+}
+
+// ═══════════════════════════════════════════════════════
+// SOLVER — MAIN PIPELINE  (port of solve_multi_system)
+// ═══════════════════════════════════════════════════════
+function runSolver(params) {
+  const { freq, length, temp, dXmm: cellMm } = params;
+  const omega = 2 * Math.PI * freq;
+
+  // ── Rasterize ────────────────────────────────────────
+  const gridInfo = rasterizeShapes(shapes, cellMm);
+  if (!gridInfo) return { error: 'Nothing to rasterize — draw some shapes first.' };
+  const { grid, rows, cols, dXmm, minX, minY } = gridInfo;
+
+  // ── Phase list from grid ─────────────────────────────
+  const phaseSet = new Set();
+  for (const v of grid) if (v > 0) phaseSet.add(v);
+  if (!phaseSet.size) return { error: 'No conducting phases found in grid.' };
+  const phaseList = [...phaseSet].sort((a,b) => a-b);
+  const numPhases = phaseList.length;
+
+  // ── Build element vector per phase ───────────────────
+  const elemR = [], elemC = [], elemX = [], elemY = [], elemPhI = [];
+  const phaseBounds = [];
+  for (let pi = 0; pi < numPhases; pi++) {
+    const pid = phaseList[pi];
+    const start = elemR.length;
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (grid[r * cols + c] === pid) {
+          elemR.push(r); elemC.push(c);
+          elemX.push(minX + (c + 0.5) * dXmm);
+          elemY.push(minY + (r + 0.5) * dXmm);
+          elemPhI.push(pi);
+        }
+    phaseBounds.push({ start, end: elemR.length, pid });
+  }
+  const N = elemR.length;
+  if (N === 0) return { error: 'No conducting elements after rasterisation.' };
+  if (N > 5000) return { error: `Too many elements (N=${N}). Increase cell size.` };
+
+  // ── Material properties per element ──────────────────
+  const sigmaArr = new Float64Array(N);
+  const alphaArr = new Float64Array(N);
+  const mi_rArr  = new Float64Array(N).fill(1);
+
+  for (const { start, end, pid } of phaseBounds) {
+    const { sigma, alpha, mi_r } = getPhaseMatProps(phases[pid]);
+    for (let i = start; i < end; i++) {
+      sigmaArr[i] = sigma; alphaArr[i] = alpha; mi_rArr[i] = mi_r;
+    }
+  }
+
+  // ── Resistance vector ────────────────────────────────
+  const Rvec = new Float64Array(N);
+  for (let i = 0; i < N; i++)
+    Rvec[i] = getResistanceEl(dXmm, dXmm, length, temp, sigmaArr[i], alphaArr[i]);
+
+  // ── Impedance matrix (N×N complex) ───────────────────
+  const Zre = new Float64Array(N * N);
+  const Zim = new Float64Array(N * N);
+
+  for (let i = 0; i < N; i++) {
+    // diagonal: R + jωL_self
+    const L = getSelfInductance(dXmm, dXmm, length, mi_rArr[i], 1);
+    Zre[i*N+i] = Rvec[i];
+    Zim[i*N+i] = omega * L;
+    // off-diagonal: jωM (symmetric)
+    for (let j = i+1; j < N; j++) {
+      const dx = elemX[i]-elemX[j], dy = elemY[i]-elemY[j];
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      const mi_r_w = (mi_rArr[i] + mi_rArr[j]) / 2;
+      const M  = getMutualInductance(dXmm, dXmm, length, d, mi_r_w);
+      const v  = omega * M;
+      Zim[i*N+j] = v;
+      Zim[j*N+i] = v;
+    }
+  }
+
+  // ── LU factorize Z (in-place) ────────────────────────
+  const piv = complexLUDecomp(N, Zre, Zim);
+
+  // ── Target currents ──────────────────────────────────
+  // [re, im] phasor from phase I_rms and total angle
+  const Itgt = phaseList.map(pid => {
+    const ph = phases[pid];
+    const rms = ph?.Irms ?? 0;
+    const phi = ((ph?.phi ?? 0) + (ph?.shift ?? 0)) * Math.PI / 180;
+    return { re: rms * Math.cos(phi), im: rms * Math.sin(phi), mag: rms };
+  });
+
+  // ── Trial voltage vector (unit amplitude, correct phase) ─
+  const buildVoltageVec = (Ure, Uim) => {
+    const vr = new Float64Array(N), vi = new Float64Array(N);
+    for (let pi = 0; pi < numPhases; pi++) {
+      const { start, end } = phaseBounds[pi];
+      for (let i = start; i < end; i++) { vr[i] = Ure[pi]; vi[i] = Uim[pi]; }
+    }
+    return [vr, vi];
+  };
+
+  const Ure = new Float64Array(numPhases);
+  const Uim = new Float64Array(numPhases);
+  for (let pi = 0; pi < numPhases; pi++) {
+    const phi = ((phases[phaseList[pi]]?.phi ?? 0) + (phases[phaseList[pi]]?.shift ?? 0)) * Math.PI / 180;
+    Ure[pi] = Math.cos(phi); Uim[pi] = Math.sin(phi);
+  }
+
+  // ── First solve ──────────────────────────────────────
+  let [V1r, V1i] = buildVoltageVec(Ure, Uim);
+  const [I1r, I1i] = complexLUSolve(N, Zre, Zim, piv, V1r, V1i);
+
+  // per-phase sum → voltage correction
+  for (let pi = 0; pi < numPhases; pi++) {
+    const { start, end } = phaseBounds[pi];
+    let sr = 0, si = 0;
+    for (let i = start; i < end; i++) { sr += I1r[i]; si += I1i[i]; }
+    const m2 = sr*sr + si*si;
+    if (m2 > 1e-30) {
+      const it = Itgt[pi];
+      // U_new = U_trial * (I_target / I_sum)  (complex division)
+      const ur = Ure[pi], ui = Uim[pi];
+      // (ur+ui*j) * (it.re+it.im*j) / (sr+si*j)
+      // = ((ur+ui*j)(it.re+it.im*j)) / (sr+si*j)
+      const nr = ur*it.re - ui*it.im, ni = ur*it.im + ui*it.re;
+      Ure[pi] = (nr*sr + ni*si) / m2;
+      Uim[pi] = (ni*sr - nr*si) / m2;
+    }
+  }
+
+  // ── Second solve ─────────────────────────────────────
+  let [V2r, V2i] = buildVoltageVec(Ure, Uim);
+  const [I2r, I2i] = complexLUSolve(N, Zre, Zim, piv, V2r, V2i);
+
+  // ── Magnitude normalisation per phase ────────────────
+  const Imagn = new Float64Array(N);
+  for (let pi = 0; pi < numPhases; pi++) {
+    const { start, end } = phaseBounds[pi];
+    let sr = 0, si = 0;
+    for (let i = start; i < end; i++) { sr += I2r[i]; si += I2i[i]; }
+    const modSum = Math.hypot(sr, si);
+    const tgt    = Itgt[pi].mag;
+    const scale  = (modSum > 1e-30 && tgt > 0) ? tgt / modSum : 0;
+    for (let i = start; i < end; i++)
+      Imagn[i] = Math.hypot(I2r[i], I2i[i]) * scale;
+  }
+
+  // ── Power losses ─────────────────────────────────────
+  const powerVec = new Float64Array(N);
+  for (let i = 0; i < N; i++) powerVec[i] = Rvec[i] * Imagn[i]**2;
+
+  const phaseResults = phaseBounds.map(({ start, end, pid }) => {
+    let power = 0;
+    for (let i = start; i < end; i++) power += powerVec[i];
+    return { pid, power, label: phases[pid]?.label || `Ph${pid}` };
+  });
+  const totalPower = phaseResults.reduce((s, r) => s + r.power, 0);
+
+  // ── Current density A/mm² ─────────────────────────────
+  const densVec = new Float64Array(N);
+  for (let i = 0; i < N; i++) densVec[i] = Imagn[i] / (dXmm * dXmm);
+  const maxDensity = Math.max(...densVec);
+
+  // ── Reconstruct 2D heatmap ───────────────────────────
+  const heatmap = new Float32Array(rows * cols);
+  for (let i = 0; i < N; i++) heatmap[elemR[i] * cols + elemC[i]] = densVec[i];
+
+  return { ok: true, N, heatmap, phaseResults, totalPower, maxDensity,
+           rows, cols, dXmm, minX, minY };
+}
+
+// ═══════════════════════════════════════════════════════
+// SOLVER — JET COLORMAP
+// ═══════════════════════════════════════════════════════
+function jetColor(t) {
+  // t in [0,1]: 0=dark blue → cyan → green → yellow → red
+  t = Math.max(0, Math.min(1, t));
+  const r = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 3))));
+  const g = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 2))));
+  const b = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 1))));
+  return `rgb(${r},${g},${b})`;
+}
+
+// ═══════════════════════════════════════════════════════
+// SOLVER — UI
+// ═══════════════════════════════════════════════════════
+function setStatus(msg, cls = '') {
+  const el = document.getElementById('solver-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = cls;
+}
+
+function showResultsPanel(results) {
+  const panel = document.getElementById('solver-results');
+  const table = document.getElementById('results-table');
+  const info  = document.getElementById('res-cell-info');
+  if (!panel || !table) return;
+
+  if (!results?.ok) { panel.style.display = 'none'; return; }
+
+  panel.style.display = '';
+  if (info) info.textContent = `(N=${results.N}, cell=${results.dXmm}mm)`;
+
+  const fmt = v => v < 1 ? v.toFixed(3) : v < 100 ? v.toFixed(2) : v.toFixed(1);
+  const rows = results.phaseResults.map(r =>
+    `<div class="res-row">
+      <span class="res-lbl">${r.label} (ph${r.pid})</span>
+      <span class="res-val">${fmt(r.power)} W/m</span>
+    </div>`
+  ).join('');
+
+  table.innerHTML = `
+    ${rows}
+    <div class="res-row" style="margin-top:4px">
+      <span class="res-lbl res-total">Total</span>
+      <span class="res-val res-total">${fmt(results.totalPower)} W/m</span>
+    </div>
+    <div class="res-row">
+      <span class="res-lbl">Max J</span>
+      <span class="res-val">${fmt(results.maxDensity)} A/mm²</span>
+    </div>`;
+
+  const legend = document.getElementById('heatmap-legend');
+  const legendMax = document.getElementById('legend-max');
+  if (showHeatmap && legend) {
+    legend.classList.add('visible');
+    if (legendMax) legendMax.textContent = fmt(results.maxDensity);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// REPORT GENERATOR
+// ═══════════════════════════════════════════════════════
+function buildHeatmapDataURL() {
+  if (!solverResults?.ok) return null;
+  const { heatmap, rows, cols, maxDensity } = solverResults;
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = cols;
+  offscreen.height = rows;
+  const octx = offscreen.getContext('2d');
+  const img  = octx.createImageData(cols, rows);
+  const d    = img.data;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v   = heatmap[r * cols + c];
+      const t   = maxDensity > 0 ? v / maxDensity : 0;
+      const dr  = rows - 1 - r;  // Y-flip
+      const idx = (dr * cols + c) * 4;
+      if (v <= 0) {
+        d[idx]=255; d[idx+1]=255; d[idx+2]=255; d[idx+3]=255;
+      } else {
+        const [rr, gg, bb] = jetColorArr(t);
+        d[idx]=rr; d[idx+1]=gg; d[idx+2]=bb; d[idx+3]=255;
+      }
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  return offscreen.toDataURL('image/png');
+}
+
+function jetColorArr(t) {
+  t = Math.max(0, Math.min(1, t));
+  return [
+    Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 3)))),
+    Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 2)))),
+    Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 1)))),
+  ];
+}
+
+function openReport() {
+  if (!solverResults?.ok) return;
+  const res = solverResults;
+  const fmt = v => v < 1 ? v.toFixed(3) : v < 100 ? v.toFixed(2) : v.toFixed(1);
+
+  // Solver params from UI
+  const freq   = parseFloat(document.getElementById('s-freq')?.value)  || 50;
+  const length = parseFloat(document.getElementById('s-len')?.value)   || 1000;
+  const temp   = parseFloat(document.getElementById('s-temp')?.value)  ?? 20;
+
+  // Phase summary for intro
+  const usedPhases = res.phaseResults.map(r => {
+    const ph = phases[r.pid];
+    return `phase ${r.pid} (${ph?.label || '?'}, ${ph?.Irms ?? 0} A)`;
+  });
+
+  // Heatmap image
+  const heatmapUrl = buildHeatmapDataURL();
+  const heatmapHTML = heatmapUrl
+    ? `<div class="rpt-heatmap-wrap">
+         <img src="${heatmapUrl}" style="border:1px solid #ccc;border-radius:4px;image-rendering:pixelated;width:calc(100% - 50px);max-height:520px;object-fit:contain">
+         <div class="rpt-heatmap-legend">
+           <span>${fmt(res.maxDensity)}</span>
+           <div class="rpt-legend-bar"></div>
+           <span>0</span>
+           <span style="color:#999;font-size:9px">A/mm²</span>
+         </div>
+       </div>`
+    : '<p style="color:#888;font-size:12px">No heatmap available.</p>';
+
+  // Per-phase material names
+  function matLabel(pid) {
+    const ph = phases[pid];
+    if (!ph) return '—';
+    if (ph.customMatName && customMaterials[ph.customMatName]) return ph.customMatName;
+    if (ph.customMat) return `custom (σ=${(ph.customMat.sigma/1e6).toFixed(1)} MS/m)`;
+    return MATERIALS[ph.material ?? 0] || '—';
+  }
+
+  // Results table rows
+  const resultRows = res.phaseResults.map(r => {
+    const ph   = phases[r.pid];
+    const irms = ph?.Irms  ?? 0;
+    const phi  = ((ph?.phi ?? 0) + (ph?.shift ?? 0)).toFixed(1);
+    return `<tr>
+      <td>${r.pid}</td>
+      <td>${ph?.label || '—'}</td>
+      <td>${irms} A</td>
+      <td>${phi}°</td>
+      <td>${matLabel(r.pid)}</td>
+      <td>${fmt(r.power)} W/m</td>
+    </tr>`;
+  }).join('');
+
+  // Custom materials section (only if any exist)
+  const custEntries = Object.entries(customMaterials);
+  const custMatSection = custEntries.length ? `
+    <div class="rpt-section">
+      <h2>Custom Materials</h2>
+      <table class="rpt-res-table">
+        <thead><tr><th>Name</th><th>σ (S/m)</th><th>α (1/K)</th><th>μr</th></tr></thead>
+        <tbody>${custEntries.map(([n,m]) =>
+          `<tr><td>${n}</td><td>${m.sigma.toExponential(3)}</td><td>${m.alpha}</td><td>${m.mi_r}</td></tr>`
+        ).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  // IC code
+  const icCode = (document.getElementById('ic-preview')?.value || generateIC())
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+  const timeStr = now.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+
+  document.getElementById('report-body').innerHTML = `
+    <div class="rpt-title">Current Density Analysis Report</div>
+    <div class="rpt-subtitle">Generated by CSD Editor · ${dateStr} ${timeStr}</div>
+
+    <div class="rpt-section">
+      <h2>Introduction</h2>
+      <p class="rpt-intro">
+        This report presents the results of an electromagnetic current density and power loss
+        analysis performed on a ${res.phaseResults.length}-phase conductor arrangement.
+        The analysis uses the method of partial inductances (PEEC-like impedance matrix)
+        to compute current distribution and Joule losses across the cross-section at
+        <strong>${freq} Hz</strong>.
+        The system comprises ${usedPhases.join(', ')}.
+        The conductor length used for normalisation is <strong>${length} mm</strong>.
+      </p>
+    </div>
+
+    <div class="rpt-section">
+      <h2>Analysis Parameters</h2>
+      <table class="rpt-param-table">
+        <tr><td>Frequency</td><td>${freq} Hz</td></tr>
+        <tr><td>Conductor length</td><td>${length} mm</td></tr>
+        <tr><td>Operating temperature</td><td>${temp} °C</td></tr>
+        <tr><td>Mesh cell size</td><td>${res.dXmm} mm × ${res.dXmm} mm</td></tr>
+        <tr><td>Total mesh elements (N)</td><td>${res.N}</td></tr>
+        <tr><td>Number of phases</td><td>${res.phaseResults.length}</td></tr>
+      </table>
+    </div>
+
+    <div class="rpt-section">
+      <h2>Current Density Distribution</h2>
+      ${heatmapHTML}
+    </div>
+
+    ${custMatSection}
+
+    <div class="rpt-section">
+      <h2>Power Loss Results</h2>
+      <table class="rpt-res-table">
+        <thead>
+          <tr><th>Phase ID</th><th>Label</th><th>I rms</th><th>Angle</th><th>Material</th><th>Loss (W/m)</th></tr>
+        </thead>
+        <tbody>
+          ${resultRows}
+          <tr class="rpt-total">
+            <td colspan="5">Total power loss</td>
+            <td>${fmt(res.totalPower)} W/m</td>
+          </tr>
+          <tr>
+            <td colspan="5">Maximum current density</td>
+            <td>${fmt(res.maxDensity)} A/mm²</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rpt-section">
+      <h2>Geometry Definition (.ic code)</h2>
+      <div class="rpt-code">${icCode}</div>
+    </div>`;
+
+  document.getElementById('report-modal').style.display = 'flex';
+}
+
+document.getElementById('report-btn')?.addEventListener('click', openReport);
+document.getElementById('report-modal-close')?.addEventListener('click', () => {
+  document.getElementById('report-modal').style.display = 'none';
+});
+document.getElementById('report-modal-close2')?.addEventListener('click', () => {
+  document.getElementById('report-modal').style.display = 'none';
+});
+document.getElementById('report-print-btn')?.addEventListener('click', () => {
+  const body = document.getElementById('report-body')?.innerHTML || '';
+  const pw = window.open('', '_blank', 'width=900,height=700');
+  if (!pw) { alert('Pop-up blocked — please allow pop-ups for this page.'); return; }
+  pw.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>CSD Report</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 40px; color: #111; background: #fff; }
+  h1,h2,h3 { margin: 0 0 6px; }
+  .rpt-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .rpt-subtitle { font-size: 12px; color: #666; margin-bottom: 24px; }
+  .rpt-section { margin-bottom: 28px; page-break-inside: avoid; }
+  .rpt-section h2 { font-size: 14px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: #333; border-bottom: 1px solid #ddd;
+    padding-bottom: 4px; margin-bottom: 10px; }
+  .rpt-intro { font-size: 13px; color: #444; line-height: 1.65; margin: 0; }
+  .rpt-param-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rpt-param-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+  .rpt-param-table td:first-child { color: #666; width: 40%; }
+  .rpt-param-table td:last-child { font-weight: 600; font-family: monospace; }
+  .rpt-heatmap-wrap { text-align: center; margin: 12px 0; }
+  .rpt-heatmap-wrap img { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; image-rendering: pixelated; }
+  .rpt-heatmap-legend { display: flex; align-items: center; gap: 10px; font-size: 11px;
+    color: #555; justify-content: center; margin-top: 6px; }
+  .rpt-legend-bar { flex: 1; max-width: 220px; height: 10px; border-radius: 3px;
+    background: linear-gradient(to right,#00f,#0ff,#0f0,#ff0,#f00); }
+  .rpt-res-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rpt-res-table th { background: #f4f4f4; font-weight: 600; text-align: left;
+    padding: 6px 10px; border-bottom: 2px solid #ddd; }
+  .rpt-res-table td { padding: 5px 10px; border-bottom: 1px solid #eee; color: #222; }
+  .rpt-res-table tr.rpt-total td { font-weight: 700; background: #f9f9f9; }
+  .rpt-code { background: #f6f8fa; border: 1px solid #ddd; border-radius: 6px;
+    padding: 14px 16px; font-family: monospace; font-size: 11px; color: #24292e;
+    white-space: pre; overflow-x: auto; }
+  @media print { body { margin: 20px; } }
+</style></head><body>${body}</body></html>`);
+  pw.document.close();
+  pw.focus();
+  pw.onload = () => { pw.print(); };
+  // fallback if onload already fired
+  setTimeout(() => { try { pw.print(); } catch(_){} }, 400);
+});
+document.getElementById('report-modal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('report-modal'))
+    document.getElementById('report-modal').style.display = 'none';
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('report-modal')?.style.display !== 'none')
+    document.getElementById('report-modal').style.display = 'none';
+});
+
+// ─── Web Worker state ────────────────────────────────────
+let _solverWorker = null;
+let _solverWorkerUrl = null;
+
+function getSolverWorkerUrl() {
+  if (!_solverWorkerUrl) {
+    const src = document.getElementById('solver-worker').textContent;
+    const blob = new Blob([src], { type: 'application/javascript' });
+    _solverWorkerUrl = URL.createObjectURL(blob);
+  }
+  return _solverWorkerUrl;
+}
+
+function triggerSolve() {
+  const freq   = parseFloat(document.getElementById('s-freq')?.value)  || 50;
+  const length = parseFloat(document.getElementById('s-len')?.value)   || 1000;
+  const temp   = parseFloat(document.getElementById('s-temp')?.value)  ?? 20;
+  let   cellMm = parseFloat(document.getElementById('s-cell')?.value)  || 0;
+  if (cellMm <= 0) cellMm = autoPickCellSize(shapes);
+
+  const btn = document.getElementById('solve-btn');
+  if (btn) btn.disabled = true;
+  setStatus('Solving…');
+
+  if (_solverWorker) { _solverWorker.terminate(); _solverWorker = null; }
+
+  const worker = new Worker(getSolverWorkerUrl());
+  _solverWorker = worker;
+  const t0 = performance.now();
+
+  worker.onmessage = function(e) {
+    _solverWorker = null;
+    const dt = ((performance.now() - t0) / 1000).toFixed(2);
+    const result = e.data;
+    if (result.error) {
+      setStatus(result.error, 'error');
+      solverResults = null;
+      showResultsPanel(null);
+    } else {
+      solverResults = result;
+      const legend = document.getElementById('heatmap-legend');
+      if (showHeatmap && legend) {
+        legend.classList.add('visible');
+        const lm = document.getElementById('legend-max');
+        if (lm) lm.textContent = result.maxDensity.toFixed(2);
+      }
+      showResultsPanel(result);
+      setStatus(`Done in ${dt}s — ${result.N} elements`, 'ok');
+    }
+    if (btn) btn.disabled = false;
+  };
+
+  worker.onerror = function(e) {
+    _solverWorker = null;
+    setStatus('Worker error: ' + (e.message || 'unknown'), 'error');
+    console.error(e);
+    if (btn) btn.disabled = false;
+  };
+
+  // Pre-resolve named/anonymous custom materials into customMat so the
+  // worker's simple ph.customMat check works without needing the global dict.
+  const phasesForWorker = {};
+  for (const [id, ph] of Object.entries(phases)) {
+    phasesForWorker[id] = { ...ph, customMat: getPhaseMatProps(ph) };
+  }
+
+  worker.postMessage({
+    shapes,
+    phases: phasesForWorker,
+    params: { freq, length, temp, dXmm: cellMm }
+  });
+}
+
+document.getElementById('solve-btn')?.addEventListener('click', triggerSolve);
+document.getElementById('tb-solve-btn')?.addEventListener('click', triggerSolve);
+
+document.getElementById('heatmap-toggle')?.addEventListener('change', e => {
+  showHeatmap = e.target.checked;
+  const legend = document.getElementById('heatmap-legend');
+  if (!showHeatmap) {
+    if (legend) legend.classList.remove('visible');
+  } else if (solverResults?.ok) {
+    if (legend) legend.classList.add('visible');
+    const lm = document.getElementById('legend-max');
+    if (lm) lm.textContent = solverResults.maxDensity.toFixed(2);
+    showResultsPanel(solverResults);
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// MATERIALS MANAGER MODAL
+// ═══════════════════════════════════════════════════════
+function renderMatModal() {
+  const list = document.getElementById('mat-list');
+  if (!list) return;
+  const names = Object.keys(customMaterials);
+  if (!names.length) {
+    list.innerHTML = '<div class="mat-empty">No custom materials yet. Click "＋ Add Material".</div>';
+    return;
+  }
+  list.innerHTML = names.map(name => {
+    const m = customMaterials[name];
+    return `<div class="mat-row">
+      <span class="mat-name">${name}</span>
+      <input class="prop-inp" type="number" data-mat="${name}" data-key="sigma" value="${m.sigma}" step="1e6" min="1" title="Conductivity σ (S/m)">
+      <input class="prop-inp" type="number" data-mat="${name}" data-key="alpha" value="${m.alpha}" step="0.0001" title="Temp. coeff. α (1/K)">
+      <input class="prop-inp" type="number" data-mat="${name}" data-key="mi_r"  value="${m.mi_r}"  step="1"      min="1" title="Rel. permeability μr">
+      <button class="mat-del-btn" data-mat="${name}" title="Delete material">✕</button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('input[data-mat]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const name = inp.dataset.mat;
+      const key  = inp.dataset.key;
+      if (customMaterials[name]) {
+        customMaterials[name][key] = parseFloat(inp.value) || 0;
+        updatePreview();
+      }
+    });
+  });
+
+  list.querySelectorAll('.mat-del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.mat;
+      const inUse = Object.values(phases).some(ph => ph.customMatName === name);
+      if (inUse && !confirm(`"${name}" is assigned to one or more phases. Delete anyway?\n(Affected phases will revert to Copper.)`)) return;
+      delete customMaterials[name];
+      for (const ph of Object.values(phases)) {
+        if (ph.customMatName === name) {
+          delete ph.customMatName;
+          ph.material = 0;
+        }
+      }
+      renderMatModal();
+      renderPropsPanel();
+      updatePreview();
+    });
+  });
+}
+
+function openMatModal() {
+  renderMatModal();
+  document.getElementById('mat-modal').style.display = 'flex';
+}
+
+function closeMatModal() {
+  document.getElementById('mat-modal').style.display = 'none';
+  renderPropsPanel();  // refresh dropdown to show any new/edited materials
+  updatePreview();
+}
+
+document.getElementById('mat-mgr-btn')?.addEventListener('click', openMatModal);
+document.getElementById('mat-modal-close')?.addEventListener('click', closeMatModal);
+document.getElementById('mat-modal-close2')?.addEventListener('click', closeMatModal);
+
+document.getElementById('mat-add-btn')?.addEventListener('click', () => {
+  let name = prompt('Material name (letters, digits, underscore — no spaces):');
+  if (!name) return;
+  name = name.trim().replace(/\s+/g, '_');
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+    alert('Invalid name. Use letters, digits, and underscores only, starting with a letter or underscore.');
+    return;
+  }
+  if (customMaterials[name]) { alert(`"${name}" already exists.`); return; }
+  customMaterials[name] = { sigma: 56e6, alpha: 3.9e-3, mi_r: 1 };
+  renderMatModal();
+  updatePreview();
+});
+
+// Close modal on overlay click
+document.getElementById('mat-modal')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('mat-modal')) closeMatModal();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('mat-modal')?.style.display !== 'none') {
+    closeMatModal();
+  }
+});
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     INLINE WEB WORKER — browser ignores unknown MIME type;
+     JS reads textContent and creates a Blob URL.
+     ════════════════════════════════════════════════════ -->
+<script id="solver-worker" type="text/js-worker">
+'use strict';
+const MU0 = 4 * Math.PI * 1e-7;
+const MATERIAL_PROPS = [
+  { sigma:56e6,   alpha:3.9e-3, mi_r:1   },
+  { sigma:31e6,   alpha:4.4e-3, mi_r:1   },
+  { sigma:31e6,   alpha:4.4e-3, mi_r:1   },
+  { sigma:6.99e6, alpha:6.5e-3, mi_r:100 },
+  { sigma:1.45e6, alpha:1.0e-3, mi_r:1   },
+  { sigma:6.99e6, alpha:6.5e-3, mi_r:10  },
+];
+
+function getResistanceEl(dXmm, dYmm, lenMm, tempC, sigma, alpha) {
+  return (lenMm / (dXmm * dYmm * sigma)) * 1e3 * (1 + alpha * (tempC - 20));
+}
+function getSelfInductance(dXmm, dYmm, lenMm, mi_r, mi_r_w) {
+  const srednica = (dXmm + dYmm) / 2;
+  const r = (srednica / 2) * 1e-3;
+  const l = lenMm * 1e-3;
+  return (MU0 * mi_r_w / (2 * Math.PI)) * (Math.log(2 * l / r) - 1 + mi_r / 4) * l;
+}
+function getMutualInductance(dXmm, dYmm, lenMm, distMm, mi_r_w) {
+  const l = lenMm * 1e-3;
+  const d = distMm * 1e-3;
+  return (MU0 * mi_r_w * l / (2 * Math.PI)) * (
+    Math.log((l + Math.sqrt(l*l + d*d)) / d) - Math.sqrt(1 + (d/l)**2) + d/l
+  );
+}
+
+function complexLUDecomp(N, re, im) {
+  const piv = Array.from({length:N}, (_,i) => i);
+  for (let k = 0; k < N; k++) {
+    let maxAbs = -1, maxRow = k;
+    for (let i = k; i < N; i++) {
+      const a = Math.hypot(re[i*N+k], im[i*N+k]);
+      if (a > maxAbs) { maxAbs = a; maxRow = i; }
+    }
+    if (maxRow !== k) {
+      [piv[k], piv[maxRow]] = [piv[maxRow], piv[k]];
+      for (let j = 0; j < N; j++) {
+        [re[k*N+j], re[maxRow*N+j]] = [re[maxRow*N+j], re[k*N+j]];
+        [im[k*N+j], im[maxRow*N+j]] = [im[maxRow*N+j], im[k*N+j]];
+      }
+    }
+    const pkr = re[k*N+k], pki = im[k*N+k];
+    const pkM2 = pkr*pkr + pki*pki;
+    if (pkM2 < 1e-60) continue;
+    for (let i = k+1; i < N; i++) {
+      const air = re[i*N+k], aii = im[i*N+k];
+      const fr = (air*pkr + aii*pki) / pkM2;
+      const fi = (aii*pkr - air*pki) / pkM2;
+      re[i*N+k] = fr; im[i*N+k] = fi;
+      for (let j = k+1; j < N; j++) {
+        const akr = re[k*N+j], aki = im[k*N+j];
+        re[i*N+j] -= fr*akr - fi*aki;
+        im[i*N+j] -= fr*aki + fi*akr;
+      }
+    }
+  }
+  return piv;
+}
+
+function complexLUSolve(N, luRe, luIm, piv, bRe, bIm) {
+  const xr = new Float64Array(N), xi = new Float64Array(N);
+  for (let i = 0; i < N; i++) { xr[i] = bRe[piv[i]]; xi[i] = bIm[piv[i]]; }
+  for (let i = 1; i < N; i++) {
+    for (let j = 0; j < i; j++) {
+      const lr = luRe[i*N+j], li = luIm[i*N+j];
+      xr[i] -= lr*xr[j] - li*xi[j];
+      xi[i] -= lr*xi[j] + li*xr[j];
+    }
+  }
+  for (let i = N-1; i >= 0; i--) {
+    for (let j = i+1; j < N; j++) {
+      const ur = luRe[i*N+j], ui = luIm[i*N+j];
+      xr[i] -= ur*xr[j] - ui*xi[j];
+      xi[i] -= ur*xi[j] + ui*xr[j];
+    }
+    const dr = luRe[i*N+i], di = luIm[i*N+i];
+    const dM2 = dr*dr + di*di;
+    const nr = (xr[i]*dr + xi[i]*di) / dM2;
+    const ni = (xi[i]*dr - xr[i]*di) / dM2;
+    xr[i] = nr; xi[i] = ni;
+  }
+  return [xr, xi];
+}
+
+function getBoundsOfShapes(shapeList) {
+  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  for (const s of shapeList) {
+    if ((s.phaseId||0) === 0 && !(s.type==='circle' && s.dInner>0)) continue;
+    if (s.type === 'rect') {
+      minX=Math.min(minX,s.x);    maxX=Math.max(maxX,s.x+s.w);
+      minY=Math.min(minY,s.y);    maxY=Math.max(maxY,s.y+s.h);
+    } else if (s.type === 'circle') {
+      minX=Math.min(minX,s.cx-s.d/2); maxX=Math.max(maxX,s.cx+s.d/2);
+      minY=Math.min(minY,s.cy-s.d/2); maxY=Math.max(maxY,s.cy+s.d/2);
+    }
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+function autoPickCellSize(shapeList) {
+  const hasCircle = shapeList.some(s => s.type==='circle');
+  const { minX, maxX, minY, maxY } = getBoundsOfShapes(shapeList);
+  const W = maxX - minX, H = maxY - minY;
+  const candidates = hasCircle ? [2.5, 2, 1.5, 1] : [10, 5, 4, 2.5, 2, 1];
+  for (const c of candidates) {
+    if (Math.abs(W % c) < 0.01 && Math.abs(H % c) < 0.01) return c;
+  }
+  return candidates[candidates.length - 1];
+}
+
+function rasterizeShapes(shapeList, dXmm) {
+  const { minX: rawMinX, maxX, minY: rawMinY, maxY } = getBoundsOfShapes(shapeList);
+  if (!isFinite(rawMinX)) return null;
+  const minX = Math.floor(rawMinX / dXmm) * dXmm;
+  const minY = Math.floor(rawMinY / dXmm) * dXmm;
+  const cols  = Math.ceil((maxX - minX) / dXmm);
+  const rows  = Math.ceil((maxY - minY) / dXmm);
+  if (rows <= 0 || cols <= 0 || rows * cols > 1e7) return null;
+  const grid = new Uint16Array(rows * cols);
+  for (const s of shapeList) {
+    if (s.type === 'rect') {
+      const phId = s.phaseId || 0;
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          const cx = minX + (c + 0.5) * dXmm;
+          const cy = minY + (r + 0.5) * dXmm;
+          if (cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h)
+            grid[r * cols + c] = phId;
+        }
+    } else if (s.type === 'circle') {
+      const r2 = (s.d / 2) ** 2;
+      const ri2 = (s.dInner > 0) ? (s.dInner / 2) ** 2 : -1;
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+          const cx = minX + (c + 0.5) * dXmm;
+          const cy = minY + (r + 0.5) * dXmm;
+          const d2 = (cx - s.cx)**2 + (cy - s.cy)**2;
+          if (d2 <= r2) {
+            if (ri2 > 0 && d2 <= ri2)
+              grid[r * cols + c] = s.phaseInner || 0;
+            else
+              grid[r * cols + c] = s.phaseId || 0;
+          }
+        }
+    }
+  }
+  return { grid, rows, cols, dXmm, minX, minY };
+}
+
+function runSolver(shapes, phases, params) {
+  const { freq, length, temp, dXmm: cellMm } = params;
+  const omega = 2 * Math.PI * freq;
+
+  const gridInfo = rasterizeShapes(shapes, cellMm);
+  if (!gridInfo) return { error: 'Nothing to rasterize — draw some shapes first.' };
+  const { grid, rows, cols, dXmm, minX, minY } = gridInfo;
+
+  const phaseSet = new Set();
+  for (const v of grid) if (v > 0) phaseSet.add(v);
+  if (!phaseSet.size) return { error: 'No conducting phases found in grid.' };
+  const phaseList = [...phaseSet].sort((a,b) => a-b);
+  const numPhases = phaseList.length;
+
+  const elemR = [], elemC = [], elemX = [], elemY = [], elemPhI = [];
+  const phaseBounds = [];
+  for (let pi = 0; pi < numPhases; pi++) {
+    const pid = phaseList[pi];
+    const start = elemR.length;
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (grid[r * cols + c] === pid) {
+          elemR.push(r); elemC.push(c);
+          elemX.push(minX + (c + 0.5) * dXmm);
+          elemY.push(minY + (r + 0.5) * dXmm);
+          elemPhI.push(pi);
+        }
+    phaseBounds.push({ start, end: elemR.length, pid });
+  }
+  const N = elemR.length;
+  if (N === 0) return { error: 'No conducting elements after rasterisation.' };
+  if (N > 8000) return { error: `Too many elements (N=${N}). Increase cell size.` };
+
+  const sigmaArr = new Float64Array(N);
+  const alphaArr = new Float64Array(N);
+  const mi_rArr  = new Float64Array(N).fill(1);
+
+  for (const { start, end, pid } of phaseBounds) {
+    const ph = phases[pid];
+    let sigma, alpha, mi_r;
+    if (ph?.customMat) {
+      ({ sigma, alpha, mi_r } = ph.customMat);
+    } else {
+      const mp = MATERIAL_PROPS[ph?.material ?? 0] || MATERIAL_PROPS[0];
+      ({ sigma, alpha, mi_r } = mp);
+    }
+    for (let i = start; i < end; i++) {
+      sigmaArr[i] = sigma; alphaArr[i] = alpha; mi_rArr[i] = mi_r;
+    }
+  }
+
+  const Rvec = new Float64Array(N);
+  for (let i = 0; i < N; i++)
+    Rvec[i] = getResistanceEl(dXmm, dXmm, length, temp, sigmaArr[i], alphaArr[i]);
+
+  const Zre = new Float64Array(N * N);
+  const Zim = new Float64Array(N * N);
+  for (let i = 0; i < N; i++) {
+    const L = getSelfInductance(dXmm, dXmm, length, mi_rArr[i], 1);
+    Zre[i*N+i] = Rvec[i];
+    Zim[i*N+i] = omega * L;
+    for (let j = i+1; j < N; j++) {
+      const dx = elemX[i]-elemX[j], dy = elemY[i]-elemY[j];
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      const mi_r_w = (mi_rArr[i] + mi_rArr[j]) / 2;
+      const M  = getMutualInductance(dXmm, dXmm, length, d, mi_r_w);
+      const v  = omega * M;
+      Zim[i*N+j] = v;
+      Zim[j*N+i] = v;
+    }
+  }
+
+  const piv = complexLUDecomp(N, Zre, Zim);
+
+  const Itgt = phaseList.map(pid => {
+    const ph = phases[pid];
+    const rms = ph?.Irms ?? 0;
+    const phi = ((ph?.phi ?? 0) + (ph?.shift ?? 0)) * Math.PI / 180;
+    return { re: rms * Math.cos(phi), im: rms * Math.sin(phi), mag: rms };
+  });
+
+  const buildVoltageVec = (Ure, Uim) => {
+    const vr = new Float64Array(N), vi = new Float64Array(N);
+    for (let pi = 0; pi < numPhases; pi++) {
+      const { start, end } = phaseBounds[pi];
+      for (let i = start; i < end; i++) { vr[i] = Ure[pi]; vi[i] = Uim[pi]; }
+    }
+    return [vr, vi];
+  };
+
+  const Ure = new Float64Array(numPhases);
+  const Uim = new Float64Array(numPhases);
+  for (let pi = 0; pi < numPhases; pi++) {
+    const phi = ((phases[phaseList[pi]]?.phi ?? 0) + (phases[phaseList[pi]]?.shift ?? 0)) * Math.PI / 180;
+    Ure[pi] = Math.cos(phi); Uim[pi] = Math.sin(phi);
+  }
+
+  let [V1r, V1i] = buildVoltageVec(Ure, Uim);
+  const [I1r, I1i] = complexLUSolve(N, Zre, Zim, piv, V1r, V1i);
+
+  for (let pi = 0; pi < numPhases; pi++) {
+    const { start, end } = phaseBounds[pi];
+    let sr = 0, si = 0;
+    for (let i = start; i < end; i++) { sr += I1r[i]; si += I1i[i]; }
+    const m2 = sr*sr + si*si;
+    if (m2 > 1e-30) {
+      const it = Itgt[pi];
+      const ur = Ure[pi], ui = Uim[pi];
+      const nr = ur*it.re - ui*it.im, ni = ur*it.im + ui*it.re;
+      Ure[pi] = (nr*sr + ni*si) / m2;
+      Uim[pi] = (ni*sr - nr*si) / m2;
+    }
+  }
+
+  let [V2r, V2i] = buildVoltageVec(Ure, Uim);
+  const [I2r, I2i] = complexLUSolve(N, Zre, Zim, piv, V2r, V2i);
+
+  const Imagn = new Float64Array(N);
+  for (let pi = 0; pi < numPhases; pi++) {
+    const { start, end } = phaseBounds[pi];
+    let sr = 0, si = 0;
+    for (let i = start; i < end; i++) { sr += I2r[i]; si += I2i[i]; }
+    const modSum = Math.hypot(sr, si);
+    const tgt    = Itgt[pi].mag;
+    const scale  = (modSum > 1e-30 && tgt > 0) ? tgt / modSum : 0;
+    for (let i = start; i < end; i++)
+      Imagn[i] = Math.hypot(I2r[i], I2i[i]) * scale;
+  }
+
+  const powerVec = new Float64Array(N);
+  for (let i = 0; i < N; i++) powerVec[i] = Rvec[i] * Imagn[i]**2;
+
+  const phaseResults = phaseBounds.map(({ start, end, pid }) => {
+    let power = 0;
+    for (let i = start; i < end; i++) power += powerVec[i];
+    return { pid, power, label: phases[pid]?.label || `Ph${pid}` };
+  });
+  const totalPower = phaseResults.reduce((s, r) => s + r.power, 0);
+
+  const densVec = new Float64Array(N);
+  for (let i = 0; i < N; i++) densVec[i] = Imagn[i] / (dXmm * dXmm);
+  const maxDensity = Math.max(...densVec);
+
+  const heatmap = new Float32Array(rows * cols);
+  for (let i = 0; i < N; i++) heatmap[elemR[i] * cols + elemC[i]] = densVec[i];
+
+  return { ok: true, N, heatmap, phaseResults, totalPower, maxDensity,
+           rows, cols, dXmm, minX, minY };
+}
+
+self.onmessage = function(e) {
+  try {
+    const { shapes, phases, params } = e.data;
+    const result = runSolver(shapes, phases, params);
+    if (result.ok) {
+      self.postMessage(result, [result.heatmap.buffer]);
+    } else {
+      self.postMessage(result);
+    }
+  } catch(err) {
+    self.postMessage({ error: err.message });
+  }
+};
 </script>
 </body>
 </html>

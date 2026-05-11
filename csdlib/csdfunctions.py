@@ -145,7 +145,7 @@ def loadTheData(filename):
                     file_content = f.read()
 
                 codeLines = file_content.splitlines()
-                codeSteps, currents, materials = ic.textToCode(codeLines)
+                codeSteps, currents, materials, custom_materials = ic.textToCode(codeLines)
 
                 XSecArray, dXmm, dYmm = getCanvas(codeSteps)
             except IOError:
@@ -155,8 +155,9 @@ def loadTheData(filename):
         else:
             myLog("reading from file :" + filename)
             XSecArray, dXmm, dYmm = loadObj(filename).restore()
+            custom_materials = {}
 
-        return XSecArray, dXmm, dYmm, currents, materials
+        return XSecArray, dXmm, dYmm, currents, materials, custom_materials
     else:
         print(f"The file {filename} can't be opened!")
         sys.exit(1)

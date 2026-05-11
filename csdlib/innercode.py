@@ -173,11 +173,13 @@ def codeLoops(input_text):
 # ---------------------------------------------------------------------------
 
 def textToCode(input_text):
-    """Parse inner-code text and return (codeSteps, currents, materials).
+    """Parse inner-code text and return (codeSteps, currents, materials, custom_materials).
 
-    codeSteps  – list of [function, [float_args], command_name]
-    currents   – list of [phase_id, I_rms, phase_shift, extra_shift]
-    materials  – list of [phase_id, material_type_id]
+    codeSteps        – list of [function, [float_args], command_name]
+    currents         – list of [phase_id, I_rms, phase_shift, extra_shift]
+    materials        – list of [phase_id, material_type_id_or_name]
+    custom_materials – dict of {name: {sigma, alpha, mi_r, rho, cp, k}}
+                       populated by defmat() commands in the .ic file
     """
 
     commands = {
@@ -190,12 +192,14 @@ def textToCode(input_text):
         'cp':       [copyCells, [3]],
         'current':  [None,      [4]],
         'material': [None,      [2]],
+        'defmat':   [None,      [4, 7]],
     }
 
     innerCodeSteps = []
     innerVariables = {}
     currents = []
     materials = []
+    custom_materials = {}
 
     input_text = codeLoops(input_text)
 
@@ -252,10 +256,55 @@ def textToCode(input_text):
                 currents.append(resolved)
 
         elif command == 'material':
-            ar = [a.strip() for a in raw_args.split(',')]
-            resolved = _resolve_args(ar, innerVariables)
-            if len(resolved) in commands[command][1]:
-                materials.append(resolved)
+            # Split on first comma only so phase_id expressions like ph+1 work.
+            # The material reference (second arg) may be an integer index OR a
+            # name defined by defmat(); _resolve_args returns it as a string
+            # when it cannot be evaluated as a numeric expression.
+            ar = [a.strip() for a in raw_args.split(',', 1)]
+            if len(ar) == 2:
+                phase_resolved = _resolve_args([ar[0]], innerVariables)
+                mat_resolved   = _resolve_args([ar[1]], innerVariables)
+                materials.append([phase_resolved[0], mat_resolved[0]])
+
+        elif command == 'defmat':
+            # defmat(name, sigma, alpha, mi_r)
+            # defmat(name, sigma, alpha, mi_r, rho, cp, thermal_k)
+            # First token is always a plain name string; rest are numeric expressions.
+            parts = [a.strip() for a in raw_args.split(',', 1)]
+            if len(parts) != 2:
+                print(f"[ic line {line_nr + 1}] defmat requires at least 4 arguments")
+                continue
+            mat_name = parts[0]
+            numeric_parts = [a.strip() for a in parts[1].split(',')]
+            resolved = _resolve_args(numeric_parts, innerVariables)
+            if len(resolved) == 3:
+                # sigma, alpha, mi_r
+                try:
+                    custom_materials[mat_name] = {
+                        'sigma': float(resolved[0]),
+                        'alpha': float(resolved[1]),
+                        'mi_r':  float(resolved[2]),
+                        'rho':   0.0,
+                        'cp':    0.0,
+                        'k':     0.0,
+                    }
+                except (ValueError, TypeError) as e:
+                    print(f"[ic line {line_nr + 1}] defmat({mat_name}): {e}")
+            elif len(resolved) == 6:
+                # sigma, alpha, mi_r, rho, cp, thermal_k
+                try:
+                    custom_materials[mat_name] = {
+                        'sigma': float(resolved[0]),
+                        'alpha': float(resolved[1]),
+                        'mi_r':  float(resolved[2]),
+                        'rho':   float(resolved[3]),
+                        'cp':    float(resolved[4]),
+                        'k':     float(resolved[5]),
+                    }
+                except (ValueError, TypeError) as e:
+                    print(f"[ic line {line_nr + 1}] defmat({mat_name}): {e}")
+            else:
+                print(f"[ic line {line_nr + 1}] defmat({mat_name}): expected 3 or 6 numeric args, got {len(resolved)}")
 
         else:
             # Geometry commands: c, r, mv, cp
@@ -269,4 +318,4 @@ def textToCode(input_text):
                     print(f"[ic line {line_nr + 1}] Cannot convert args to numbers "
                           f"in '{line}': {e}")
 
-    return innerCodeSteps, currents, materials
+    return innerCodeSteps, currents, materials, custom_materials

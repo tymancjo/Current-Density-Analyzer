@@ -14,6 +14,7 @@ An `.ic` file is plain text. Lines are processed in order. There are four kinds 
 |---|---|---|
 | Comment | `# any text` | Documentation; ignored by the parser |
 | Variable | `v(…)` / `a(…)` | Define and update numeric variables |
+| Material definition | `defmat(…)` | Declare a named custom material inline |
 | Physical setup | `current(…)` / `material(…)` | Assign electrical properties to phases |
 | Geometry | `r(…)` / `c(…)` / `mv(…)` / `cp(…)` | Draw shapes on the cross-section canvas |
 
@@ -107,10 +108,55 @@ current(4, 2300, 0,  180)    # return of phase 1
 current(99, 0.0001, 0, 180)  # structural part — effectively zero current
 ```
 
-### `material(phase_id, material_type_id)`
+### `defmat(name, sigma, alpha, mi_r)` — define a custom material
 
-Assigns a material to a phase. The `material_type_id` is the row index (0-based)
-in `setup/materials.txt`:
+Declares a named material for use in subsequent `material()` commands.
+All numeric arguments may be expressions or variables.
+
+| Argument | Unit | Meaning |
+|---|---|---|
+| `name` | — | Identifier you choose freely (no spaces, no quotes) |
+| `sigma` | S/m | Electrical conductivity at 20 °C |
+| `alpha` | 1/K | Temperature coefficient of resistance |
+| `mi_r` | — | Relative magnetic permeability |
+
+Extended form with full thermal properties:
+
+```
+defmat(name, sigma, alpha, mi_r, rho, cp, thermal_k)
+```
+
+| Extra argument | Unit | Meaning |
+|---|---|---|
+| `rho` | kg/m³ | Mass density |
+| `cp` | J/(kg·K) | Specific heat capacity |
+| `thermal_k` | W/(m·K) | Thermal conductivity |
+
+```
+# Short form (electrical only)
+defmat(myBrass,  15.9e6, 1.5e-3, 1.0)
+defmat(hotCopper, 45e6,  3.9e-3, 1.0)   # copper at higher temperature
+
+# Full form (electrical + thermal)
+defmat(myCu, 56e6, 3.9e-3, 1.0, 8960, 385, 400)
+```
+
+Variables may appear in the numeric arguments:
+
+```
+v(sigma_b, 15.9e6)
+defmat(brass, sigma_b, 1.5e-3, 1.0)
+```
+
+---
+
+### `material(phase_id, material_type_id_or_name)`
+
+Assigns a material to a phase. The second argument is either:
+- An **integer index** (0-based row) into `setup/materials.txt`, or
+- A **name** previously declared with `defmat()`.
+
+Built-in library indices:
 
 | ID | Name | σ [S/m] | Typical use |
 |---|---|---|---|
@@ -122,9 +168,10 @@ in `setup/materials.txt`:
 | 5 | Fake Carbon Steel | 6.99×10⁶ | Short-section approximation |
 
 ```
-material(1, 0)   # phase 1 is copper
-material(2, 2)   # phase 2 is aluminium
-material(99, 3)  # structural frame is carbon steel
+material(1, 0)        # phase 1 is copper (library index)
+material(2, 2)        # phase 2 is aluminium (library index)
+material(99, 3)       # structural frame is carbon steel
+material(1, myBrass)  # phase 1 is a custom material defined via defmat
 ```
 
 ---

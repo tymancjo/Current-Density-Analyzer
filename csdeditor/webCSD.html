@@ -277,7 +277,7 @@ body {
 }
 .modal-box {
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 8px; min-width: 560px; max-width: 90vw;
+  border-radius: 8px; min-width: 720px; max-width: 92vw;
   max-height: 80vh; display: flex; flex-direction: column;
   box-shadow: 0 8px 32px rgba(0,0,0,.5);
 }
@@ -297,14 +297,21 @@ body {
   display: flex; gap: 8px; justify-content: flex-end;
 }
 .mat-row {
-  display: grid; grid-template-columns: 1fr 110px 100px 80px 32px;
+  display: grid; grid-template-columns: 1.4fr 110px 100px 70px 1fr 32px;
   gap: 6px; align-items: center; padding: 4px 0;
   border-bottom: 1px solid var(--panel2);
 }
 .mat-row:last-child { border-bottom: none; }
+.mat-row-builtin { opacity: .85; }
+.mat-row-builtin input { background: var(--panel2); color: var(--text2); cursor: default; }
+.mat-section-hdr {
+  font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--text3); padding: 10px 0 4px; border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
 .mat-col-hdr {
-  display: grid; grid-template-columns: 1fr 110px 100px 80px 32px;
-  gap: 6px; padding: 4px 0 6px; border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 1.4fr 110px 100px 70px 1fr 32px;
+  gap: 6px; padding: 4px 0 6px; border-bottom: 2px solid var(--border);
   font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px;
 }
 .mat-name { font-size: 12px; font-family: monospace; color: var(--text); word-break: break-all; }
@@ -316,6 +323,7 @@ body {
 }
 .mat-del-btn:hover { background: rgba(235,87,87,.15); border-color: #eb5757; color: #eb5757; }
 .mat-empty { color: var(--text3); font-size: 12px; padding: 12px 0; text-align: center; }
+.mat-phase-tags { display: flex; flex-wrap: wrap; gap: 2px; align-items: center; }
 .modal-add-btn {
   padding: 6px 14px; background: var(--accent); border: none; color: #fff;
   font-size: 12px; font-weight: 600; border-radius: 5px; cursor: pointer;
@@ -508,16 +516,16 @@ body.raster-mode .raster-only { display: flex !important; }
   </div>
 </div>
 
-<!-- ── Custom Materials Manager modal ──────────────────── -->
+<!-- ── Materials Manager modal ──────────────────────────── -->
 <div id="mat-modal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true">
   <div class="modal-box">
     <div class="modal-hdr">
-      <span>⚙ Custom Materials</span>
+      <span>⚙ Materials</span>
       <button id="mat-modal-close" title="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="mat-col-hdr">
-        <span>Name</span><span>σ (S/m)</span><span>α (1/K)</span><span>μr</span><span></span>
+        <span>Name</span><span>σ (S/m)</span><span>α (1/K)</span><span>μr</span><span>Phases</span><span></span>
       </div>
       <div id="mat-list"></div>
     </div>
@@ -3014,6 +3022,7 @@ function buildConductorMapDataURL(comps) {
 function buildConductorSection(res, comps, phases, htc, temp, length, fmt) {
   if (!comps || !res.componentResults?.length) return '';
   const powerById = Object.fromEntries(res.componentResults.map(r => [r.compId, r.power]));
+  const irmsById  = Object.fromEntries(res.componentResults.map(r => [r.compId, r.Irms]));
   const htcOk = htc > 0;
   const sorted = comps.components.map((c, i) => ({ ...c, colorIdx: i }))
     .sort((a, b) => a.phaseId - b.phaseId);
@@ -3024,10 +3033,20 @@ function buildConductorSection(res, comps, phases, htc, temp, length, fmt) {
     const trise     = htcOk && coolingM2 > 0 ? power / (htc * coolingM2) : null;
     const pLabel    = phases[c.phaseId]?.label || `ph${c.phaseId}`;
     const swatch    = `<span style="display:inline-block;width:11px;height:11px;background:${conductorCSS(c.colorIdx)};border-radius:2px;vertical-align:middle;margin-right:4px"></span>`;
+    // Per-conductor I from phasor sum of element currents (transport current)
+    const irmsSum = irmsById[c.id] ?? null;
+    // Per-conductor I rms: I = sqrt(P / R), R = length[m] / (areaMm2[m²] × sigma_T)
+    let irms = null;
+    if (c.areaMm2 > 0 && power >= 0) {
+      const { sigma, alpha } = getPhaseMatProps(phases[c.phaseId]);
+      const sigmaT = sigma / (1 + alpha * (temp - 20));
+      const R = (length * 1e-3) / (c.areaMm2 * 1e-6 * sigmaT); // Ω
+      irms = R > 0 ? Math.sqrt(power / R) : null;
+    }
     let groupRow = '';
     if (c.phaseId !== lastPhaseId) {
       lastPhaseId = c.phaseId;
-      groupRow = `<tr style="background:var(--hover,#f3f4f6)"><td colspan="7" style="font-weight:600;font-size:11px;padding:4px 8px;color:var(--text2,#555)">${pLabel} — phase ${c.phaseId}</td></tr>`;
+      groupRow = `<tr style="background:var(--hover,#f3f4f6)"><td colspan="9" style="font-weight:600;font-size:11px;padding:4px 8px;color:var(--text2,#555)">${pLabel} — phase ${c.phaseId}</td></tr>`;
     }
     return groupRow + `<tr>
       <td>${swatch}${c.id}</td>
@@ -3036,6 +3055,8 @@ function buildConductorSection(res, comps, phases, htc, temp, length, fmt) {
       <td>${c.perimeterMm.toFixed(2)}</td>
       <td>${(c.perimeterMm * length / 100).toFixed(1)}</td>
       <td>${fmt(power)}</td>
+      <td>${irmsSum !== null ? irmsSum.toFixed(1) : '—'}</td>
+      <td>${irms !== null ? irms.toFixed(1) : '—'}</td>
       <td>${trise !== null ? trise.toFixed(1) : '—'}</td>
     </tr>`;
   }).join('');
@@ -3053,7 +3074,7 @@ function buildConductorSection(res, comps, phases, htc, temp, length, fmt) {
         <thead><tr>
           <th>ID</th><th>Phase</th><th>Cross-section <span class="u">(mm²)</span></th>
           <th>Perimeter * <span class="u">(mm)</span></th><th>Cooling area <span class="u">(cm²)</span></th>
-          <th>Power loss <span class="u">(W)</span></th><th>ΔT <span class="u">(K)</span></th>
+          <th>Power loss <span class="u">(W)</span></th><th>I Σ <span class="u">(A)</span></th><th>I rms <span class="u">(A)</span></th><th>ΔT <span class="u">(K)</span></th>
         </tr></thead>
         <tbody>${tableRows}</tbody>
       </table>
@@ -3418,21 +3439,60 @@ document.getElementById('heatmap-toggle')?.addEventListener('change', e => {
 function renderMatModal() {
   const list = document.getElementById('mat-list');
   if (!list) return;
-  const names = Object.keys(customMaterials);
-  if (!names.length) {
-    list.innerHTML = '<div class="mat-empty">No custom materials yet. Click "＋ Add Material".</div>';
-    return;
+  // Build lookup: material key → list of phase tags
+  function phaseTagsFor(matKey) {
+    const tags = [];
+    for (const [pid, ph] of Object.entries(phases)) {
+      let match = false;
+      if (typeof matKey === 'number') {
+        match = !ph.customMatName && !ph.customMat && (ph.material ?? 0) === matKey;
+      } else {
+        match = ph.customMatName === matKey;
+      }
+      if (match) tags.push({ id: parseInt(pid), label: ph.label || `ph${pid}`, color: ph.color || '#888' });
+    }
+    return tags;
   }
-  list.innerHTML = names.map(name => {
+  function renderPhaseTags(tags) {
+    if (!tags.length) return '<span style="color:var(--text3);font-size:11px">—</span>';
+    return tags.map(p =>
+      `<span style="display:inline-flex;align-items:center;background:${p.color}22;border:1px solid ${p.color};border-radius:3px;padding:1px 6px;font-size:10px;color:${p.color};font-weight:600;margin:1px">${p.label}</span>`
+    ).join('');
+  }
+
+  // Built-in materials (read-only)
+  const builtinRows = MATERIAL_PROPS.map((m, idx) => {
+    const tags = phaseTagsFor(idx);
+    return `<div class="mat-row mat-row-builtin">
+      <span class="mat-name" title="Built-in material #${idx}">#${idx} ${m.name}</span>
+      <input class="prop-inp" type="number" value="${m.sigma}" readonly tabindex="-1" title="Conductivity σ (S/m) — read-only">
+      <input class="prop-inp" type="number" value="${m.alpha}" readonly tabindex="-1" title="Temp. coeff. α (1/K) — read-only">
+      <input class="prop-inp" type="number" value="${m.mi_r}"  readonly tabindex="-1" title="Rel. permeability μr — read-only">
+      <div class="mat-phase-tags">${renderPhaseTags(tags)}</div>
+      <span></span>
+    </div>`;
+  }).join('');
+
+  // Custom materials (editable)
+  const names = Object.keys(customMaterials);
+  const customRows = names.map(name => {
     const m = customMaterials[name];
+    const tags = phaseTagsFor(name);
     return `<div class="mat-row">
       <span class="mat-name">${name}</span>
       <input class="prop-inp" type="number" data-mat="${name}" data-key="sigma" value="${m.sigma}" step="1e6" min="1" title="Conductivity σ (S/m)">
       <input class="prop-inp" type="number" data-mat="${name}" data-key="alpha" value="${m.alpha}" step="0.0001" title="Temp. coeff. α (1/K)">
       <input class="prop-inp" type="number" data-mat="${name}" data-key="mi_r"  value="${m.mi_r}"  step="1"      min="1" title="Rel. permeability μr">
+      <div class="mat-phase-tags">${renderPhaseTags(tags)}</div>
       <button class="mat-del-btn" data-mat="${name}" title="Delete material">✕</button>
     </div>`;
   }).join('');
+
+  const customSection = names.length
+    ? `<div class="mat-section-hdr">Custom</div>${customRows}`
+    : `<div class="mat-section-hdr">Custom</div><div class="mat-empty">No custom materials yet. Click "＋ Add Material".</div>`;
+
+  list.innerHTML = `<div class="mat-section-hdr">Built-in (read-only)</div>${builtinRows}${customSection}`;
 
   list.querySelectorAll('input[data-mat]').forEach(inp => {
     inp.addEventListener('input', () => {
@@ -3780,6 +3840,8 @@ function runSolver(shapes, phases, params, gridData, compGrid) {
   const [I2r, I2i] = complexLUSolve(N, Zre, Zim, piv, V2r, V2i);
 
   const Imagn = new Float64Array(N);
+  const scIre  = new Float64Array(N);   // scaled complex current re per element
+  const scIim  = new Float64Array(N);   // scaled complex current im per element
   const phaseCurrentPhasors = [];   // [{re, im}] scaled complex current per phase
   for (let pi = 0; pi < numPhases; pi++) {
     const { start, end } = phaseBounds[pi];
@@ -3788,23 +3850,35 @@ function runSolver(shapes, phases, params, gridData, compGrid) {
     const modSum = Math.hypot(sr, si);
     const tgt    = Itgt[pi].mag;
     const scale  = (modSum > 1e-30 && tgt > 0) ? tgt / modSum : 0;
-    for (let i = start; i < end; i++)
+    for (let i = start; i < end; i++) {
       Imagn[i] = Math.hypot(I2r[i], I2i[i]) * scale;
+      scIre[i] = I2r[i] * scale;
+      scIim[i] = I2i[i] * scale;
+    }
     phaseCurrentPhasors.push({ re: sr * scale, im: si * scale });
   }
 
   const powerVec = new Float64Array(N);
   for (let i = 0; i < N; i++) powerVec[i] = Rvec[i] * Imagn[i]**2;
 
-  // Per-component power aggregation
+  // Per-component power and phasor-sum current aggregation
   let componentResults = null;
   if (compGrid) {
     const compPowerMap = new Map();
+    const compIreMap   = new Map();
+    const compIimMap   = new Map();
     for (let i = 0; i < N; i++) {
       const cid = compGrid[elemR[i] * cols + elemC[i]];
-      if (cid > 0) compPowerMap.set(cid, (compPowerMap.get(cid) || 0) + powerVec[i]);
+      if (cid > 0) {
+        compPowerMap.set(cid, (compPowerMap.get(cid) || 0) + powerVec[i]);
+        compIreMap.set(cid,   (compIreMap.get(cid)   || 0) + scIre[i]);
+        compIimMap.set(cid,   (compIimMap.get(cid)   || 0) + scIim[i]);
+      }
     }
-    componentResults = [...compPowerMap.entries()].map(([compId, power]) => ({ compId, power }));
+    componentResults = [...compPowerMap.entries()].map(([compId, power]) => ({
+      compId, power,
+      Irms: Math.hypot(compIreMap.get(compId) || 0, compIimMap.get(compId) || 0)
+    }));
   }
 
   const phaseResults = phaseBounds.map(({ start, end, pid }, pi) => {

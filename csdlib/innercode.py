@@ -154,7 +154,7 @@ def codeLoops(input_text):
         index_non_rev = len(input_text) - line_nr
 
         if len(line) > 3:
-            command = line[0].lower()
+            command = line.split('(')[0].lower().strip()
             if command in commands and command == 'l':
                 arguments = line[2:-1].split(',')
                 if len(arguments) in commands[command][1]:
@@ -173,14 +173,20 @@ def codeLoops(input_text):
 # ---------------------------------------------------------------------------
 
 def textToCode(input_text):
-    """Parse inner-code text and return (codeSteps, currents, materials, custom_materials).
+    """Parse inner-code text and return
+    (codeSteps, currents, materials, custom_materials, analysis_params).
 
     codeSteps        – list of [function, [float_args], command_name]
-    currents         – list of [phase_id, I_rms, phase_shift, extra_shift]
+    currents         – list of [phase_id, I_rms, phase_shift, extra_shift] or [..., Isc_kA]
     materials        – list of [phase_id, material_type_id_or_name]
     custom_materials – dict of {name: {sigma, alpha, mi_r, rho, cp, k}}
                        populated by defmat() commands in the .ic file
+    analysis_params  – dict with any of: freq, length, temp, htc, cellsize
+                       populated by the matching single-argument directives
     """
+
+    # Analysis-parameter directives: each takes exactly one numeric argument.
+    _ANALYSIS_KEYS = {'freq', 'length', 'temp', 'htc', 'cellsize'}
 
     commands = {
         'c':        [addCircle, [4, 6]],
@@ -190,7 +196,7 @@ def textToCode(input_text):
         'l':        [None,      [1]],
         'mv':       [moveCells, [3]],
         'cp':       [copyCells, [3]],
-        'current':  [None,      [4]],
+        'current':  [None,      [4, 5]],  # 5th arg is optional Isc (kA) for force analysis
         'material': [None,      [2]],
         'defmat':   [None,      [4, 7]],
     }
@@ -200,6 +206,7 @@ def textToCode(input_text):
     currents = []
     materials = []
     custom_materials = {}
+    analysis_params  = {}
 
     input_text = codeLoops(input_text)
 
@@ -210,7 +217,7 @@ def textToCode(input_text):
 
         command = line.split('(')[0].lower().strip()
 
-        if command not in commands:
+        if command not in commands and command not in _ANALYSIS_KEYS:
             continue
 
         # Extract argument string: everything between the first '(' and last ')'
@@ -306,6 +313,13 @@ def textToCode(input_text):
             else:
                 print(f"[ic line {line_nr + 1}] defmat({mat_name}): expected 3 or 6 numeric args, got {len(resolved)}")
 
+        elif command in _ANALYSIS_KEYS:
+            # freq(v) | length(v) | temp(v) | htc(v) | cellsize(v)
+            try:
+                analysis_params[command] = _eval(raw_args.strip(), innerVariables)
+            except Exception as e:
+                print(f"[ic line {line_nr + 1}] Error parsing {command}({raw_args}): {e}")
+
         else:
             # Geometry commands: c, r, mv, cp
             ar = [a.strip() for a in raw_args.split(',')]
@@ -318,4 +332,4 @@ def textToCode(input_text):
                     print(f"[ic line {line_nr + 1}] Cannot convert args to numbers "
                           f"in '{line}': {e}")
 
-    return innerCodeSteps, currents, materials, custom_materials
+    return innerCodeSteps, currents, materials, custom_materials, analysis_params

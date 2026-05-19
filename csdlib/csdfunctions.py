@@ -66,6 +66,9 @@ class the_bar:
         self.length = 1000
         self.dT = 0
         self.thermal_group = 0
+        self.Fx = 0.0   # electromagnetic force x-component [N]
+        self.Fy = 0.0   # electromagnetic force y-component [N]
+        self.Fmag = 0.0 # |F| [N]
 
 def myLog(s: str = "", *args, **kwargs):
     if verbose:
@@ -145,7 +148,7 @@ def loadTheData(filename):
                     file_content = f.read()
 
                 codeLines = file_content.splitlines()
-                codeSteps, currents, materials, custom_materials = ic.textToCode(codeLines)
+                codeSteps, currents, materials, custom_materials, analysis_params = ic.textToCode(codeLines)
 
                 XSecArray, dXmm, dYmm = getCanvas(codeSteps)
             except IOError:
@@ -155,9 +158,10 @@ def loadTheData(filename):
         else:
             myLog("reading from file :" + filename)
             XSecArray, dXmm, dYmm = loadObj(filename).restore()
-            custom_materials = {}
+            custom_materials  = {}
+            analysis_params   = {}
 
-        return XSecArray, dXmm, dYmm, currents, materials, custom_materials
+        return XSecArray, dXmm, dYmm, currents, materials, custom_materials, analysis_params
     else:
         print(f"The file {filename} can't be opened!")
         sys.exit(1)
@@ -188,70 +192,48 @@ def combineVectors(*list_of_vectors):
     return output, *lengths,
 
 def getConductors(XsecArr, phases):
+    """BFS connected-component labelling with 4-connectivity.
+
+    Each physically separate conductor body gets a unique integer ID in
+    conductorsArr (1-based).  Conductors that share only a diagonal corner
+    are treated as separate — consistent with the webCSD algorithm.
+
+    Returns
+    -------
+    conductorsArr   : 2-D int array, same shape as XsecArr; cell value = conductor ID
+    total_conductors: total number of distinct conductors found
+    phaseCond       : list of lists — phaseCond[phase_idx] = [conductor IDs in that phase]
     """
-    [Row,Col,X,Y]
-    """
-    # Setting up new conductors array
-    conductorsArr = np.zeros((XsecArr.shape), dtype=int)
+    from collections import deque
 
-    conductors_number = 0
-    phaseCond = []
+    rows, cols = XsecArr.shape
+    conductorsArr = np.zeros((rows, cols), dtype=int)
+    num_phases = len(phases)
+    phaseCond = [[] for _ in range(num_phases)]
+    conductor_id = 0
 
-    # let's map the elements back to the 2D shape array.
-    # I can use the recreate array here - but for sake of the clarity
-    phase_numbers = []
-    for phase_number, phase in enumerate(phases):
+    for r in range(rows):
+        for c in range(cols):
+            phase_val = int(XsecArr[r, c])
+            if phase_val == 0 or conductorsArr[r, c] != 0:
+                continue
+            # Start a new BFS from this unvisited conductor cell
+            conductor_id += 1
+            phase_idx = phase_val - 1   # XsecArr is 1-indexed after normalisation
+            if 0 <= phase_idx < num_phases:
+                phaseCond[phase_idx].append(conductor_id)
+            conductorsArr[r, c] = conductor_id
+            queue = deque([(r, c)])
+            while queue:
+                cr, cc = queue.popleft()
+                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    nr, nc = cr + dr, cc + dc
+                    if 0 <= nr < rows and 0 <= nc < cols:
+                        if XsecArr[nr, nc] == phase_val and conductorsArr[nr, nc] == 0:
+                            conductorsArr[nr, nc] = conductor_id
+                            queue.append((nr, nc))
 
-        phase_numbers.append(-1-phase_number)
-
-        for element in phase:
-            R = int(element[0])
-            C = int(element[1])
-
-            conductorsArr[R, C] = phase_numbers[-1]
-    
-    Rows, Cols = conductorsArr.shape
-
-    # look around coordinates vector
-    dRC = [(-1,-1), (-1,0),(-1,1),
-            (0,-1),  (0,1),
-            (1,-1), (1,0),(1,1)] 
-
-    for phase_number in phase_numbers:
-        phaseConductors = 0
-        this_phase_cond_numbers = []
-        for R in range(Rows):
-            for C in range(Cols):
-                if conductorsArr[R,C] == phase_number:
-                    # looking around
-                    for step in range(5):
-                        altered_C = min(C+step, Cols-1)
-                        
-                        # to look around more if we follow a conductor of phases
-                        if conductorsArr[R,altered_C] == phase_number or conductorsArr[R,altered_C] in this_phase_cond_numbers :
-                            for dR,dC in dRC:
-                                # just to be able not fall of the size of array
-                                try:
-                                    N =  conductorsArr[max(0,R+dR),max(0,altered_C+dC)]
-                                except:
-                                    N = 0
-                                if N > 0:
-                                    conductorsArr[R,C] = N
-                                    break
-                        elif conductorsArr[R,altered_C] == 0:
-                            break
-
-
-                    if conductorsArr[R,C] < 1:
-                        # if we didn't find any neighbor already marked. 
-                        conductors_number += 1
-                        phaseConductors += 1
-                        this_phase_cond_numbers.append(conductors_number)
-                        conductorsArr[R, C] = conductors_number
-
-
-        phaseCond.append(this_phase_cond_numbers)
-    return conductorsArr, conductors_number, phaseCond
+    return conductorsArr, conductor_id, phaseCond
 
 def getPerymiter(vec, arr, dXmm, dYmm):
     if len(vec) > 0:
@@ -305,4 +287,90 @@ def move_to_phase(bars, from_phase, to_phase):
     for bar in bars:
         if bar.phase == from_phase:
             bar.phase = to_phase
+
+
+def compute_forces_for_bars(bars_data, currentsDraw, Isc_per_phase, length):
+    """Compute Ampère electromagnetic forces on each conductor bar.
+
+    Parameters
+    ----------
+    bars_data       : list of the_bar objects (elements must be populated)
+    currentsDraw    : 2D numpy array of complex element currents (from recreateresultsArray)
+    Isc_per_phase   : dict {phase_id: Isc_kA}  — signed short-circuit current per phase [kA]
+    length          : busbar length [mm]
+
+    Each bar's Fx, Fy, Fmag attributes are set in-place (forces in Newtons for the given length).
+    """
+    MU0_OVER_2PI = 2e-7   # μ₀/(2π) [H/m]
+    length_m = length * 1e-3
+
+    # ── Build flat element arrays ──────────────────────────────────────
+    rows_list, cols_list, x_list, y_list, I_list, bar_list = [], [], [], [], [], []
+
+    for bar_idx, bar in enumerate(bars_data):
+        phase   = bar.phase
+        Isc_kA  = float(Isc_per_phase.get(phase, 0.0))
+        Isc_A   = Isc_kA * 1000.0
+
+        elems = bar.elements
+        if len(elems) == 0:
+            continue
+
+        # Magnitude of complex current per element within this bar
+        I_mags = np.array([abs(currentsDraw[int(e[0]), int(e[1])]) for e in elems])
+        sum_I  = I_mags.sum()
+
+        for k, elem in enumerate(elems):
+            if Isc_A == 0.0:
+                I_force = 0.0
+            elif sum_I > 1e-12:
+                I_force = Isc_A * I_mags[k] / sum_I
+            else:
+                I_force = Isc_A / len(elems)
+
+            rows_list.append(int(elem[0]))
+            cols_list.append(int(elem[1]))
+            x_list.append(elem[2] * 1e-3)   # mm → m
+            y_list.append(elem[3] * 1e-3)
+            I_list.append(I_force)
+            bar_list.append(bar_idx)
+
+    N = len(I_list)
+    if N == 0:
+        return bars_data
+
+    ex = np.array(x_list,   dtype=np.float64)
+    ey = np.array(y_list,   dtype=np.float64)
+    eI = np.array(I_list,   dtype=np.float64)
+    eb = np.array(bar_list, dtype=np.int32)
+
+    # ── Vectorised O(N²) pairwise Ampère force ─────────────────────────
+    dx = ex[np.newaxis, :] - ex[:, np.newaxis]   # (N,N) xj-xi  [m]
+    dy = ey[np.newaxis, :] - ey[:, np.newaxis]   # (N,N) yj-yi  [m]
+    d2 = dx**2 + dy**2                            # (N,N) distance² [m²]
+    np.fill_diagonal(d2, np.inf)                  # zero self-force
+
+    IiIj = eI[:, np.newaxis] * eI[np.newaxis, :] # (N,N) current products
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        factor = np.where(d2 > 1e-20,
+                          MU0_OVER_2PI * IiIj * length_m / d2,
+                          0.0)                    # (N,N) force factor [N/m² * m = N]
+
+    Fx_elem = (factor * dx).sum(axis=1)   # (N,) total Fx per element
+    Fy_elem = (factor * dy).sum(axis=1)   # (N,) total Fy per element
+
+    # ── Aggregate by bar ───────────────────────────────────────────────
+    n_bars  = len(bars_data)
+    bar_Fx  = np.zeros(n_bars, dtype=np.float64)
+    bar_Fy  = np.zeros(n_bars, dtype=np.float64)
+    np.add.at(bar_Fx, eb, Fx_elem)
+    np.add.at(bar_Fy, eb, Fy_elem)
+
+    for i, bar in enumerate(bars_data):
+        bar.Fx   = float(bar_Fx[i])
+        bar.Fy   = float(bar_Fy[i])
+        bar.Fmag = float(np.hypot(bar.Fx, bar.Fy))
+
+    return bars_data
 

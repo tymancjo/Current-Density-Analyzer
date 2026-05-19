@@ -715,7 +715,9 @@ def solve_with_magnetic(
         powerLossesVector,
         currentVector,
         vPh,
-        mi_r_weighted_array
+        mi_r_weighted_array,
+        U,            # complex voltage phasor per phase (calibrated)
+        I_results,    # complex current phasor per phase (after polish)
     )
 
 def solve_thermal_for_bars(list_of_bars, HTC=5):

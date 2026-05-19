@@ -517,6 +517,8 @@ def vectorizeTheArray(*arg):
             complexCurrent,
             vPh,
             mi_r_weighted,
+            _phase_U,
+            _phase_I,
         ) = csds.solve_with_magnetic(
             XsecArr=XSecArray,
             phases_materials=phases_material,
